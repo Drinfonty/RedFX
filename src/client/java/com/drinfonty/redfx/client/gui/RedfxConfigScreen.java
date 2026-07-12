@@ -132,8 +132,8 @@ public class RedfxConfigScreen extends Screen {
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        // Draw background
-        this.renderBackground(graphics, mouseX, mouseY, partialTick);
+        // Draw background without triggering duplicate blur shader crash
+        this.renderTransparentBackground(graphics);
 
         // Draw title
         graphics.drawCenteredString(this.font, this.title, this.width / 2, 20, 0xFFFFFF);
