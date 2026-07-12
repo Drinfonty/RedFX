@@ -12,8 +12,9 @@ public class RedfxConfig {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
     public boolean bloodEnabled = true;
-    public String particleAmount = "Medium"; // Low, Medium, High, Ultra
-    public String particleType = "RedstoneBlock"; // RedstoneBlock, RedPoof
+    public String particleAmount = "High"; // Low, Medium, High, Ultra
+    public String particleType = "RedWool"; // RedWool, TNT, RedPoof
+    public int particleLifetimeSeconds = 5; // Range: 1 to 15 seconds
 
     private static RedfxConfig instance;
 
@@ -29,6 +30,18 @@ public class RedfxConfig {
             try (FileReader reader = new FileReader(CONFIG_FILE)) {
                 RedfxConfig config = GSON.fromJson(reader, RedfxConfig.class);
                 if (config != null) {
+                    if (config.particleAmount == null) {
+                        config.particleAmount = "High";
+                    }
+                    if (config.particleLifetimeSeconds <= 0) {
+                        config.particleLifetimeSeconds = 5;
+                    }
+                    // Fallback to default if loaded particleType is one of the removed ones
+                    if (config.particleType == null || 
+                        config.particleType.equals("RedstoneBlock") || 
+                        config.particleType.equals("RedstoneWire")) {
+                        config.particleType = "RedWool";
+                    }
                     return config;
                 }
             } catch (Exception e) {

@@ -4,7 +4,10 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
 import com.drinfonty.redfx.config.RedfxConfig;
+import com.drinfonty.redfx.client.particle.BloodParticle;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -38,11 +41,6 @@ public class LivingEntityMixin {
     }
 
     private void spawnBloodParticles(LivingEntity entity, float yaw, boolean isDeath) {
-        BlockParticleOption blockParticle = new BlockParticleOption(
-            ParticleTypes.BLOCK, 
-            Blocks.REDSTONE_BLOCK.defaultBlockState()
-        );
-        
         float multiplier = RedfxConfig.get().getMultiplier();
         int baseCount = isDeath ? (25 + entity.getRandom().nextInt(15)) : (12 + entity.getRandom().nextInt(8));
         int count = Math.round(baseCount * multiplier);
@@ -60,7 +58,19 @@ public class LivingEntityMixin {
         double forceX = -Math.sin(rad);
         double forceZ = Math.cos(rad);
 
-        boolean isPoof = RedfxConfig.get().particleType.equals("RedPoof");
+        String particleType = RedfxConfig.get().particleType;
+        boolean isPoof = particleType.equals("RedPoof");
+        
+        net.minecraft.world.level.block.state.BlockState blockState = null;
+        if (!isPoof) {
+            if (particleType.equals("TNT")) {
+                blockState = Blocks.TNT.defaultBlockState();
+            } else {
+                blockState = Blocks.RED_WOOL.defaultBlockState();
+            }
+        }
+
+        ClientLevel clientLevel = (ClientLevel) entity.level();
 
         for (int i = 0; i < count; i++) {
             double px = entity.getX() + (entity.getRandom().nextDouble() - 0.5) * entity.getBbWidth() * 0.8;
@@ -74,15 +84,17 @@ public class LivingEntityMixin {
             double vz = forceZ * spreadSpeed + (entity.getRandom().nextDouble() - 0.5) * 0.15;
             
             if (isPoof) {
-                net.minecraft.client.particle.Particle p = net.minecraft.client.Minecraft.getInstance().particleEngine.createParticle(
+                net.minecraft.client.particle.Particle p = Minecraft.getInstance().particleEngine.createParticle(
                     ParticleTypes.POOF, px, py, pz, vx, vy, vz
                 );
                 if (p instanceof net.minecraft.client.particle.SingleQuadParticle sqp) {
-                    // Set color to bright blood red (1.0, 0.05, 0.05)
                     sqp.setColor(1.0f, 0.05f, 0.05f);
+                    sqp.setLifetime(RedfxConfig.get().particleLifetimeSeconds * 4);
                 }
             } else {
-                entity.level().addParticle(blockParticle, px, py, pz, vx, vy, vz);
+                // Spawn our custom sliding/sticking BloodParticle
+                BloodParticle blood = new BloodParticle(clientLevel, px, py, pz, vx, vy, vz, blockState);
+                Minecraft.getInstance().particleEngine.add(blood);
             }
         }
     }
