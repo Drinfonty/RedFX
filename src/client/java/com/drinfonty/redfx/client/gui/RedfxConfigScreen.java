@@ -1,7 +1,7 @@
 package com.drinfonty.redfx.client.gui;
 
 import com.drinfonty.redfx.config.RedfxConfig;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.AbstractSliderButton;
 import net.minecraft.client.gui.screens.Screen;
@@ -131,15 +131,15 @@ public class RedfxConfigScreen extends Screen {
     }
 
     @Override
-    public void extractRenderState(GuiGraphicsExtractor extractor, int mouseX, int mouseY, float partialTick) {
+    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         // Draw background
-        this.extractTransparentBackground(extractor);
-        
+        this.renderBackground(graphics, mouseX, mouseY, partialTick);
+
         // Draw title
-        extractor.centeredText(this.font, this.title, this.width / 2, 20, 0xFFFFFF);
-        
+        graphics.drawCenteredString(this.font, this.title, this.width / 2, 20, 0xFFFFFF);
+
         // Draw widgets (calls super to render buttons and slider)
-        super.extractRenderState(extractor, mouseX, mouseY, partialTick);
+        super.render(graphics, mouseX, mouseY, partialTick);
     }
 
     @Override

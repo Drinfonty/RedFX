@@ -110,7 +110,7 @@ public class BloodParticle extends TerrainParticle {
                     TextureAtlas blocksAtlas = (TextureAtlas) Minecraft.getInstance().getTextureManager().getTexture(TextureAtlas.LOCATION_BLOCKS);
                     if (blocksAtlas != null) {
                         TextureAtlasSprite splatSprite = blocksAtlas.getSprite(
-                            Identifier.fromNamespaceAndPath("redfx", "block/blood_splat_" + this.splatIndex)
+                            Identifier.parse("redfx:block/blood_splat_" + this.splatIndex)
                         );
                         if (splatSprite != null) {
                             this.setSprite(splatSprite);
@@ -167,7 +167,7 @@ public class BloodParticle extends TerrainParticle {
     @Override
     public SingleQuadParticle.Layer getLayer() {
         if (this.landed && RedfxConfig.get().useSplatTexture) {
-            return SingleQuadParticle.Layer.TRANSLUCENT_TERRAIN;
+            return SingleQuadParticle.Layer.TRANSLUCENT;
         }
         return super.getLayer();
     }
@@ -195,11 +195,11 @@ public class BloodParticle extends TerrainParticle {
 
     // Query lighting 0.2 blocks above the landed splat to prevent it sampling inside/under the ground block (which is dark/black)
     @Override
-    protected int getLightCoords(float partialTicks) {
+    public int getLightColor(float partialTicks) {
         if (this.landed) {
             net.minecraft.core.BlockPos pos = net.minecraft.core.BlockPos.containing(this.x, this.y + 0.2, this.z);
-            return this.level.isLoaded(pos) ? net.minecraft.client.renderer.LevelRenderer.getLightCoords(this.level, pos) : 0;
+            return this.level.hasChunkAt(pos) ? net.minecraft.client.renderer.LevelRenderer.getLightColor(this.level, pos) : 0;
         }
-        return super.getLightCoords(partialTicks);
+        return super.getLightColor(partialTicks);
     }
 }
