@@ -9,12 +9,12 @@
 - [x] Integrate with ModMenu and add configuration menu (toggles blood effects and adjusts particle multipliers)
 
 ## Phase 2: Particle Collision & Ground Decals
-- [ ] Add block collision check to make blood particles stop and slide on block surfaces
-- [ ] Render temporary blood splats/stains on blocks when particles land
+- [x] Add block collision check to make blood particles stop and slide on block surfaces
+- [x] Render temporary blood splats/stains on blocks when particles land
 
 ## Phase 3: Entity-Specific Blood Colors
-- [ ] Detect entity type in damage mixin
-- [ ] Customize blood color:
+- [x] Detect entity type in damage mixin
+- [x] Customize blood color:
   - Red: Zombies, Creepers, Animals, Players
   - Lime Green: Slimes
   - Purple/Black: Endermen
