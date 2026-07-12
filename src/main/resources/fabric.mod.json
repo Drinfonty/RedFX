@@ -1,0 +1,37 @@
+{
+	"schemaVersion": 1,
+	"id": "redfx",
+	"version": "${version}",
+	"name": "RedFX",
+	"description": "A Fabric mod: RedFX.",
+	"authors": [
+		"YourName"
+	],
+	"contact": {
+		"homepage": "https://fabricmc.net/"
+	},
+	"license": "CC0-1.0",
+	"icon": "assets/redfx/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"com.drinfonty.redfx.RedfxMod"
+		],
+		"client": [
+			"com.drinfonty.redfx.client.RedfxModClient"
+		]
+	},
+	"mixins": [
+		"redfx.mixins.json",
+		{
+			"config": "redfx.client.mixins.json",
+			"environment": "client"
+		}
+	],
+	"depends": {
+		"fabricloader": ">=0.19.3",
+		"minecraft": "~26.1.2",
+		"java": ">=25",
+		"fabric-api": "*"
+	}
+}
