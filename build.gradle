@@ -89,6 +89,14 @@ tasks.register('copyJarToMods', Copy) {
 	mustRunAfter tasks.named('jar')
 }
 
+// Automatically copy built remapped jar to release directory in the project root
+tasks.register('copyJarToRelease', Copy) {
+	from tasks.named('jar')
+	into "${project.rootDir}/release"
+
+	mustRunAfter tasks.named('jar')
+}
+
 tasks.named('build') {
-	finalizedBy('copyJarToMods')
+	finalizedBy('copyJarToMods', 'copyJarToRelease')
 }
