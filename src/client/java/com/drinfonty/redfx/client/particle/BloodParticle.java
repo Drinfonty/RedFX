@@ -167,7 +167,7 @@ public class BloodParticle extends TerrainParticle {
     @Override
     public SingleQuadParticle.Layer getLayer() {
         if (this.landed && RedfxConfig.get().useSplatTexture) {
-            return SingleQuadParticle.Layer.TRANSLUCENT;
+            return SingleQuadParticle.Layer.TERRAIN;
         }
         return super.getLayer();
     }
