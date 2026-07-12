@@ -22,8 +22,8 @@
   - [x] Yellow/Flame: Blazes, Magma Cubes
 
 ## Phase 4: Splat Textures & Particle Scale
-- [ ] Implement custom splat textures for landed blood particles
-- [ ] Configure blood particle amount based on weapon type or damage value
+- [x] Implement custom splat textures for landed blood particles
+- [x] Configure blood particle amount based on weapon type or damage value
 
 ## Phase 5: Screen Effects
 - [ ] Add screen blood splatters when a player receives heavy damage or hits a mob up close
