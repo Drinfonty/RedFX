@@ -11,7 +11,11 @@
 		"homepage": "https://fabricmc.net/"
 	},
 	"license": "CC0-1.0",
-	"icon": "assets/redfx/icon.png",
+	"icon": {
+		"16": "assets/redfx/icon_16.png",
+		"32": "assets/redfx/icon_32.png",
+		"128": "assets/redfx/icon_128.png"
+	},
 	"environment": "*",
 	"entrypoints": {
 		"main": [
