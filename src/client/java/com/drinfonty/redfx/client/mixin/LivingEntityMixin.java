@@ -17,6 +17,7 @@ import net.minecraft.world.entity.boss.enderdragon.EnderDragon;
 import net.minecraft.world.entity.monster.Blaze;
 import net.minecraft.world.entity.monster.MagmaCube;
 import net.minecraft.world.entity.monster.skeleton.AbstractSkeleton;
+import net.minecraft.world.entity.monster.warden.Warden;
 
 // Import item types & tags for weapon scaling
 import net.minecraft.world.item.ProjectileWeaponItem;
@@ -115,6 +116,11 @@ public class LivingEntityMixin {
             r = 0.9F;
             g = 0.9F;
             b = 0.9F;
+        } else if (entity instanceof Warden) {
+            // Sculk Blue
+            r = 0.05F;
+            g = 0.3F;
+            b = 0.7F;
         }
 
         ClientLevel clientLevel = (ClientLevel) entity.level();
