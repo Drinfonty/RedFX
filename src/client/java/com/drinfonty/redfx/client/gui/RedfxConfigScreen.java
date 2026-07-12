@@ -77,7 +77,7 @@ public class RedfxConfigScreen extends Screen {
         AbstractSliderButton lifetimeSlider = new AbstractSliderButton(
             x, startY + 100, buttonWidth, buttonHeight,
             Component.empty(),
-            (double) (config.particleLifetimeSeconds - 1) / 14.0
+            (double) (config.particleLifetimeSeconds - 1) / 29.0
         ) {
             {
                 this.updateMessage();
@@ -90,7 +90,7 @@ public class RedfxConfigScreen extends Screen {
 
             @Override
             protected void applyValue() {
-                config.particleLifetimeSeconds = 1 + (int) Math.round(this.value * 14.0);
+                config.particleLifetimeSeconds = 1 + (int) Math.round(this.value * 29.0);
             }
         };
         this.addRenderableWidget(lifetimeSlider);

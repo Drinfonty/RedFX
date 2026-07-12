@@ -90,7 +90,7 @@ public class LivingEntityMixin {
             }
         }
 
-        // Determine entity-specific blood colors
+        // Determine base entity-specific blood colors
         float r = 1.0F;
         float g = 0.05F;
         float b = 0.05F;
@@ -105,7 +105,7 @@ public class LivingEntityMixin {
             r = 0.2F;
             g = 0.9F;
             b = 0.2F;
-        } else if (entity instanceof EnderMan || entity instanceof EnderDragon) {
+        } else if (entity instanceof EnderMan || entity instanceof net.minecraft.world.entity.boss.enderdragon.EnderDragon) {
             // Purple
             r = 0.6F;
             g = 0.1F;
@@ -130,18 +130,24 @@ public class LivingEntityMixin {
             double vy = 0.15 + entity.getRandom().nextDouble() * 0.25;
             double vz = forceZ * spreadSpeed + (entity.getRandom().nextDouble() - 0.5) * 0.15;
             
+            // Introduce stronger color variation per particle (+/- 0.18 variance)
+            float variance = (entity.getRandom().nextFloat() - 0.5F) * 0.36F; // -0.18 to +0.18
+            float particleR = Math.max(0.0F, Math.min(1.0F, r + variance));
+            float particleG = Math.max(0.0F, Math.min(1.0F, g + (entity.getRandom().nextFloat() - 0.5F) * 0.18F));
+            float particleB = Math.max(0.0F, Math.min(1.0F, b + (entity.getRandom().nextFloat() - 0.5F) * 0.18F));
+            
             if (isPoof) {
                 net.minecraft.client.particle.Particle p = Minecraft.getInstance().particleEngine.createParticle(
                     ParticleTypes.POOF, px, py, pz, vx, vy, vz
                 );
                 if (p instanceof net.minecraft.client.particle.SingleQuadParticle sqp) {
-                    sqp.setColor(r, g, b);
+                    sqp.setColor(particleR, particleG, particleB);
                     sqp.setLifetime(RedfxConfig.get().particleLifetimeSeconds * 4);
                 }
             } else {
                 // Spawn our custom sliding/sticking BloodParticle and apply custom tint
                 BloodParticle blood = new BloodParticle(clientLevel, px, py, pz, vx, vy, vz, blockState);
-                blood.setColor(r, g, b);
+                blood.setColor(particleR, particleG, particleB);
                 Minecraft.getInstance().particleEngine.add(blood);
             }
         }

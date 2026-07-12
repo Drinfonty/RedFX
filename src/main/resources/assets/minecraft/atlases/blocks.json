@@ -2,7 +2,23 @@
   "sources": [
     {
       "type": "single",
-      "resource": "redfx:block/blood_splat"
+      "resource": "redfx:block/blood_splat_1"
+    },
+    {
+      "type": "single",
+      "resource": "redfx:block/blood_splat_2"
+    },
+    {
+      "type": "single",
+      "resource": "redfx:block/blood_splat_3"
+    },
+    {
+      "type": "single",
+      "resource": "redfx:block/blood_splat_4"
+    },
+    {
+      "type": "single",
+      "resource": "redfx:block/blood_splat_5"
     }
   ]
 }
