@@ -18,6 +18,11 @@ import net.minecraft.world.entity.monster.Blaze;
 import net.minecraft.world.entity.monster.MagmaCube;
 import net.minecraft.world.entity.monster.skeleton.AbstractSkeleton;
 
+// Import item types & tags for weapon scaling
+import net.minecraft.world.item.ProjectileWeaponItem;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.tags.ItemTags;
+
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -51,14 +56,17 @@ public class LivingEntityMixin {
     }
 
     private void spawnBloodParticles(LivingEntity entity, float yaw, boolean isDeath) {
-        float multiplier = RedfxConfig.get().getMultiplier();
+        float configMultiplier = RedfxConfig.get().getMultiplier();
+        float weaponMultiplier = getWeaponMultiplier(entity);
+        float totalMultiplier = configMultiplier * weaponMultiplier;
+
         int baseCount = isDeath ? (25 + entity.getRandom().nextInt(15)) : (12 + entity.getRandom().nextInt(8));
-        int count = Math.round(baseCount * multiplier);
+        int count = Math.round(baseCount * totalMultiplier);
         
         if (count <= 0) return;
         
-        com.drinfonty.redfx.RedfxMod.LOGGER.info("Spawning {} blood particles (multiplier={}) for entity {} (yaw={})", 
-            count, multiplier, entity.getType().getDescriptionId(), yaw);
+        com.drinfonty.redfx.RedfxMod.LOGGER.info("Spawning {} blood particles (totalMultiplier={}, weaponScale={}) for entity {} (yaw={})", 
+            count, totalMultiplier, weaponMultiplier, entity.getType().getDescriptionId(), yaw);
         
         // Calculate force direction away from the source of the blow
         float absoluteAngle = entity.getYRot() + yaw;
@@ -137,5 +145,35 @@ public class LivingEntityMixin {
                 Minecraft.getInstance().particleEngine.add(blood);
             }
         }
+    }
+
+    private float getWeaponMultiplier(LivingEntity entity) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null) return 1.0f;
+        
+        // Check if the local player is reasonably close to the entity ( melee/close range )
+        double distSq = mc.player.distanceToSqr(entity);
+        if (distSq > 36.0) { // Distance > 6 blocks
+            // Player is far away. Check if holding a ranged weapon
+            if (mc.player.getMainHandItem().getItem() instanceof ProjectileWeaponItem) {
+                return 0.6f; // Ranged puncture (less blood spray)
+            }
+            return 1.0f; // Environmental damage or indirect
+        }
+        
+        ItemStack stack = mc.player.getMainHandItem();
+        if (stack.isEmpty()) {
+            return 0.4f; // Fist/blunt hit (very little blood)
+        }
+        
+        if (stack.is(ItemTags.SWORDS)) {
+            return 1.3f; // Sword slashing
+        } else if (stack.is(ItemTags.AXES)) {
+            return 1.8f; // Heavy Axe chopping
+        } else if (stack.getItem() instanceof ProjectileWeaponItem) {
+            return 0.6f; // Bow/Crossbow close range
+        }
+        
+        return 1.0f; // Default item
     }
 }

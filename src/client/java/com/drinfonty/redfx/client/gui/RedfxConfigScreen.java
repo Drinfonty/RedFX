@@ -22,7 +22,7 @@ public class RedfxConfigScreen extends Screen {
         int buttonWidth = 220;
         int buttonHeight = 20;
         int x = (this.width - buttonWidth) / 2;
-        int startY = this.height / 2 - 60;
+        int startY = this.height / 2 - 70;
 
         // Button 1: Toggle Blood Enabled
         Button bloodToggle = Button.builder(
@@ -63,9 +63,19 @@ public class RedfxConfigScreen extends Screen {
         ).bounds(x, startY + 50, buttonWidth, buttonHeight).build();
         this.addRenderableWidget(styleToggle);
 
-        // Button 4: Slider for Particle Lifetime
+        // Button 4: Toggle Splat Decal Texture
+        Button splatToggle = Button.builder(
+            getSplatButtonMessage(config),
+            btn -> {
+                config.useSplatTexture = !config.useSplatTexture;
+                btn.setMessage(getSplatButtonMessage(config));
+            }
+        ).bounds(x, startY + 75, buttonWidth, buttonHeight).build();
+        this.addRenderableWidget(splatToggle);
+
+        // Button 5: Slider for Particle Lifetime
         AbstractSliderButton lifetimeSlider = new AbstractSliderButton(
-            x, startY + 75, buttonWidth, buttonHeight,
+            x, startY + 100, buttonWidth, buttonHeight,
             Component.empty(),
             (double) (config.particleLifetimeSeconds - 1) / 14.0
         ) {
@@ -85,7 +95,7 @@ public class RedfxConfigScreen extends Screen {
         };
         this.addRenderableWidget(lifetimeSlider);
 
-        // Button 5: Done / Close
+        // Button 6: Done / Close
         Button doneButton = Button.builder(
             Component.literal("Done"),
             btn -> {
@@ -94,7 +104,7 @@ public class RedfxConfigScreen extends Screen {
                     this.minecraft.setScreen(this.parent);
                 }
             }
-        ).bounds(x, startY + 105, buttonWidth, buttonHeight).build();
+        ).bounds(x, startY + 130, buttonWidth, buttonHeight).build();
         this.addRenderableWidget(doneButton);
     }
 
@@ -114,6 +124,10 @@ public class RedfxConfigScreen extends Screen {
             default -> "Red Wool";
         };
         return Component.literal("Particle Style: " + displayName);
+    }
+
+    private Component getSplatButtonMessage(RedfxConfig config) {
+        return Component.literal("Splat Texture: " + (config.useSplatTexture ? "ON" : "OFF"));
     }
 
     @Override
