@@ -74,22 +74,14 @@ publishing {
 	}
 }
 
-// Automatically deploy built remapped jar to Minecraft mods directory
-tasks.register('copyJarToMods', Copy) {
-	from tasks.named('jar')
-	into "/home/ptphong/.minecraft/mods"
+// Automatically copy built remapped jar to release directory in the project root
+tasks.register('copyJarToRelease', Copy) {
+	from tasks.named('remapJar')
+	into "${project.rootDir}/release"
 
-	doFirst {
-		fileTree("/home/ptphong/.minecraft/mods").matching {
-			include "redfx-*.jar"
-		}.each { file ->
-			delete file
-		}
-	}
-
-	mustRunAfter tasks.named('jar')
+	mustRunAfter tasks.named('remapJar')
 }
 
 tasks.named('build') {
-	finalizedBy('copyJarToMods')
+	finalizedBy('copyJarToRelease')
 }
