@@ -14,7 +14,7 @@ public class RedfxConfig {
     public boolean bloodEnabled = true;
     public String particleAmount = "High"; // Low, Medium, High, Ultra
     public String particleType = "RedWool"; // RedWool, TNT, RedPoof
-    public int particleLifetimeSeconds = 5; // Range: 1 to 15 seconds
+    public int particleLifetimeSeconds = 5; // Range: 1 to 30 seconds
     public boolean useSplatTexture = true; // Use custom splatter texture on landing
 
     private static RedfxConfig instance;

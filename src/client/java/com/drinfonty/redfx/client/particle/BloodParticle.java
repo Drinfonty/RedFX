@@ -15,6 +15,7 @@ public class BloodParticle extends TerrainParticle {
     private boolean landed = false;
     private int landedTicks = 0;
     private final int targetLandedTicks;
+    private final int splatIndex; // Picks one of 5 splat patterns (1 to 5)
 
     // Define a static camera facing mode that locks the particle flat on the ground (XZ plane)
     private static final SingleQuadParticle.FacingCameraMode FLAT_ON_GROUND = (quaternion, camera, partialTicks) -> {
@@ -24,8 +25,14 @@ public class BloodParticle extends TerrainParticle {
     public BloodParticle(ClientLevel level, double x, double y, double z, double vx, double vy, double vz, BlockState state) {
         super(level, x, y, z, vx, vy, vz, state);
         
-        // Retrieve lifetime setting from config (seconds to ticks)
-        this.targetLandedTicks = RedfxConfig.get().particleLifetimeSeconds * 20;
+        // Retrieve lifetime setting from config (seconds to ticks) with +/- 25% random variance
+        int baseLifetimeTicks = RedfxConfig.get().particleLifetimeSeconds * 20;
+        int variance = (int) (baseLifetimeTicks * 0.25F);
+        int finalTicks = baseLifetimeTicks;
+        if (variance > 0) {
+            finalTicks += this.random.nextInt(variance * 2) - variance;
+        }
+        this.targetLandedTicks = Math.max(20, finalTicks); // Ensure at least 1s lifetime
         
         // Setup initial physical properties
         // We set total lifetime to be high enough so it doesn't get removed while falling in air
@@ -37,6 +44,18 @@ public class BloodParticle extends TerrainParticle {
         // Randomize initial rotation/roll (radians)
         this.roll = (float) (this.random.nextFloat() * Math.PI * 2.0);
         this.oRoll = this.roll;
+
+        // Pick a random splat pattern from 1 to 5
+        this.splatIndex = 1 + this.random.nextInt(5);
+
+        // Randomize size on spawn (ranging from 0.8x to 1.8x of base size)
+        float sizeScale = 0.8F + this.random.nextFloat() * 1.0F;
+        this.quadSize *= sizeScale;
+
+        // If using splat textures, start at half size while flying to prevent shrinking on landing
+        if (RedfxConfig.get().useSplatTexture) {
+            this.quadSize *= 0.5F;
+        }
     }
 
     @Override
@@ -83,16 +102,7 @@ public class BloodParticle extends TerrainParticle {
         super.tick();
 
         if (this.onGround) {
-            this.landed = true;
-            this.gravity = 0;
-            this.xd = 0;
-            this.yd = 0;
-            this.zd = 0;
-            this.alpha = 1.0f; // Reset alpha to full
-            
-            // Lift particle slightly above the ground block to prevent z-fighting
-            this.y += 0.02;
-            this.setPos(this.x, this.y, this.z);
+            boolean swapSuccess = false;
 
             // Switch to custom flat splat texture on landing if enabled!
             if (RedfxConfig.get().useSplatTexture) {
@@ -100,14 +110,35 @@ public class BloodParticle extends TerrainParticle {
                     TextureAtlas blocksAtlas = (TextureAtlas) Minecraft.getInstance().getTextureManager().getTexture(TextureAtlas.LOCATION_BLOCKS);
                     if (blocksAtlas != null) {
                         TextureAtlasSprite splatSprite = blocksAtlas.getSprite(
-                            Identifier.fromNamespaceAndPath("redfx", "block/blood_splat")
+                            Identifier.fromNamespaceAndPath("redfx", "block/blood_splat_" + this.splatIndex)
                         );
                         if (splatSprite != null) {
                             this.setSprite(splatSprite);
+                            swapSuccess = true;
                         }
                     }
                 } catch (Exception e) {
-                    // Fallback silently if textures are not loaded/reloading
+                    // Retry on subsequent ticks if resource manager is reloading/busy
+                }
+            } else {
+                swapSuccess = true; // Immediate landing if custom textures are disabled
+            }
+
+            if (swapSuccess) {
+                this.landed = true;
+                this.gravity = 0;
+                this.xd = 0;
+                this.yd = 0;
+                this.zd = 0;
+                this.alpha = 1.0f; // Reset alpha to full
+                
+                // Lift particle slightly above the ground block to prevent z-fighting
+                this.y += 0.02;
+                this.setPos(this.x, this.y, this.z);
+
+                // Double the quad size on landing to compensate for transparent texture borders
+                if (RedfxConfig.get().useSplatTexture) {
+                    this.quadSize *= 2.0F;
                 }
             }
         } else {
@@ -130,6 +161,15 @@ public class BloodParticle extends TerrainParticle {
             return FLAT_ON_GROUND;
         }
         return super.getFacingCameraMode();
+    }
+
+    // Override the rendering layer to enable alpha blending/translucency when landed (otherwise opaque terrain is used)
+    @Override
+    public SingleQuadParticle.Layer getLayer() {
+        if (this.landed && RedfxConfig.get().useSplatTexture) {
+            return SingleQuadParticle.Layer.TRANSLUCENT_TERRAIN;
+        }
+        return super.getLayer();
     }
 
     // Override UV mappings when landed to output the full custom splat texture instead of block crack snippets
