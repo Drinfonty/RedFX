@@ -8,6 +8,16 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import com.drinfonty.redfx.config.RedfxConfig;
 import com.drinfonty.redfx.client.particle.BloodParticle;
+
+// Import mobs for entity-specific blood colors
+import net.minecraft.world.entity.monster.Slime;
+import net.minecraft.world.entity.monster.Creeper;
+import net.minecraft.world.entity.monster.EnderMan;
+import net.minecraft.world.entity.boss.enderdragon.EnderDragon;
+import net.minecraft.world.entity.monster.Blaze;
+import net.minecraft.world.entity.monster.MagmaCube;
+import net.minecraft.world.entity.monster.skeleton.AbstractSkeleton;
+
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -61,13 +71,42 @@ public class LivingEntityMixin {
         String particleType = RedfxConfig.get().particleType;
         boolean isPoof = particleType.equals("RedPoof");
         
+        // Base canvas mapping
         net.minecraft.world.level.block.state.BlockState blockState = null;
         if (!isPoof) {
             if (particleType.equals("TNT")) {
                 blockState = Blocks.TNT.defaultBlockState();
             } else {
-                blockState = Blocks.RED_WOOL.defaultBlockState();
+                // Use white wool as a clean canvas for color tinting
+                blockState = Blocks.WHITE_WOOL.defaultBlockState();
             }
+        }
+
+        // Determine entity-specific blood colors
+        float r = 1.0F;
+        float g = 0.05F;
+        float b = 0.05F;
+
+        if (entity instanceof Blaze || entity instanceof MagmaCube) {
+            // Yellow/Orange Flame
+            r = 0.9F;
+            g = 0.7F;
+            b = 0.1F;
+        } else if (entity instanceof Slime || entity instanceof Creeper) {
+            // Lime Green
+            r = 0.2F;
+            g = 0.9F;
+            b = 0.2F;
+        } else if (entity instanceof EnderMan || entity instanceof EnderDragon) {
+            // Purple
+            r = 0.6F;
+            g = 0.1F;
+            b = 0.8F;
+        } else if (entity instanceof AbstractSkeleton) {
+            // Bone White
+            r = 0.9F;
+            g = 0.9F;
+            b = 0.9F;
         }
 
         ClientLevel clientLevel = (ClientLevel) entity.level();
@@ -88,12 +127,13 @@ public class LivingEntityMixin {
                     ParticleTypes.POOF, px, py, pz, vx, vy, vz
                 );
                 if (p instanceof net.minecraft.client.particle.SingleQuadParticle sqp) {
-                    sqp.setColor(1.0f, 0.05f, 0.05f);
+                    sqp.setColor(r, g, b);
                     sqp.setLifetime(RedfxConfig.get().particleLifetimeSeconds * 4);
                 }
             } else {
-                // Spawn our custom sliding/sticking BloodParticle
+                // Spawn our custom sliding/sticking BloodParticle and apply custom tint
                 BloodParticle blood = new BloodParticle(clientLevel, px, py, pz, vx, vy, vz, blockState);
+                blood.setColor(r, g, b);
                 Minecraft.getInstance().particleEngine.add(blood);
             }
         }
