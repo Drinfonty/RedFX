@@ -15,13 +15,15 @@
 ## Phase 3: Entity-Specific Blood Colors
 - [x] Detect entity type in damage mixin
 - [x] Customize blood color:
-  - Red: Zombies, Creepers, Animals, Players
-  - Lime Green: Slimes
-  - Purple/Black: Endermen
-  - Bone White: Skeletons, Wither Skeletons
-  - Yellow/Flame: Blazes, Magma Cubes
+  - [x] Red: Zombies, Creepers, Animals, Players
+  - [x] Lime Green: Slimes
+  - [x] Purple/Black: Endermen
+  - [x] Bone White: Skeletons, Wither Skeletons
+  - [x] Yellow/Flame: Blazes, Magma Cubes
 
-## Phase 4: Custom Textures & Advanced Effects
-- [ ] Implement custom high-fidelity `BloodParticle` with proper texture sheets
+## Phase 4: Splat Textures & Particle Scale
+- [ ] Implement custom splat textures for landed blood particles
 - [ ] Configure blood particle amount based on weapon type or damage value
+
+## Phase 5: Screen Effects
 - [ ] Add screen blood splatters when a player receives heavy damage or hits a mob up close
