@@ -1,0 +1,66 @@
+package com.drinfonty.redfx.config;
+
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import net.fabricmc.loader.api.FabricLoader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+
+public class RedfxConfig {
+    private static final File CONFIG_FILE = new File(FabricLoader.getInstance().getConfigDir().toFile(), "redfx.json");
+    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+
+    public boolean bloodEnabled = true;
+    public String particleAmount = "Medium"; // Low, Medium, High, Ultra
+    public String particleType = "RedstoneBlock"; // RedstoneBlock, RedPoof
+
+    private static RedfxConfig instance;
+
+    public static RedfxConfig get() {
+        if (instance == null) {
+            instance = load();
+        }
+        return instance;
+    }
+
+    public static RedfxConfig load() {
+        if (CONFIG_FILE.exists()) {
+            try (FileReader reader = new FileReader(CONFIG_FILE)) {
+                RedfxConfig config = GSON.fromJson(reader, RedfxConfig.class);
+                if (config != null) {
+                    return config;
+                }
+            } catch (Exception e) {
+                System.err.println("[RedFX] Failed to load config: " + e.getMessage());
+            }
+        }
+        RedfxConfig config = new RedfxConfig();
+        config.save();
+        return config;
+    }
+
+    public void save() {
+        try {
+            File parent = CONFIG_FILE.getParentFile();
+            if (parent != null && !parent.exists()) {
+                parent.mkdirs();
+            }
+            try (FileWriter writer = new FileWriter(CONFIG_FILE)) {
+                GSON.toJson(this, writer);
+            }
+        } catch (Exception e) {
+            System.err.println("[RedFX] Failed to save config: " + e.getMessage());
+        }
+    }
+
+    public float getMultiplier() {
+        return switch (particleAmount) {
+            case "Low" -> 0.4f;
+            case "Medium" -> 1.0f;
+            case "High" -> 2.0f;
+            case "Ultra" -> 4.0f;
+            default -> 1.0f;
+        };
+    }
+}

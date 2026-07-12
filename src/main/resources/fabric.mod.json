@@ -19,6 +19,9 @@
 		],
 		"client": [
 			"com.drinfonty.redfx.client.RedfxModClient"
+		],
+		"modmenu": [
+			"com.drinfonty.redfx.client.integration.ModMenuIntegration"
 		]
 	},
 	"mixins": [
