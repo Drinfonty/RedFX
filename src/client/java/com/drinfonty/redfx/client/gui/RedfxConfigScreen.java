@@ -3,6 +3,7 @@ package com.drinfonty.redfx.client.gui;
 import com.drinfonty.redfx.config.RedfxConfig;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.AbstractSliderButton;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
@@ -21,7 +22,7 @@ public class RedfxConfigScreen extends Screen {
         int buttonWidth = 220;
         int buttonHeight = 20;
         int x = (this.width - buttonWidth) / 2;
-        int startY = this.height / 2 - 50;
+        int startY = this.height / 2 - 60;
 
         // Button 1: Toggle Blood Enabled
         Button bloodToggle = Button.builder(
@@ -48,17 +49,43 @@ public class RedfxConfigScreen extends Screen {
         ).bounds(x, startY + 25, buttonWidth, buttonHeight).build();
         this.addRenderableWidget(amountToggle);
 
-        // Button 3: Toggle Particle Style (Redstone Block vs Red Poof)
+        // Button 3: Toggle Particle Style
         Button styleToggle = Button.builder(
             getStyleButtonMessage(config),
             btn -> {
-                config.particleType = config.particleType.equals("RedstoneBlock") ? "RedPoof" : "RedstoneBlock";
+                config.particleType = switch (config.particleType) {
+                    case "RedWool" -> "TNT";
+                    case "TNT" -> "RedPoof";
+                    default -> "RedWool";
+                };
                 btn.setMessage(getStyleButtonMessage(config));
             }
         ).bounds(x, startY + 50, buttonWidth, buttonHeight).build();
         this.addRenderableWidget(styleToggle);
 
-        // Button 4: Done / Close
+        // Button 4: Slider for Particle Lifetime
+        AbstractSliderButton lifetimeSlider = new AbstractSliderButton(
+            x, startY + 75, buttonWidth, buttonHeight,
+            Component.empty(),
+            (double) (config.particleLifetimeSeconds - 1) / 14.0
+        ) {
+            {
+                this.updateMessage();
+            }
+
+            @Override
+            protected void updateMessage() {
+                this.setMessage(Component.literal("Landed Lifetime: " + config.particleLifetimeSeconds + "s"));
+            }
+
+            @Override
+            protected void applyValue() {
+                config.particleLifetimeSeconds = 1 + (int) Math.round(this.value * 14.0);
+            }
+        };
+        this.addRenderableWidget(lifetimeSlider);
+
+        // Button 5: Done / Close
         Button doneButton = Button.builder(
             Component.literal("Done"),
             btn -> {
@@ -67,7 +94,7 @@ public class RedfxConfigScreen extends Screen {
                     this.minecraft.setScreen(this.parent);
                 }
             }
-        ).bounds(x, startY + 85, buttonWidth, buttonHeight).build();
+        ).bounds(x, startY + 105, buttonWidth, buttonHeight).build();
         this.addRenderableWidget(doneButton);
     }
 
@@ -80,7 +107,12 @@ public class RedfxConfigScreen extends Screen {
     }
 
     private Component getStyleButtonMessage(RedfxConfig config) {
-        String displayName = config.particleType.equals("RedstoneBlock") ? "Redstone Block" : "Red Poof";
+        String displayName = switch (config.particleType) {
+            case "TNT" -> "TNT Block";
+            case "RedPoof" -> "Red Poof";
+            case "RedWool" -> "Red Wool";
+            default -> "Red Wool";
+        };
         return Component.literal("Particle Style: " + displayName);
     }
 
@@ -92,7 +124,7 @@ public class RedfxConfigScreen extends Screen {
         // Draw title
         extractor.centeredText(this.font, this.title, this.width / 2, 20, 0xFFFFFF);
         
-        // Draw widgets (calls super to render buttons)
+        // Draw widgets (calls super to render buttons and slider)
         super.extractRenderState(extractor, mouseX, mouseY, partialTick);
     }
 
