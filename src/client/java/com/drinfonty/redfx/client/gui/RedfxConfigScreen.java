@@ -118,10 +118,10 @@ public class RedfxConfigScreen extends Screen {
 
     private Component getStyleButtonMessage(RedfxConfig config) {
         String displayName = switch (config.particleType) {
-            case "TNT" -> "TNT Block";
-            case "RedPoof" -> "Red Poof";
-            case "RedWool" -> "Red Wool";
-            default -> "Red Wool";
+            case "TNT" -> "Shred";
+            case "RedPoof" -> "Spray";
+            case "RedWool" -> "Default";
+            default -> "Default";
         };
         return Component.literal("Particle Style: " + displayName);
     }
