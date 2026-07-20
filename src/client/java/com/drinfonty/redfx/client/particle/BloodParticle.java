@@ -9,6 +9,10 @@ import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.Identifier;
+import net.minecraft.client.particle.Particle;
+import net.minecraft.core.particles.BlockParticleOption;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import com.drinfonty.redfx.config.RedfxConfig;
 import org.joml.Quaternionf;
@@ -197,6 +201,27 @@ public class BloodParticle extends TerrainParticle {
                 // Double the quad size on landing to compensate for transparent texture borders
                 if (RedfxConfig.get().useSplatTexture) {
                     this.quadSize *= 2.0F;
+                }
+
+                // Spawn 1 falling dust particle upon surface impact, matching the blood droplet's color
+                try {
+                    BlockState dustState = Blocks.WHITE_WOOL.defaultBlockState();
+                    double dustVx = (this.random.nextDouble() - 0.5) * 0.04;
+                    double dustVy = 0.02 + this.random.nextDouble() * 0.03;
+                    double dustVz = (this.random.nextDouble() - 0.5) * 0.04;
+                    
+                    Particle dustParticle = Minecraft.getInstance().particleEngine.createParticle(
+                        new BlockParticleOption(ParticleTypes.FALLING_DUST, dustState),
+                        this.x, this.y, this.z, dustVx, dustVy, dustVz
+                    );
+                    if (dustParticle instanceof SingleQuadParticle sqp) {
+                        sqp.setColor(this.rCol, this.gCol, this.bCol);
+                    }
+                    if (dustParticle != null) {
+                        Minecraft.getInstance().particleEngine.add(dustParticle);
+                    }
+                } catch (Exception e) {
+                    // Ignore particle creation errors
                 }
             }
         }
