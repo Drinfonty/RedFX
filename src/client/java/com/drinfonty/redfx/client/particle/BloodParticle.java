@@ -14,6 +14,7 @@ import com.drinfonty.redfx.config.RedfxConfig;
 import org.joml.Quaternionf;
 
 public class BloodParticle extends TerrainParticle {
+    private static int globalLandedCounter = 0;
     private boolean landed = false;
     private Direction attachedDirection = null;
     private int landedTicks = 0;
@@ -179,8 +180,9 @@ public class BloodParticle extends TerrainParticle {
                 this.zd = 0;
                 this.alpha = 1.0f; // Reset alpha to full
                 
-                // Position quad center flush against surface with randomized depth jitter (0.008 to 0.016 blocks) to prevent Z-fighting lines on overlapping splats
-                double depthJitter = 0.008 + (this.random.nextDouble() * 0.008);
+                // Position quad center flush against surface using 64 guaranteed distinct depth layers (0.005 to 0.043 blocks) to eliminate all Z-fighting lines
+                int depthTier = (globalLandedCounter++) & 63;
+                double depthJitter = 0.005 + (depthTier * 0.0006);
                 net.minecraft.world.phys.AABB bb = this.getBoundingBox();
                 switch (hitDirection) {
                     case UP -> this.y = bb.minY + depthJitter;
