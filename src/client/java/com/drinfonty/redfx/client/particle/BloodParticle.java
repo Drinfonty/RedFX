@@ -6,6 +6,7 @@ import net.minecraft.client.particle.TerrainParticle;
 import net.minecraft.client.particle.SingleQuadParticle;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import net.minecraft.core.Direction;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.block.state.BlockState;
 import com.drinfonty.redfx.config.RedfxConfig;
@@ -13,13 +14,23 @@ import org.joml.Quaternionf;
 
 public class BloodParticle extends TerrainParticle {
     private boolean landed = false;
+    private Direction attachedDirection = null;
     private int landedTicks = 0;
     private final int targetLandedTicks;
     private final int splatIndex; // Picks one of 5 splat patterns (1 to 5)
 
-    // Define a static camera facing mode that locks the particle flat on the ground (XZ plane)
-    private static final SingleQuadParticle.FacingCameraMode FLAT_ON_GROUND = (quaternion, camera, partialTicks) -> {
-        quaternion.rotationX((float) (-Math.PI / 2.0)); // Rotate -90 degrees around X-axis (face upwards)
+    // Dynamic facing camera mode that locks the particle flat against the attached surface (floor, wall, or ceiling)
+    private final SingleQuadParticle.FacingCameraMode SURFACE_ALIGNED = (quaternion, camera, partialTicks) -> {
+        if (this.attachedDirection != null) {
+            switch (this.attachedDirection) {
+                case UP -> quaternion.rotationX((float) (-Math.PI / 2.0)).rotateZ(this.roll);
+                case DOWN -> quaternion.rotationX((float) (Math.PI / 2.0)).rotateZ(this.roll);
+                case NORTH -> quaternion.rotationY((float) Math.PI).rotateZ(this.roll);
+                case SOUTH -> quaternion.rotationY(0.0f).rotateZ(this.roll);
+                case EAST -> quaternion.rotationY((float) (Math.PI / 2.0)).rotateZ(this.roll);
+                case WEST -> quaternion.rotationY((float) (-Math.PI / 2.0)).rotateZ(this.roll);
+            }
+        }
     };
 
     public BloodParticle(ClientLevel level, double x, double y, double z, double vx, double vy, double vz, BlockState state) {
@@ -35,7 +46,6 @@ public class BloodParticle extends TerrainParticle {
         this.targetLandedTicks = Math.max(20, finalTicks); // Ensure at least 1s lifetime
         
         // Setup initial physical properties
-        // We set total lifetime to be high enough so it doesn't get removed while falling in air
         this.lifetime = 300 + this.targetLandedTicks; 
         this.gravity = 1.0F; // affected by gravity
         this.friction = 0.98F; // standard drag
@@ -70,38 +80,60 @@ public class BloodParticle extends TerrainParticle {
         }
 
         if (this.landed) {
-            // Check if the block directly below the particle is broken (became air)
-            net.minecraft.core.BlockPos belowPos = net.minecraft.core.BlockPos.containing(this.x, this.y - 0.1, this.z);
-            if (this.level.getBlockState(belowPos).isAir()) {
-                // Ground was broken, remove the splat particle immediately!
-                this.remove();
-                return;
-            } else {
-                this.landedTicks++;
-                this.xd = 0;
-                this.yd = 0;
-                this.zd = 0;
-                
-                // Fade out near the end of life
-                if (this.landedTicks >= this.targetLandedTicks) {
+            // Check if the attached block behind the splat is broken (became air)
+            if (this.attachedDirection != null) {
+                net.minecraft.core.BlockPos attachedBlockPos = switch (this.attachedDirection) {
+                    case UP -> net.minecraft.core.BlockPos.containing(this.x, this.y - 0.1, this.z);
+                    case DOWN -> net.minecraft.core.BlockPos.containing(this.x, this.y + 0.1, this.z);
+                    case WEST -> net.minecraft.core.BlockPos.containing(this.x + 0.1, this.y, this.z);
+                    case EAST -> net.minecraft.core.BlockPos.containing(this.x - 0.1, this.y, this.z);
+                    case NORTH -> net.minecraft.core.BlockPos.containing(this.x, this.y, this.z + 0.1);
+                    case SOUTH -> net.minecraft.core.BlockPos.containing(this.x, this.y, this.z - 0.1);
+                };
+                if (this.level.getBlockState(attachedBlockPos).isAir()) {
+                    // Surface block was broken, remove the splat particle immediately!
                     this.remove();
-                } else if (this.landedTicks > this.targetLandedTicks - 20) {
-                    // Fade out over last 1 second (20 ticks)
-                    float ratio = (float)(this.targetLandedTicks - this.landedTicks) / 20.0f;
-                    this.alpha = ratio;
+                    return;
                 }
-                return;
             }
+            
+            this.landedTicks++;
+            this.xd = 0;
+            this.yd = 0;
+            this.zd = 0;
+            
+            // Fade out near the end of life
+            if (this.landedTicks >= this.targetLandedTicks) {
+                this.remove();
+            } else if (this.landedTicks > this.targetLandedTicks - 20) {
+                // Fade out over last 1 second (20 ticks)
+                float ratio = (float)(this.targetLandedTicks - this.landedTicks) / 20.0f;
+                this.alpha = ratio;
+            }
+            return;
         }
 
-        // Store pre-tick velocities to detect wall collisions
+        // Store pre-tick velocities to detect wall/ceiling/floor collisions
         double oldXd = this.xd;
+        double oldYd = this.yd;
         double oldZd = this.zd;
 
         // Perform standard physics tick
         super.tick();
 
+        // Determine surface collision direction
+        Direction hitDirection = null;
         if (this.onGround) {
+            hitDirection = Direction.UP;
+        } else if (Math.abs(oldYd) > 0.01 && Math.abs(this.yd) < 0.001 && oldYd > 0) {
+            hitDirection = Direction.DOWN;
+        } else if (Math.abs(oldXd) > 0.01 && Math.abs(this.xd) < 0.001) {
+            hitDirection = oldXd > 0 ? Direction.WEST : Direction.EAST;
+        } else if (Math.abs(oldZd) > 0.01 && Math.abs(this.zd) < 0.001) {
+            hitDirection = oldZd > 0 ? Direction.NORTH : Direction.SOUTH;
+        }
+
+        if (hitDirection != null) {
             boolean swapSuccess = false;
 
             // Switch to custom flat splat texture on landing if enabled!
@@ -126,14 +158,22 @@ public class BloodParticle extends TerrainParticle {
 
             if (swapSuccess) {
                 this.landed = true;
+                this.attachedDirection = hitDirection;
                 this.gravity = 0;
                 this.xd = 0;
                 this.yd = 0;
                 this.zd = 0;
                 this.alpha = 1.0f; // Reset alpha to full
                 
-                // Lift particle slightly above the ground block to prevent z-fighting
-                this.y += 0.02;
+                // Offset particle slightly away from the attached surface face to prevent z-fighting
+                switch (hitDirection) {
+                    case UP -> this.y += 0.02;
+                    case DOWN -> this.y -= 0.02;
+                    case WEST -> this.x -= 0.02;
+                    case EAST -> this.x += 0.02;
+                    case NORTH -> this.z -= 0.02;
+                    case SOUTH -> this.z += 0.02;
+                }
                 this.setPos(this.x, this.y, this.z);
 
                 // Double the quad size on landing to compensate for transparent texture borders
@@ -141,24 +181,13 @@ public class BloodParticle extends TerrainParticle {
                     this.quadSize *= 2.0F;
                 }
             }
-        } else {
-            // Check for wall collision (horizontal velocity got stopped)
-            boolean hitWallX = Math.abs(oldXd) > 0.01 && Math.abs(this.xd) < 0.001;
-            boolean hitWallZ = Math.abs(oldZd) > 0.01 && Math.abs(this.zd) < 0.001;
-            
-            if (hitWallX || hitWallZ) {
-                // Slide down the wall slowly
-                this.yd = -0.04;
-                this.xd *= 0.1; // slow down horizontal movements
-                this.zd *= 0.1;
-            }
         }
     }
 
     @Override
     public SingleQuadParticle.FacingCameraMode getFacingCameraMode() {
         if (this.landed) {
-            return FLAT_ON_GROUND;
+            return SURFACE_ALIGNED;
         }
         return super.getFacingCameraMode();
     }
@@ -193,11 +222,18 @@ public class BloodParticle extends TerrainParticle {
         return (this.landed && RedfxConfig.get().useSplatTexture) ? this.sprite.getV1() : super.getV1();
     }
 
-    // Query lighting 0.2 blocks above the landed splat to prevent it sampling inside/under the ground block (which is dark/black)
+    // Query lighting 0.2 blocks in front of the landed splat to prevent it sampling inside solid ground/wall blocks
     @Override
     protected int getLightCoords(float partialTicks) {
-        if (this.landed) {
-            net.minecraft.core.BlockPos pos = net.minecraft.core.BlockPos.containing(this.x, this.y + 0.2, this.z);
+        if (this.landed && this.attachedDirection != null) {
+            net.minecraft.core.BlockPos pos = switch (this.attachedDirection) {
+                case UP -> net.minecraft.core.BlockPos.containing(this.x, this.y + 0.2, this.z);
+                case DOWN -> net.minecraft.core.BlockPos.containing(this.x, this.y - 0.2, this.z);
+                case WEST -> net.minecraft.core.BlockPos.containing(this.x - 0.2, this.y, this.z);
+                case EAST -> net.minecraft.core.BlockPos.containing(this.x + 0.2, this.y, this.z);
+                case NORTH -> net.minecraft.core.BlockPos.containing(this.x, this.y, this.z - 0.2);
+                case SOUTH -> net.minecraft.core.BlockPos.containing(this.x, this.y, this.z + 0.2);
+            };
             return this.level.isLoaded(pos) ? net.minecraft.client.renderer.LevelRenderer.getLightCoords(this.level, pos) : 0;
         }
         return super.getLightCoords(partialTicks);
