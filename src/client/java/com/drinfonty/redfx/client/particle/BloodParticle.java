@@ -179,15 +179,16 @@ public class BloodParticle extends TerrainParticle {
                 this.zd = 0;
                 this.alpha = 1.0f; // Reset alpha to full
                 
-                // Position quad center flush against the exact surface collision face (0.005 blocks offset to prevent z-fighting)
+                // Position quad center flush against surface with randomized depth jitter (0.008 to 0.016 blocks) to prevent Z-fighting lines on overlapping splats
+                double depthJitter = 0.008 + (this.random.nextDouble() * 0.008);
                 net.minecraft.world.phys.AABB bb = this.getBoundingBox();
                 switch (hitDirection) {
-                    case UP -> this.y = bb.minY + 0.005;
-                    case DOWN -> this.y = bb.maxY - 0.005;
-                    case WEST -> this.x = bb.maxX - 0.005;
-                    case EAST -> this.x = bb.minX + 0.005;
-                    case NORTH -> this.z = bb.maxZ - 0.005;
-                    case SOUTH -> this.z = bb.minZ + 0.005;
+                    case UP -> this.y = bb.minY + depthJitter;
+                    case DOWN -> this.y = bb.maxY - depthJitter;
+                    case WEST -> this.x = bb.maxX - depthJitter;
+                    case EAST -> this.x = bb.minX + depthJitter;
+                    case NORTH -> this.z = bb.maxZ - depthJitter;
+                    case SOUTH -> this.z = bb.minZ + depthJitter;
                 }
                 this.setPos(this.x, this.y, this.z);
 
