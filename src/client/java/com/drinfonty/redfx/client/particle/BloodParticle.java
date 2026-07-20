@@ -179,14 +179,15 @@ public class BloodParticle extends TerrainParticle {
                 this.zd = 0;
                 this.alpha = 1.0f; // Reset alpha to full
                 
-                // Offset particle slightly away from the attached surface face to prevent z-fighting
+                // Position quad center flush against the exact surface collision face (0.005 blocks offset to prevent z-fighting)
+                net.minecraft.world.phys.AABB bb = this.getBoundingBox();
                 switch (hitDirection) {
-                    case UP -> this.y += 0.015;
-                    case DOWN -> this.y -= 0.015;
-                    case WEST -> this.x -= 0.015;
-                    case EAST -> this.x += 0.015;
-                    case NORTH -> this.z -= 0.015;
-                    case SOUTH -> this.z += 0.015;
+                    case UP -> this.y = bb.minY + 0.005;
+                    case DOWN -> this.y = bb.maxY - 0.005;
+                    case WEST -> this.x = bb.maxX - 0.005;
+                    case EAST -> this.x = bb.minX + 0.005;
+                    case NORTH -> this.z = bb.maxZ - 0.005;
+                    case SOUTH -> this.z = bb.minZ + 0.005;
                 }
                 this.setPos(this.x, this.y, this.z);
 
