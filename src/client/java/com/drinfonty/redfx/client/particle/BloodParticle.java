@@ -6,6 +6,7 @@ import net.minecraft.client.particle.TerrainParticle;
 import net.minecraft.client.particle.SingleQuadParticle;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.block.state.BlockState;
@@ -68,6 +69,17 @@ public class BloodParticle extends TerrainParticle {
         }
     }
 
+    private BlockPos getAttachedBlockPos(Direction dir) {
+        return switch (dir) {
+            case UP -> BlockPos.containing(this.x, this.y - 0.1, this.z);
+            case DOWN -> BlockPos.containing(this.x, this.y + 0.1, this.z);
+            case WEST -> BlockPos.containing(this.x + 0.15, this.y, this.z);
+            case EAST -> BlockPos.containing(this.x - 0.15, this.y, this.z);
+            case NORTH -> BlockPos.containing(this.x, this.y, this.z + 0.15);
+            case SOUTH -> BlockPos.containing(this.x, this.y, this.z - 0.15);
+        };
+    }
+
     @Override
     public void tick() {
         this.xo = this.x;
@@ -82,14 +94,7 @@ public class BloodParticle extends TerrainParticle {
         if (this.landed) {
             // Check if the attached block behind the splat is broken (became air)
             if (this.attachedDirection != null) {
-                net.minecraft.core.BlockPos attachedBlockPos = switch (this.attachedDirection) {
-                    case UP -> net.minecraft.core.BlockPos.containing(this.x, this.y - 0.1, this.z);
-                    case DOWN -> net.minecraft.core.BlockPos.containing(this.x, this.y + 0.1, this.z);
-                    case WEST -> net.minecraft.core.BlockPos.containing(this.x + 0.1, this.y, this.z);
-                    case EAST -> net.minecraft.core.BlockPos.containing(this.x - 0.1, this.y, this.z);
-                    case NORTH -> net.minecraft.core.BlockPos.containing(this.x, this.y, this.z + 0.1);
-                    case SOUTH -> net.minecraft.core.BlockPos.containing(this.x, this.y, this.z - 0.1);
-                };
+                BlockPos attachedBlockPos = getAttachedBlockPos(this.attachedDirection);
                 if (this.level.getBlockState(attachedBlockPos).isAir()) {
                     // Surface block was broken, remove the splat particle immediately!
                     this.remove();
@@ -113,24 +118,39 @@ public class BloodParticle extends TerrainParticle {
             return;
         }
 
-        // Store pre-tick velocities to detect wall/ceiling/floor collisions
+        // Store pre-tick velocities and positions to detect ACTUAL block collision vs friction
         double oldXd = this.xd;
         double oldYd = this.yd;
         double oldZd = this.zd;
+        double startX = this.x;
+        double startY = this.y;
+        double startZ = this.z;
 
         // Perform standard physics tick
         super.tick();
+
+        double movedX = Math.abs(this.x - startX);
+        double movedY = Math.abs(this.y - startY);
+        double movedZ = Math.abs(this.z - startZ);
 
         // Determine surface collision direction
         Direction hitDirection = null;
         if (this.onGround) {
             hitDirection = Direction.UP;
-        } else if (Math.abs(oldYd) > 0.01 && Math.abs(this.yd) < 0.001 && oldYd > 0) {
+        } else if (Math.abs(oldYd) > 0.01 && movedY < 0.001 && oldYd > 0) {
             hitDirection = Direction.DOWN;
-        } else if (Math.abs(oldXd) > 0.01 && Math.abs(this.xd) < 0.001) {
+        } else if (Math.abs(oldXd) > 0.01 && movedX < 0.001) {
             hitDirection = oldXd > 0 ? Direction.WEST : Direction.EAST;
-        } else if (Math.abs(oldZd) > 0.01 && Math.abs(this.zd) < 0.001) {
+        } else if (Math.abs(oldZd) > 0.01 && movedZ < 0.001) {
             hitDirection = oldZd > 0 ? Direction.NORTH : Direction.SOUTH;
+        }
+
+        // Verify that the candidate surface block actually exists and is NOT air
+        if (hitDirection != null) {
+            BlockPos targetBlock = getAttachedBlockPos(hitDirection);
+            if (this.level.getBlockState(targetBlock).isAir()) {
+                hitDirection = null; // Do not land in midair!
+            }
         }
 
         if (hitDirection != null) {
@@ -167,12 +187,12 @@ public class BloodParticle extends TerrainParticle {
                 
                 // Offset particle slightly away from the attached surface face to prevent z-fighting
                 switch (hitDirection) {
-                    case UP -> this.y += 0.02;
-                    case DOWN -> this.y -= 0.02;
-                    case WEST -> this.x -= 0.02;
-                    case EAST -> this.x += 0.02;
-                    case NORTH -> this.z -= 0.02;
-                    case SOUTH -> this.z += 0.02;
+                    case UP -> this.y += 0.015;
+                    case DOWN -> this.y -= 0.015;
+                    case WEST -> this.x -= 0.015;
+                    case EAST -> this.x += 0.015;
+                    case NORTH -> this.z -= 0.015;
+                    case SOUTH -> this.z += 0.015;
                 }
                 this.setPos(this.x, this.y, this.z);
 
@@ -226,13 +246,13 @@ public class BloodParticle extends TerrainParticle {
     @Override
     protected int getLightCoords(float partialTicks) {
         if (this.landed && this.attachedDirection != null) {
-            net.minecraft.core.BlockPos pos = switch (this.attachedDirection) {
-                case UP -> net.minecraft.core.BlockPos.containing(this.x, this.y + 0.2, this.z);
-                case DOWN -> net.minecraft.core.BlockPos.containing(this.x, this.y - 0.2, this.z);
-                case WEST -> net.minecraft.core.BlockPos.containing(this.x - 0.2, this.y, this.z);
-                case EAST -> net.minecraft.core.BlockPos.containing(this.x + 0.2, this.y, this.z);
-                case NORTH -> net.minecraft.core.BlockPos.containing(this.x, this.y, this.z - 0.2);
-                case SOUTH -> net.minecraft.core.BlockPos.containing(this.x, this.y, this.z + 0.2);
+            BlockPos pos = switch (this.attachedDirection) {
+                case UP -> BlockPos.containing(this.x, this.y + 0.2, this.z);
+                case DOWN -> BlockPos.containing(this.x, this.y - 0.2, this.z);
+                case WEST -> BlockPos.containing(this.x - 0.2, this.y, this.z);
+                case EAST -> BlockPos.containing(this.x + 0.2, this.y, this.z);
+                case NORTH -> BlockPos.containing(this.x, this.y, this.z - 0.2);
+                case SOUTH -> BlockPos.containing(this.x, this.y, this.z + 0.2);
             };
             return this.level.isLoaded(pos) ? net.minecraft.client.renderer.LevelRenderer.getLightCoords(this.level, pos) : 0;
         }
