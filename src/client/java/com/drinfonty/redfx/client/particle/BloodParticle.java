@@ -9,6 +9,10 @@ import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.Identifier;
+import net.minecraft.client.particle.Particle;
+import net.minecraft.core.particles.BlockParticleOption;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import com.drinfonty.redfx.config.RedfxConfig;
 import org.joml.Quaternionf;
@@ -156,7 +160,7 @@ public class BloodParticle extends TerrainParticle {
                     TextureAtlas blocksAtlas = (TextureAtlas) Minecraft.getInstance().getTextureManager().getTexture(TextureAtlas.LOCATION_BLOCKS);
                     if (blocksAtlas != null) {
                         TextureAtlasSprite splatSprite = blocksAtlas.getSprite(
-                            Identifier.parse("redfx:block/blood_splat_" + this.splatIndex)
+                            Identifier.fromNamespaceAndPath("redfx", "block/blood_splat_" + this.splatIndex)
                         );
                         if (splatSprite != null) {
                             this.setSprite(splatSprite);
@@ -198,6 +202,29 @@ public class BloodParticle extends TerrainParticle {
                 if (RedfxConfig.get().useSplatTexture) {
                     this.quadSize *= 2.0F;
                 }
+
+                // Spawn 1 falling dust particle upon surface impact, matching the blood droplet's color (if enabled)
+                if (RedfxConfig.get().enableSplatDust) {
+                    try {
+                        BlockState dustState = Blocks.WHITE_WOOL.defaultBlockState();
+                        double dustVx = (this.random.nextDouble() - 0.5) * 0.04;
+                        double dustVy = 0.02 + this.random.nextDouble() * 0.03;
+                        double dustVz = (this.random.nextDouble() - 0.5) * 0.04;
+                        
+                        Particle dustParticle = Minecraft.getInstance().particleEngine.createParticle(
+                            new BlockParticleOption(ParticleTypes.FALLING_DUST, dustState),
+                            this.x, this.y, this.z, dustVx, dustVy, dustVz
+                        );
+                        if (dustParticle instanceof SingleQuadParticle sqp) {
+                            sqp.setColor(this.rCol, this.gCol, this.bCol);
+                        }
+                        if (dustParticle != null) {
+                            Minecraft.getInstance().particleEngine.add(dustParticle);
+                        }
+                    } catch (Exception e) {
+                        // Ignore particle creation errors
+                    }
+                }
             }
         }
     }
@@ -214,7 +241,7 @@ public class BloodParticle extends TerrainParticle {
     @Override
     public SingleQuadParticle.Layer getLayer() {
         if (this.landed && RedfxConfig.get().useSplatTexture) {
-            return SingleQuadParticle.Layer.TERRAIN;
+            return SingleQuadParticle.Layer.TRANSLUCENT_TERRAIN;
         }
         return super.getLayer();
     }
@@ -242,7 +269,7 @@ public class BloodParticle extends TerrainParticle {
 
     // Query lighting 0.2 blocks in front of the landed splat to prevent it sampling inside solid ground/wall blocks
     @Override
-    public int getLightColor(float partialTicks) {
+    protected int getLightCoords(float partialTicks) {
         if (this.landed && this.attachedDirection != null) {
             BlockPos pos = switch (this.attachedDirection) {
                 case UP -> BlockPos.containing(this.x, this.y + 0.2, this.z);
@@ -252,8 +279,8 @@ public class BloodParticle extends TerrainParticle {
                 case NORTH -> BlockPos.containing(this.x, this.y, this.z - 0.2);
                 case SOUTH -> BlockPos.containing(this.x, this.y, this.z + 0.2);
             };
-            return this.level.hasChunkAt(pos) ? net.minecraft.client.renderer.LevelRenderer.getLightColor(this.level, pos) : 0;
+            return this.level.isLoaded(pos) ? net.minecraft.client.renderer.LevelRenderer.getLightCoords(this.level, pos) : 0;
         }
-        return super.getLightColor(partialTicks);
+        return super.getLightCoords(partialTicks);
     }
 }
