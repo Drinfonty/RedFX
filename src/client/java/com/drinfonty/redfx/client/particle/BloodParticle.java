@@ -44,10 +44,10 @@ public class BloodParticle extends TerrainParticle {
         if (variance > 0) {
             finalTicks += this.random.nextInt(variance * 2) - variance;
         }
-        this.targetLandedTicks = Math.max(20, finalTicks); // Ensure at least 1s lifetime
+        this.targetLandedTicks = Math.max(20, finalTicks); // Ensure at least 1s landed lifetime
         
-        // Setup initial physical properties
-        this.lifetime = 300 + this.targetLandedTicks; 
+        // Setup initial physical properties for flying phase (short lifetime if it doesn't land)
+        this.lifetime = 40; // max 2s flying in air before despawning
         this.gravity = 1.0F; // affected by gravity
         this.friction = 0.98F; // standard drag
         this.hasPhysics = true;
@@ -71,12 +71,12 @@ public class BloodParticle extends TerrainParticle {
 
     private BlockPos getAttachedBlockPos(Direction dir) {
         return switch (dir) {
-            case UP -> BlockPos.containing(this.x, this.y - 0.1, this.z);
-            case DOWN -> BlockPos.containing(this.x, this.y + 0.1, this.z);
-            case WEST -> BlockPos.containing(this.x + 0.15, this.y, this.z);
-            case EAST -> BlockPos.containing(this.x - 0.15, this.y, this.z);
-            case NORTH -> BlockPos.containing(this.x, this.y, this.z + 0.15);
-            case SOUTH -> BlockPos.containing(this.x, this.y, this.z - 0.15);
+            case UP -> BlockPos.containing(this.x, this.y - 0.2, this.z);
+            case DOWN -> BlockPos.containing(this.x, this.y + 0.2, this.z);
+            case WEST -> BlockPos.containing(this.x + 0.2, this.y, this.z);
+            case EAST -> BlockPos.containing(this.x - 0.2, this.y, this.z);
+            case NORTH -> BlockPos.containing(this.x, this.y, this.z + 0.2);
+            case SOUTH -> BlockPos.containing(this.x, this.y, this.z - 0.2);
         };
     }
 
@@ -118,30 +118,23 @@ public class BloodParticle extends TerrainParticle {
             return;
         }
 
-        // Store pre-tick velocities and positions to detect ACTUAL block collision vs friction
+        // Store pre-tick velocities
         double oldXd = this.xd;
         double oldYd = this.yd;
         double oldZd = this.zd;
-        double startX = this.x;
-        double startY = this.y;
-        double startZ = this.z;
 
         // Perform standard physics tick
         super.tick();
 
-        double movedX = Math.abs(this.x - startX);
-        double movedY = Math.abs(this.y - startY);
-        double movedZ = Math.abs(this.z - startZ);
-
-        // Determine surface collision direction
+        // Determine surface collision direction using Minecraft's internal collision signals
         Direction hitDirection = null;
         if (this.onGround) {
             hitDirection = Direction.UP;
-        } else if (Math.abs(oldYd) > 0.01 && movedY < 0.001 && oldYd > 0) {
+        } else if (oldYd > 0.01 && this.yd == 0.0) {
             hitDirection = Direction.DOWN;
-        } else if (Math.abs(oldXd) > 0.01 && movedX < 0.001) {
+        } else if (Math.abs(oldXd) > 0.01 && this.xd == 0.0) {
             hitDirection = oldXd > 0 ? Direction.WEST : Direction.EAST;
-        } else if (Math.abs(oldZd) > 0.01 && movedZ < 0.001) {
+        } else if (Math.abs(oldZd) > 0.01 && this.zd == 0.0) {
             hitDirection = oldZd > 0 ? Direction.NORTH : Direction.SOUTH;
         }
 
@@ -179,6 +172,7 @@ public class BloodParticle extends TerrainParticle {
             if (swapSuccess) {
                 this.landed = true;
                 this.attachedDirection = hitDirection;
+                this.lifetime = this.age + 300 + this.targetLandedTicks; // Extend lifetime for landed splat state
                 this.gravity = 0;
                 this.xd = 0;
                 this.yd = 0;
