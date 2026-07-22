@@ -203,25 +203,27 @@ public class BloodParticle extends TerrainParticle {
                     this.quadSize *= 2.0F;
                 }
 
-                // Spawn 1 falling dust particle upon surface impact, matching the blood droplet's color
-                try {
-                    BlockState dustState = Blocks.WHITE_WOOL.defaultBlockState();
-                    double dustVx = (this.random.nextDouble() - 0.5) * 0.04;
-                    double dustVy = 0.02 + this.random.nextDouble() * 0.03;
-                    double dustVz = (this.random.nextDouble() - 0.5) * 0.04;
-                    
-                    Particle dustParticle = Minecraft.getInstance().particleEngine.createParticle(
-                        new BlockParticleOption(ParticleTypes.FALLING_DUST, dustState),
-                        this.x, this.y, this.z, dustVx, dustVy, dustVz
-                    );
-                    if (dustParticle instanceof SingleQuadParticle sqp) {
-                        sqp.setColor(this.rCol, this.gCol, this.bCol);
+                // Spawn 1 falling dust particle upon surface impact, matching the blood droplet's color (if enabled)
+                if (RedfxConfig.get().enableSplatDust) {
+                    try {
+                        BlockState dustState = Blocks.WHITE_WOOL.defaultBlockState();
+                        double dustVx = (this.random.nextDouble() - 0.5) * 0.04;
+                        double dustVy = 0.02 + this.random.nextDouble() * 0.03;
+                        double dustVz = (this.random.nextDouble() - 0.5) * 0.04;
+                        
+                        Particle dustParticle = Minecraft.getInstance().particleEngine.createParticle(
+                            new BlockParticleOption(ParticleTypes.FALLING_DUST, dustState),
+                            this.x, this.y, this.z, dustVx, dustVy, dustVz
+                        );
+                        if (dustParticle instanceof SingleQuadParticle sqp) {
+                            sqp.setColor(this.rCol, this.gCol, this.bCol);
+                        }
+                        if (dustParticle != null) {
+                            Minecraft.getInstance().particleEngine.add(dustParticle);
+                        }
+                    } catch (Exception e) {
+                        // Ignore particle creation errors
                     }
-                    if (dustParticle != null) {
-                        Minecraft.getInstance().particleEngine.add(dustParticle);
-                    }
-                } catch (Exception e) {
-                    // Ignore particle creation errors
                 }
             }
         }

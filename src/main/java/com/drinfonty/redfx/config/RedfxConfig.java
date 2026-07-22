@@ -16,6 +16,7 @@ public class RedfxConfig {
     public String particleType = "RedWool"; // RedWool, TNT, RedPoof
     public int particleLifetimeSeconds = 5; // Range: 1 to 30 seconds
     public boolean useSplatTexture = true; // Use custom splatter texture on landing
+    public boolean enableSplatDust = true; // Spawn falling dust particle on landing
 
     private static RedfxConfig instance;
 
