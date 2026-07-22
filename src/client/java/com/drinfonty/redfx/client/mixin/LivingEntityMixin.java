@@ -18,8 +18,6 @@ import net.minecraft.world.entity.monster.Blaze;
 import net.minecraft.world.entity.monster.MagmaCube;
 import net.minecraft.world.entity.monster.skeleton.AbstractSkeleton;
 import net.minecraft.world.entity.monster.warden.Warden;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.entity.animal.Animal;
 
 // Import item types & tags for weapon scaling
 import net.minecraft.world.item.ProjectileWeaponItem;
@@ -62,11 +60,6 @@ public class LivingEntityMixin {
             com.drinfonty.redfx.RedfxMod.LOGGER.info("Death status (3) detected for entity {}!", self.getType().getDescriptionId());
             if (self.level().isClientSide()) {
                 spawnBloodParticles(self, 0.0f, true); // Larger burst on death
-
-                // Spawn bone fragments if entity has bones
-                if (hasBones(self)) {
-                    spawnBoneFragments(self);
-                }
             }
         }
     }
@@ -252,54 +245,6 @@ public class LivingEntityMixin {
             BloodParticle blood = new BloodParticle(clientLevel, px, py, pz, vx, vy, vz, blockState);
             blood.setColor(particleR, particleG, particleB);
             Minecraft.getInstance().particleEngine.add(blood);
-        }
-    }
-
-    private boolean hasBones(LivingEntity entity) {
-        if (entity instanceof Animal || entity instanceof Player || entity instanceof AbstractSkeleton) {
-            return true;
-        }
-        String simpleName = entity.getClass().getSimpleName();
-        return simpleName.equals("Zombie")
-            || simpleName.equals("ZombieVillager")
-            || simpleName.equals("Husk")
-            || simpleName.equals("Drowned")
-            || simpleName.equals("ZombifiedPiglin")
-            || simpleName.equals("Piglin")
-            || simpleName.equals("PiglinBrute")
-            || simpleName.equals("SkeletonHorse")
-            || simpleName.equals("Villager")
-            || simpleName.equals("WanderingTrader")
-            || simpleName.equals("Witch")
-            || simpleName.equals("Evoker")
-            || simpleName.equals("Vindicator")
-            || simpleName.equals("Pillager")
-            || simpleName.equals("Illusioner");
-    }
-
-    private void spawnBoneFragments(LivingEntity entity) {
-        ClientLevel clientLevel = (ClientLevel) entity.level();
-        net.minecraft.world.level.block.state.BlockState boneBlockState = Blocks.BONE_BLOCK.defaultBlockState();
-
-        int count = 3 + entity.getRandom().nextInt(4); // Spawn 3 to 6 bone fragment shards
-        for (int i = 0; i < count; i++) {
-            double px = entity.getX() + (entity.getRandom().nextDouble() - 0.5) * entity.getBbWidth() * 0.7;
-            double py = entity.getY() + entity.getBbHeight() * 0.5 + (entity.getRandom().nextDouble() - 0.5) * entity.getBbHeight() * 0.4;
-            double pz = entity.getZ() + (entity.getRandom().nextDouble() - 0.5) * entity.getBbWidth() * 0.7;
-
-            // Sprays in random direction with standard explosion velocity
-            double vx = (entity.getRandom().nextDouble() - 0.5) * 0.25;
-            double vy = 0.2 + entity.getRandom().nextDouble() * 0.3;
-            double vz = (entity.getRandom().nextDouble() - 0.5) * 0.25;
-
-            BloodParticle boneParticle = new BloodParticle(clientLevel, px, py, pz, vx, vy, vz, boneBlockState);
-            boneParticle.isBoneFragment = true; // Mark as bone fragment to skip blood splat texture swap
-            boneParticle.setColor(1.0F, 1.0F, 1.0F); // No color tinting (keeps white bone texture)
-            
-            // Randomize size slightly so some are small chips and some are bigger shards
-            boneParticle.setScale(0.8F + entity.getRandom().nextFloat() * 0.6F); 
-
-            Minecraft.getInstance().particleEngine.add(boneParticle);
         }
     }
 }

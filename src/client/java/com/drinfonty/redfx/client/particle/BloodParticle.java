@@ -19,14 +19,9 @@ import org.joml.Quaternionf;
 
 public class BloodParticle extends TerrainParticle {
     private static int globalLandedCounter = 0;
-    public boolean isBoneFragment = false;
     private boolean landed = false;
     private Direction attachedDirection = null;
     private int landedTicks = 0;
-
-    public void setScale(float scale) {
-        this.quadSize *= scale;
-    }
     private final int targetLandedTicks;
     private final int splatIndex; // Picks one of 5 splat patterns (1 to 5)
 
@@ -159,8 +154,8 @@ public class BloodParticle extends TerrainParticle {
         if (hitDirection != null) {
             boolean swapSuccess = false;
 
-            // Switch to custom flat splat texture on landing if enabled and not a bone fragment!
-            if (RedfxConfig.get().useSplatTexture && !this.isBoneFragment) {
+            // Switch to custom flat splat texture on landing if enabled!
+            if (RedfxConfig.get().useSplatTexture) {
                 try {
                     TextureAtlas blocksAtlas = (TextureAtlas) Minecraft.getInstance().getTextureManager().getTexture(TextureAtlas.LOCATION_BLOCKS);
                     if (blocksAtlas != null) {
@@ -204,12 +199,12 @@ public class BloodParticle extends TerrainParticle {
                 this.setPos(this.x, this.y, this.z);
 
                 // Double the quad size on landing to compensate for transparent texture borders
-                if (RedfxConfig.get().useSplatTexture && !this.isBoneFragment) {
+                if (RedfxConfig.get().useSplatTexture) {
                     this.quadSize *= 2.0F;
                 }
 
-                // Spawn 1 falling dust particle upon surface impact, matching the blood droplet's color (if enabled and not a bone fragment)
-                if (RedfxConfig.get().enableSplatDust && !this.isBoneFragment) {
+                // Spawn 1 falling dust particle upon surface impact, matching the blood droplet's color (if enabled)
+                if (RedfxConfig.get().enableSplatDust) {
                     try {
                         BlockState dustState = Blocks.WHITE_WOOL.defaultBlockState();
                         double dustVx = (this.random.nextDouble() - 0.5) * 0.04;
@@ -251,25 +246,25 @@ public class BloodParticle extends TerrainParticle {
         return super.getLayer();
     }
 
-    // Override UV mappings when landed to output the full custom splat texture instead of block crack snippets (only for blood splats)
+    // Override UV mappings when landed to output the full custom splat texture instead of block crack snippets
     @Override
     protected float getU0() {
-        return (this.landed && RedfxConfig.get().useSplatTexture && !this.isBoneFragment) ? this.sprite.getU0() : super.getU0();
+        return (this.landed && RedfxConfig.get().useSplatTexture) ? this.sprite.getU0() : super.getU0();
     }
 
     @Override
     protected float getU1() {
-        return (this.landed && RedfxConfig.get().useSplatTexture && !this.isBoneFragment) ? this.sprite.getU1() : super.getU1();
+        return (this.landed && RedfxConfig.get().useSplatTexture) ? this.sprite.getU1() : super.getU1();
     }
 
     @Override
     protected float getV0() {
-        return (this.landed && RedfxConfig.get().useSplatTexture && !this.isBoneFragment) ? this.sprite.getV0() : super.getV0();
+        return (this.landed && RedfxConfig.get().useSplatTexture) ? this.sprite.getV0() : super.getV0();
     }
 
     @Override
     protected float getV1() {
-        return (this.landed && RedfxConfig.get().useSplatTexture && !this.isBoneFragment) ? this.sprite.getV1() : super.getV1();
+        return (this.landed && RedfxConfig.get().useSplatTexture) ? this.sprite.getV1() : super.getV1();
     }
 
     // Query lighting 0.2 blocks in front of the landed splat to prevent it sampling inside solid ground/wall blocks
