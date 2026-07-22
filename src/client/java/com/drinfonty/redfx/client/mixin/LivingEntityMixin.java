@@ -41,6 +41,14 @@ public class LivingEntityMixin {
                 float yaw = self.getHurtDir();
                 spawnBloodParticles(self, yaw, false);
             }
+
+            // Drip effect: low on health (<= 35% health)
+            if (self.getHealth() > 0.0F && self.getHealth() / self.getMaxHealth() <= 0.35F && self.deathTime == 0) {
+                // Randomize drip frequency: ~5% chance per tick (avg 1s interval)
+                if (self.getRandom().nextFloat() < 0.05F) {
+                    spawnBloodDrip(self);
+                }
+            }
         }
     }
 
@@ -92,36 +100,10 @@ public class LivingEntityMixin {
         }
 
         // Determine base entity-specific blood colors
-        float r = 1.0F;
-        float g = 0.05F;
-        float b = 0.05F;
-
-        if (entity instanceof Blaze || entity instanceof MagmaCube) {
-            // Yellow/Orange Flame
-            r = 0.9F;
-            g = 0.7F;
-            b = 0.1F;
-        } else if (entity instanceof Slime || entity instanceof Creeper) {
-            // Lime Green
-            r = 0.2F;
-            g = 0.9F;
-            b = 0.2F;
-        } else if (entity instanceof EnderMan || entity instanceof net.minecraft.world.entity.boss.enderdragon.EnderDragon) {
-            // Purple
-            r = 0.6F;
-            g = 0.1F;
-            b = 0.8F;
-        } else if (entity instanceof AbstractSkeleton) {
-            // Bone White
-            r = 0.9F;
-            g = 0.9F;
-            b = 0.9F;
-        } else if (entity instanceof Warden) {
-            // Sculk Blue
-            r = 0.05F;
-            g = 0.3F;
-            b = 0.7F;
-        }
+        float[] baseColor = getBloodColor(entity);
+        float r = baseColor[0];
+        float g = baseColor[1];
+        float b = baseColor[2];
 
         ClientLevel clientLevel = (ClientLevel) entity.level();
 
@@ -187,5 +169,82 @@ public class LivingEntityMixin {
         }
         
         return 1.0f; // Default item
+    }
+
+    private float[] getBloodColor(LivingEntity entity) {
+        float r = 1.0F;
+        float g = 0.05F;
+        float b = 0.05F;
+
+        if (entity instanceof Blaze || entity instanceof MagmaCube) {
+            r = 0.9F;
+            g = 0.7F;
+            b = 0.1F;
+        } else if (entity instanceof Slime || entity instanceof Creeper) {
+            r = 0.2F;
+            g = 0.9F;
+            b = 0.2F;
+        } else if (entity instanceof EnderMan || entity instanceof EnderDragon) {
+            r = 0.6F;
+            g = 0.1F;
+            b = 0.8F;
+        } else if (entity instanceof AbstractSkeleton) {
+            r = 0.9F;
+            g = 0.9F;
+            b = 0.9F;
+        } else if (entity instanceof Warden) {
+            r = 0.05F;
+            g = 0.3F;
+            b = 0.7F;
+        }
+        return new float[]{r, g, b};
+    }
+
+    private void spawnBloodDrip(LivingEntity entity) {
+        ClientLevel clientLevel = (ClientLevel) entity.level();
+        String particleType = RedfxConfig.get().particleType;
+        boolean isPoof = particleType.equals("RedPoof");
+        
+        net.minecraft.world.level.block.state.BlockState blockState = null;
+        if (!isPoof) {
+            if (particleType.equals("TNT")) {
+                blockState = Blocks.TNT.defaultBlockState();
+            } else {
+                blockState = Blocks.WHITE_WOOL.defaultBlockState();
+            }
+        }
+
+        float[] baseColor = getBloodColor(entity);
+        float r = baseColor[0];
+        float g = baseColor[1];
+        float b = baseColor[2];
+
+        double px = entity.getX() + (entity.getRandom().nextDouble() - 0.5) * entity.getBbWidth() * 0.5;
+        double py = entity.getY() + entity.getBbHeight() * 0.4 + (entity.getRandom().nextDouble() - 0.5) * entity.getBbHeight() * 0.2;
+        double pz = entity.getZ() + (entity.getRandom().nextDouble() - 0.5) * entity.getBbWidth() * 0.5;
+
+        // Dripping velocity (slowly falling straight down)
+        double vx = (entity.getRandom().nextDouble() - 0.5) * 0.01;
+        double vy = -0.04 - entity.getRandom().nextDouble() * 0.04;
+        double vz = (entity.getRandom().nextDouble() - 0.5) * 0.01;
+
+        float variance = (entity.getRandom().nextFloat() - 0.5F) * 0.36F;
+        float particleR = Math.max(0.0F, Math.min(1.0F, r + variance));
+        float particleG = Math.max(0.0F, Math.min(1.0F, g + (entity.getRandom().nextFloat() - 0.5F) * 0.18F));
+        float particleB = Math.max(0.0F, Math.min(1.0F, b + (entity.getRandom().nextFloat() - 0.5F) * 0.18F));
+
+        if (isPoof) {
+            net.minecraft.client.particle.Particle p = Minecraft.getInstance().particleEngine.createParticle(
+                ParticleTypes.POOF, px, py, pz, vx, vy, vz
+            );
+            if (p instanceof net.minecraft.client.particle.SingleQuadParticle sqp) {
+                sqp.setColor(particleR, particleG, particleB);
+                sqp.setLifetime(RedfxConfig.get().particleLifetimeSeconds * 4);
+            }
+        } else {
+            BloodParticle blood = new BloodParticle(clientLevel, px, py, pz, vx, vy, vz, blockState);
+            blood.setColor(particleR, particleG, particleB);
+            Minecraft.getInstance().particleEngine.add(blood);
+        }
     }
 }
