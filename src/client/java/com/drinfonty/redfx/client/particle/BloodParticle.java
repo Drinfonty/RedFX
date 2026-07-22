@@ -241,7 +241,7 @@ public class BloodParticle extends TerrainParticle {
     @Override
     public SingleQuadParticle.Layer getLayer() {
         if (this.landed && RedfxConfig.get().useSplatTexture) {
-            return SingleQuadParticle.Layer.TRANSLUCENT_TERRAIN;
+            return SingleQuadParticle.Layer.TERRAIN;
         }
         return super.getLayer();
     }
@@ -269,7 +269,7 @@ public class BloodParticle extends TerrainParticle {
 
     // Query lighting 0.2 blocks in front of the landed splat to prevent it sampling inside solid ground/wall blocks
     @Override
-    protected int getLightCoords(float partialTicks) {
+    public int getLightColor(float partialTicks) {
         if (this.landed && this.attachedDirection != null) {
             BlockPos pos = switch (this.attachedDirection) {
                 case UP -> BlockPos.containing(this.x, this.y + 0.2, this.z);
@@ -279,8 +279,8 @@ public class BloodParticle extends TerrainParticle {
                 case NORTH -> BlockPos.containing(this.x, this.y, this.z - 0.2);
                 case SOUTH -> BlockPos.containing(this.x, this.y, this.z + 0.2);
             };
-            return this.level.isLoaded(pos) ? net.minecraft.client.renderer.LevelRenderer.getLightCoords(this.level, pos) : 0;
+            return this.level.hasChunkAt(pos) ? net.minecraft.client.renderer.LevelRenderer.getLightColor(this.level, pos) : 0;
         }
-        return super.getLightCoords(partialTicks);
+        return super.getLightColor(partialTicks);
     }
 }
