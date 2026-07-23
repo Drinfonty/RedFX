@@ -1,6 +1,6 @@
 package com.drinfonty.redfx.client.mixin;
 
-import net.minecraft.client.particle.CampfireSmokeParticle;
+import net.minecraft.client.particle.Particle;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -9,8 +9,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import net.minecraft.core.BlockPos;
 import net.minecraft.tags.FluidTags;
 
-@Mixin(CampfireSmokeParticle.class)
-public abstract class CampfireSmokeParticleMixin implements BloodSmokeAccessor {
+@Mixin(Particle.class)
+public abstract class ParticleMixin implements BloodSmokeAccessor {
     @Shadow protected double x;
     @Shadow protected double y;
     @Shadow protected double z;
