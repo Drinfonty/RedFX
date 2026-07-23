@@ -155,8 +155,8 @@ public class RedfxConfigScreen extends Screen {
     }
 
     private Component getWaterParticleButtonMessage(RedfxConfig config) {
-        String displayName = config.waterParticleType.equals("CampfireSmoke") ? "Campfire Smoke" : "Smoke";
-        return Component.literal("Water Particle: " + displayName);
+        String displayName = config.waterParticleType.equals("CampfireSmoke") ? "Big" : "Small";
+        return Component.literal("Underwater Blood Style: " + displayName);
     }
 
     @Override
