@@ -144,7 +144,7 @@ public class BloodParticle extends TerrainParticle {
             if (this.random.nextFloat() < 0.30F) {
                 try {
                     Particle smoke = Minecraft.getInstance().particleEngine.createParticle(
-                        ParticleTypes.SMOKE,
+                        ParticleTypes.CAMPFIRE_COSY_SMOKE,
                         this.x, this.y, this.z,
                         (this.random.nextDouble() - 0.5) * 0.02,
                         0.01 + this.random.nextDouble() * 0.02,
