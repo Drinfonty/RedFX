@@ -22,7 +22,7 @@ public class RedfxConfigScreen extends Screen {
         int buttonWidth = 220;
         int buttonHeight = 20;
         int x = (this.width - buttonWidth) / 2;
-        int startY = this.height / 2 - 80;
+        int startY = this.height / 2 - 90;
 
         // Button 1: Toggle Blood Enabled
         Button bloodToggle = Button.builder(
@@ -83,9 +83,19 @@ public class RedfxConfigScreen extends Screen {
         ).bounds(x, startY + 100, buttonWidth, buttonHeight).build();
         this.addRenderableWidget(splatDustToggle);
 
-        // Button 6: Slider for Particle Lifetime
+        // Button 6: Toggle Underwater Particle Type
+        Button waterParticleToggle = Button.builder(
+            getWaterParticleButtonMessage(config),
+            btn -> {
+                config.waterParticleType = config.waterParticleType.equals("CampfireSmoke") ? "Smoke" : "CampfireSmoke";
+                btn.setMessage(getWaterParticleButtonMessage(config));
+            }
+        ).bounds(x, startY + 125, buttonWidth, buttonHeight).build();
+        this.addRenderableWidget(waterParticleToggle);
+
+        // Button 7: Slider for Particle Lifetime
         AbstractSliderButton lifetimeSlider = new AbstractSliderButton(
-            x, startY + 125, buttonWidth, buttonHeight,
+            x, startY + 150, buttonWidth, buttonHeight,
             Component.empty(),
             (double) (config.particleLifetimeSeconds - 1) / 29.0
         ) {
@@ -105,7 +115,7 @@ public class RedfxConfigScreen extends Screen {
         };
         this.addRenderableWidget(lifetimeSlider);
 
-        // Button 7: Done / Close
+        // Button 8: Done / Close
         Button doneButton = Button.builder(
             Component.literal("Done"),
             btn -> {
@@ -114,7 +124,7 @@ public class RedfxConfigScreen extends Screen {
                     this.minecraft.setScreen(this.parent);
                 }
             }
-        ).bounds(x, startY + 155, buttonWidth, buttonHeight).build();
+        ).bounds(x, startY + 180, buttonWidth, buttonHeight).build();
         this.addRenderableWidget(doneButton);
     }
 
@@ -142,6 +152,11 @@ public class RedfxConfigScreen extends Screen {
 
     private Component getSplatDustButtonMessage(RedfxConfig config) {
         return Component.literal("Splat Dust: " + (config.enableSplatDust ? "ON" : "OFF"));
+    }
+
+    private Component getWaterParticleButtonMessage(RedfxConfig config) {
+        String displayName = config.waterParticleType.equals("CampfireSmoke") ? "Campfire Smoke" : "Smoke";
+        return Component.literal("Water Particle: " + displayName);
     }
 
     @Override

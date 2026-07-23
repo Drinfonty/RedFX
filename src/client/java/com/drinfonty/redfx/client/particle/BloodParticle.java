@@ -143,8 +143,9 @@ public class BloodParticle extends TerrainParticle {
             // Spawn color-tinted smoke particle to simulate dispersion (30% chance per tick)
             if (this.random.nextFloat() < 0.30F) {
                 try {
+                    boolean isCampfire = RedfxConfig.get().waterParticleType.equals("CampfireSmoke");
                     Particle smoke = Minecraft.getInstance().particleEngine.createParticle(
-                        ParticleTypes.CAMPFIRE_COSY_SMOKE,
+                        isCampfire ? ParticleTypes.CAMPFIRE_COSY_SMOKE : ParticleTypes.SMOKE,
                         this.x, this.y, this.z,
                         (this.random.nextDouble() - 0.5) * 0.02,
                         0.01 + this.random.nextDouble() * 0.02,
