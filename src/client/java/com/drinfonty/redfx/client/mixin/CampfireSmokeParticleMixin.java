@@ -1,5 +1,6 @@
 package com.drinfonty.redfx.client.mixin;
 
+import net.minecraft.client.particle.CampfireSmokeParticle;
 import net.minecraft.client.particle.Particle;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -9,13 +10,13 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import net.minecraft.core.BlockPos;
 import net.minecraft.tags.FluidTags;
 import com.drinfonty.redfx.client.particle.BloodSmokeAccessor;
-@Mixin(Particle.class)
-public abstract class ParticleMixin implements BloodSmokeAccessor {
+
+@Mixin(CampfireSmokeParticle.class)
+public abstract class CampfireSmokeParticleMixin implements BloodSmokeAccessor {
     @Shadow protected double x;
     @Shadow protected double y;
     @Shadow protected double z;
     @Shadow protected net.minecraft.client.multiplayer.ClientLevel level;
-    @Shadow public abstract void remove();
 
     private boolean redfx$isBloodSmoke = false;
 
@@ -34,7 +35,7 @@ public abstract class ParticleMixin implements BloodSmokeAccessor {
         if (this.redfx$isBloodSmoke) {
             BlockPos pos = BlockPos.containing(this.x, this.y, this.z);
             if (!this.level.getFluidState(pos).is(FluidTags.WATER)) {
-                this.remove();
+                ((Particle) (Object) this).remove();
             }
         }
     }
