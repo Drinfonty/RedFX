@@ -5,7 +5,8 @@
 	"client": [
 		"ExampleClientMixin",
 		"LivingEntityMixin",
-		"CampfireSmokeParticleMixin"
+		"CampfireSmokeParticleMixin",
+		"ParticleAccessor"
 	],
 	"injectors": {
 		"defaultRequire": 1
