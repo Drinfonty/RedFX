@@ -17,6 +17,7 @@ public class RedfxConfig {
     public int particleLifetimeSeconds = 5; // Range: 1 to 30 seconds
     public boolean useSplatTexture = true; // Use custom splatter texture on landing
     public boolean enableSplatDust = true; // Spawn falling dust particle on landing
+    public String waterParticleType = "CampfireSmoke"; // CampfireSmoke or Smoke
 
     private static RedfxConfig instance;
 
@@ -43,6 +44,9 @@ public class RedfxConfig {
                         config.particleType.equals("RedstoneBlock") || 
                         config.particleType.equals("RedstoneWire")) {
                         config.particleType = "RedWool";
+                    }
+                    if (config.waterParticleType == null) {
+                        config.waterParticleType = "CampfireSmoke";
                     }
                     return config;
                 }
