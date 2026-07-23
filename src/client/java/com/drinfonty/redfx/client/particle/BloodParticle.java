@@ -153,6 +153,9 @@ public class BloodParticle extends TerrainParticle {
                     if (smoke instanceof SingleQuadParticle sqp) {
                         sqp.setColor(this.rCol, this.gCol, this.bCol);
                     }
+                    if (smoke instanceof com.drinfonty.redfx.client.mixin.BloodSmokeAccessor bsa) {
+                        bsa.redfx$setBloodSmoke(true);
+                    }
                     if (smoke != null) {
                         Minecraft.getInstance().particleEngine.add(smoke);
                     }
