@@ -14,6 +14,7 @@ import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.tags.FluidTags;
 import com.drinfonty.redfx.config.RedfxConfig;
 import org.joml.Quaternionf;
 
@@ -123,6 +124,44 @@ public class BloodParticle extends TerrainParticle {
             return;
         }
 
+        // Check if the particle is currently underwater
+        BlockPos currentPos = BlockPos.containing(this.x, this.y, this.z);
+        boolean inWater = this.level.getFluidState(currentPos).is(FluidTags.WATER);
+
+        if (inWater) {
+            this.gravity = 0.02F; // Hover / drift slowly
+            this.friction = 0.90F; // More drag/viscosity underwater
+            
+            // Limit remaining lifetime to at most 15 ticks and fade out alpha
+            this.lifetime = Math.min(this.lifetime, this.age + 15);
+            if (this.lifetime > this.age) {
+                this.alpha = (float)(this.lifetime - this.age) / 15.0f;
+            } else {
+                this.alpha = 0.0f;
+            }
+            
+            // Spawn color-tinted smoke particle to simulate dispersion (30% chance per tick)
+            if (this.random.nextFloat() < 0.30F) {
+                try {
+                    Particle smoke = Minecraft.getInstance().particleEngine.createParticle(
+                        ParticleTypes.SMOKE,
+                        this.x, this.y, this.z,
+                        (this.random.nextDouble() - 0.5) * 0.02,
+                        0.01 + this.random.nextDouble() * 0.02,
+                        (this.random.nextDouble() - 0.5) * 0.02
+                    );
+                    if (smoke instanceof SingleQuadParticle sqp) {
+                        sqp.setColor(this.rCol, this.gCol, this.bCol);
+                    }
+                    if (smoke != null) {
+                        Minecraft.getInstance().particleEngine.add(smoke);
+                    }
+                } catch (Exception e) {
+                    // Ignore particle creation errors
+                }
+            }
+        }
+
         // Store pre-tick velocities
         double oldXd = this.xd;
         double oldYd = this.yd;
@@ -131,16 +170,18 @@ public class BloodParticle extends TerrainParticle {
         // Perform standard physics tick
         super.tick();
 
-        // Determine surface collision direction using Minecraft's internal collision signals
+        // Determine surface collision direction using Minecraft's internal collision signals (only if not underwater)
         Direction hitDirection = null;
-        if (this.onGround) {
-            hitDirection = Direction.UP;
-        } else if (oldYd > 0.01 && this.yd == 0.0) {
-            hitDirection = Direction.DOWN;
-        } else if (Math.abs(oldXd) > 0.01 && this.xd == 0.0) {
-            hitDirection = oldXd > 0 ? Direction.WEST : Direction.EAST;
-        } else if (Math.abs(oldZd) > 0.01 && this.zd == 0.0) {
-            hitDirection = oldZd > 0 ? Direction.NORTH : Direction.SOUTH;
+        if (!inWater) {
+            if (this.onGround) {
+                hitDirection = Direction.UP;
+            } else if (oldYd > 0.01 && this.yd == 0.0) {
+                hitDirection = Direction.DOWN;
+            } else if (Math.abs(oldXd) > 0.01 && this.xd == 0.0) {
+                hitDirection = oldXd > 0 ? Direction.WEST : Direction.EAST;
+            } else if (Math.abs(oldZd) > 0.01 && this.zd == 0.0) {
+                hitDirection = oldZd > 0 ? Direction.NORTH : Direction.SOUTH;
+            }
         }
 
         // Verify that the candidate surface block actually exists and is NOT air
