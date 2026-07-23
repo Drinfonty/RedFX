@@ -32,7 +32,7 @@
 - [x] **Splats on wall**: Wall splats with flat decals and correct surface alignment.
 - [x] **Splat dust**: Color-matched `falling_dust` particles spawning upon surface impact.
 - [x] **Drip effect**: When a mob or player is low on health, have blood dripping from them (not spewing) even when they are not being damaged.
-- [ ] **Underwater blood effect**: Instead of splatting down like on land, blood underwater should disperse, maybe using smoke particles.
+- [x] **Underwater blood effect**: Instead of splatting down like on land, blood underwater should disperse, maybe using smoke particles.
 
 ---
 

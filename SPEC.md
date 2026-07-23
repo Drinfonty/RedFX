@@ -41,7 +41,17 @@ Blood particles automatically inherit unique colors based on the entity type:
 *   Spawns 1 `minecraft:falling_dust` particle upon surface collision to simulate a droplet splatter burst.
 *   **Color-Matched**: The falling dust particle dynamically copies the exact RGB color tint of the parent blood droplet.
 
-### 2.5 In-Game Configuration (ModMenu)
+### 2.5 Low Health Blood Drip Effect
+*   **Low Health Dripping**: Entities (players, mobs, animals) with health $\leq 35\%$ drip blood droplets straight down when not being actively damaged.
+*   **Tick Rate**: Uses a randomized tick check (5% chance per tick, avg. 1-second intervals) to simulate organic dripping.
+*   **Color-Matched**: Drip particles match the entity-specific blood color.
+
+### 2.6 Underwater Blood Dispersion Effect
+*   **Buoyancy & Friction**: Blood particles submerged in water get low buoyancy gravity (`0.02F`) and high viscous drag resistance (`0.90F`), drifting and hovering slowly.
+*   **Smoke Dispersion**: Submerged blood droplets bypass block landing checks (never splatting underwater) and instead spawn color-tinted smoke clouds (30% chance per tick) that match the parent blood color.
+*   **Water-Exit Despawning**: Uses a base-class mixin on `Particle.move()` to instantly despawn blood smoke particles when they rise out of the water, preventing floating in midair.
+
+### 2.7 In-Game Configuration (ModMenu)
 *   Provides a clean in-game screen to modify settings on the fly.
 *   **Configurable Settings**:
     *   **Blood Effects**: Toggle all blood rendering ON/OFF.
@@ -49,6 +59,7 @@ Blood particles automatically inherit unique colors based on the entity type:
     *   **Particle Style**: Default (Wool textures), Spray (Poof textures), Shred (TNT textures).
     *   **Splat Texture**: Toggle flat landing decals ON/OFF.
     *   **Splat Dust**: Toggle falling dust impact particles ON/OFF.
+    *   **Underwater Blood Style**: Toggle underwater dispersion particle size: **Small** (Smoke, default) or **Big** (Campfire Smoke).
     *   **Landed Lifetime**: Slider to adjust landed splat lifetime (1s to 30s).
 *   **Storage**: Saves to `config/redfx.json`.
 
