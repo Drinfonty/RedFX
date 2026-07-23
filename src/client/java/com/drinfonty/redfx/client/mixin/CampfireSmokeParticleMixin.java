@@ -3,7 +3,6 @@ package com.drinfonty.redfx.client.mixin;
 import net.minecraft.client.particle.CampfireSmokeParticle;
 import net.minecraft.client.particle.Particle;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -13,11 +12,6 @@ import com.drinfonty.redfx.client.particle.BloodSmokeAccessor;
 
 @Mixin(CampfireSmokeParticle.class)
 public abstract class CampfireSmokeParticleMixin implements BloodSmokeAccessor {
-    @Shadow protected double x;
-    @Shadow protected double y;
-    @Shadow protected double z;
-    @Shadow protected net.minecraft.client.multiplayer.ClientLevel level;
-
     private boolean redfx$isBloodSmoke = false;
 
     @Override
@@ -33,8 +27,9 @@ public abstract class CampfireSmokeParticleMixin implements BloodSmokeAccessor {
     @Inject(method = "tick", at = @At("HEAD"))
     private void onTick(CallbackInfo ci) {
         if (this.redfx$isBloodSmoke) {
-            BlockPos pos = BlockPos.containing(this.x, this.y, this.z);
-            if (!this.level.getFluidState(pos).is(FluidTags.WATER)) {
+            ParticleAccessor acc = (ParticleAccessor) (Object) this;
+            BlockPos pos = BlockPos.containing(acc.redfx$getX(), acc.redfx$getY(), acc.redfx$getZ());
+            if (!acc.redfx$getLevel().getFluidState(pos).is(FluidTags.WATER)) {
                 ((Particle) (Object) this).remove();
             }
         }
