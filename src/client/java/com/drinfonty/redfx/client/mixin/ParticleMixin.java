@@ -8,7 +8,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import net.minecraft.core.BlockPos;
 import net.minecraft.tags.FluidTags;
-
+import com.drinfonty.redfx.client.particle.BloodSmokeAccessor;
 @Mixin(Particle.class)
 public abstract class ParticleMixin implements BloodSmokeAccessor {
     @Shadow protected double x;

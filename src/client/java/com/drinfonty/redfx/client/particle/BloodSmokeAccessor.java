@@ -1,4 +1,4 @@
-package com.drinfonty.redfx.client.mixin;
+package com.drinfonty.redfx.client.particle;
 
 public interface BloodSmokeAccessor {
     void redfx$setBloodSmoke(boolean value);
