@@ -325,7 +325,7 @@ public class BloodParticle extends TerrainParticle {
                 case NORTH -> BlockPos.containing(this.x, this.y, this.z - 0.2);
                 case SOUTH -> BlockPos.containing(this.x, this.y, this.z + 0.2);
             };
-            return this.level.isLoaded(pos) ? net.minecraft.client.renderer.LevelRenderer.getLightCoords(this.level, pos) : 0;
+            return this.level.isLoaded(pos) ? net.minecraft.util.LightCoordsUtil.getLightCoords(this.level, pos) : 0;
         }
         return super.getLightCoords(partialTicks);
     }

@@ -120,9 +120,7 @@ public class RedfxConfigScreen extends Screen {
             Component.literal("Done"),
             btn -> {
                 config.save();
-                if (this.minecraft != null) {
-                    this.minecraft.setScreen(this.parent);
-                }
+                this.onClose();
             }
         ).bounds(x, startY + 180, buttonWidth, buttonHeight).build();
         this.addRenderableWidget(doneButton);
@@ -175,7 +173,7 @@ public class RedfxConfigScreen extends Screen {
     public void onClose() {
         RedfxConfig.get().save();
         if (this.minecraft != null) {
-            this.minecraft.setScreen(this.parent);
+            this.minecraft.setScreenAndShow(this.parent);
         }
     }
 }
