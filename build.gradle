@@ -63,6 +63,10 @@ jar {
 	}
 }
 
+remapJar {
+	archiveFileName = "redfx-${project.mod_version}-mc1.21.x.jar"
+}
+
 publishing {
 	publications {
 		create("mavenJava", MavenPublication) {
