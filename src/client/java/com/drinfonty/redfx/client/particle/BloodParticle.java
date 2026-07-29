@@ -13,6 +13,7 @@ import net.minecraft.client.particle.Particle;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.tags.FluidTags;
 import com.drinfonty.redfx.config.RedfxConfig;
@@ -251,7 +252,7 @@ public class BloodParticle extends TerrainParticle {
                 // Spawn 1 falling dust particle upon surface impact, matching the blood droplet's color (if enabled)
                 if (RedfxConfig.get().enableSplatDust) {
                     try {
-                        BlockState dustState = Blocks.WHITE_WOOL.defaultBlockState();
+                        BlockState dustState = BuiltInRegistries.BLOCK.getValue(Identifier.parse("white_wool")).defaultBlockState();
                         double dustVx = (this.random.nextDouble() - 0.5) * 0.04;
                         double dustVy = 0.02 + this.random.nextDouble() * 0.03;
                         double dustVz = (this.random.nextDouble() - 0.5) * 0.04;

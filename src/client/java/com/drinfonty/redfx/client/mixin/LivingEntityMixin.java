@@ -4,6 +4,8 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import com.drinfonty.redfx.config.RedfxConfig;
@@ -92,10 +94,10 @@ public class LivingEntityMixin {
         net.minecraft.world.level.block.state.BlockState blockState = null;
         if (!isPoof) {
             if (particleType.equals("TNT")) {
-                blockState = Blocks.TNT.defaultBlockState();
+                blockState = BuiltInRegistries.BLOCK.getValue(Identifier.parse("tnt")).defaultBlockState();
             } else {
                 // Use white wool as a clean canvas for color tinting
-                blockState = Blocks.WHITE_WOOL.defaultBlockState();
+                blockState = BuiltInRegistries.BLOCK.getValue(Identifier.parse("white_wool")).defaultBlockState();
             }
         }
 
@@ -208,9 +210,9 @@ public class LivingEntityMixin {
         net.minecraft.world.level.block.state.BlockState blockState = null;
         if (!isPoof) {
             if (particleType.equals("TNT")) {
-                blockState = Blocks.TNT.defaultBlockState();
+                blockState = BuiltInRegistries.BLOCK.getValue(Identifier.parse("tnt")).defaultBlockState();
             } else {
-                blockState = Blocks.WHITE_WOOL.defaultBlockState();
+                blockState = BuiltInRegistries.BLOCK.getValue(Identifier.parse("white_wool")).defaultBlockState();
             }
         }
 
