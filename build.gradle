@@ -54,6 +54,7 @@ java {
 }
 
 jar {
+	archiveFileName = "redfx-${project.mod_version}-${project.mc_version_suffix}.jar"
 	def projectName = project.name
 	inputs.property "projectName", projectName
 
