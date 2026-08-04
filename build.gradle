@@ -1,105 +1,18 @@
 plugins {
-	id 'net.fabricmc.fabric-loom' version "${loom_version}"
+	id 'net.fabricmc.fabric-loom' version "${loom_version}" apply false
 	id 'maven-publish'
 }
 
-version = project.mod_version
-group = project.maven_group
-
-repositories {
-	mavenCentral()
-	maven {
-		name = "TerraformersMC"
-		url = "https://maven.terraformersmc.com/releases/"
-	}
-}
-
-loom {
-	splitEnvironmentSourceSets()
-
-	mods {
-		"redfx" {
-			sourceSet sourceSets.main
-			sourceSet sourceSets.client
-		}
-	}
-}
-
-dependencies {
-	minecraft "com.mojang:minecraft:${project.minecraft_version}"
-	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
-	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
-	compileOnly "com.terraformersmc:modmenu:18.0.0"
-}
-
-processResources {
-	def version = project.version
-	def minecraftDependency = project.minecraft_dependency
-	inputs.property "version", version
-	inputs.property "minecraftDependency", minecraftDependency
-
-	filesMatching("fabric.mod.json") {
-		expand "version": version, "minecraftDependency": minecraftDependency
-	}
-}
-
-tasks.withType(JavaCompile).configureEach {
-	it.options.release = 25
-}
-
-java {
-	withSourcesJar()
-
-	toolchain {
-		languageVersion = JavaLanguageVersion.of(25)
-	}
-}
-
-jar {
-	archiveFileName = "redfx-${project.mod_version}-${project.mc_version_suffix}.jar"
-	def projectName = project.name
-	inputs.property "projectName", projectName
-
-	from("LICENSE") {
-		rename { "${it}_$projectName"}
-	}
-}
-
-publishing {
-	publications {
-		create("mavenJava", MavenPublication) {
-			from components.java
-		}
-	}
+allprojects {
 	repositories {
-		// Place optional publishing repository definitions here
-	}
-}
-
-// Automatically deploy built remapped jar to Minecraft mods directory
-tasks.register('copyJarToMods', Copy) {
-	from tasks.named('jar')
-	into "/home/ptphong/.minecraft/mods"
-
-	doFirst {
-		fileTree("/home/ptphong/.minecraft/mods").matching {
-			include "redfx-*.jar"
-		}.each { file ->
-			delete file
+		mavenCentral()
+		maven {
+			name = "TerraformersMC"
+			url = "https://maven.terraformersmc.com/releases/"
+		}
+		maven {
+			name = "NeoForge"
+			url = "https://maven.neoforged.net/releases/"
 		}
 	}
-
-	mustRunAfter tasks.named('jar')
-}
-
-// Automatically copy built remapped jar to release directory in the project root
-tasks.register('copyJarToRelease', Copy) {
-	from tasks.named('jar')
-	into "${project.rootDir}/release"
-
-	mustRunAfter tasks.named('jar')
-}
-
-tasks.named('build') {
-	finalizedBy('copyJarToMods', 'copyJarToRelease')
 }
