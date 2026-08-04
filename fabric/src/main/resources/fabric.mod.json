@@ -18,7 +18,7 @@
 			"com.drinfonty.redfx.fabric.RedfxFabric"
 		],
 		"client": [
-			"com.drinfonty.redfx.client.RedfxModClient"
+			"com.drinfonty.redfx.fabric.RedfxFabricClient"
 		],
 		"modmenu": [
 			"com.drinfonty.redfx.client.integration.ModMenuIntegration"

@@ -5,7 +5,7 @@ license="CC0-1.0"
 
 [[mods]]
 modId="redfx"
-version="${version}"
+version="${modVersion}"
 displayName="RedFX"
 description="A blood particle and visual effects mod."
 authors="YourName"

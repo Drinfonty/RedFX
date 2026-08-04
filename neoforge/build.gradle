@@ -1,35 +1,36 @@
 plugins {
-	id 'net.fabricmc.fabric-loom' version "${loom_version}"
+	id 'net.neoforged.moddev' version '2.0.143'
 }
 
-loom {
-	splitEnvironmentSourceSets()
+neoForge {
+	version = "${project.neoforge_version}"
+
+	runs {
+		client {
+			client()
+		}
+	}
 
 	mods {
-		"redfx" {
+		redfx {
 			sourceSet sourceSets.main
-			sourceSet sourceSets.client
 			sourceSet project(":common").sourceSets.main
 		}
 	}
 }
 
 dependencies {
-	minecraft "com.mojang:minecraft:${project.minecraft_version}"
-	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
-	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
-
 	implementation project(":common")
 }
 
 processResources {
-	def version = project.version
+	def modVersion = project.mod_version
 	def minecraftDependency = project.minecraft_dependency
-	inputs.property "version", version
+	inputs.property "modVersion", modVersion
 	inputs.property "minecraftDependency", minecraftDependency
 
 	filesMatching("META-INF/neoforge.mods.toml") {
-		expand "version": version, "minecraftDependency": minecraftDependency
+		expand "modVersion": modVersion, "minecraftDependency": minecraftDependency
 	}
 }
 
