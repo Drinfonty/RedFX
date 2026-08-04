@@ -5,7 +5,7 @@ license="CC0-1.0"
 
 [[mods]]
 modId="redfx"
-version="${version}"
+version="${modVersion}"
 displayName="RedFX"
 description="A blood particle and visual effects mod."
 authors="YourName"
@@ -13,7 +13,7 @@ authors="YourName"
 [[dependencies.redfx]]
 modId="neoforge"
 type="required"
-versionRange="[26.2.0,)"
+versionRange="[21.11.0,)"
 ordering="NONE"
 side="BOTH"
 

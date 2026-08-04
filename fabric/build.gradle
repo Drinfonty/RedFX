@@ -81,5 +81,5 @@ tasks.register('copyJarToRelease', Copy) {
 }
 
 tasks.named('build') {
-	finalizedBy('copyJarToMods', 'copyJarToRelease')
+	finalizedBy('copyJarToRelease')
 }
