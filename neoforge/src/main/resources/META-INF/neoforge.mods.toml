@@ -13,7 +13,7 @@ authors="YourName"
 [[dependencies.redfx]]
 modId="neoforge"
 type="required"
-versionRange="[26.2.0,)"
+versionRange="[26.1.0,)"
 ordering="NONE"
 side="BOTH"
 
