@@ -1,0 +1,2120 @@
+
+> Configure project :
+Fabric Loom: 1.17.17
+
+> Task :dependencies
+
+------------------------------------------------------------
+Root project 'redfx'
+------------------------------------------------------------
+
+annotationProcessor - Annotation processors and their dependencies for source set 'main'.
+No dependencies
+
+api - API dependencies for the 'main' feature. (n)
+No dependencies
+
+apiElements - API elements for the 'main' feature. (n)
+No dependencies
+
+cfrDecompilerClasspath
+\--- net.fabricmc:cfr:0.2.2
+
+clientAnnotationProcessor - Annotation processors and their dependencies for source set 'client'.
+No dependencies
+
+clientCompileClasspath - Compile classpath for source set 'client'.
++--- org.jetbrains:annotations:26.0.2
++--- net.fabricmc:fabric-loader:0.19.3
++--- net.fabricmc.fabric-api:fabric-api:0.154.0+26.1.2
+|    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    +--- net.fabricmc.fabric-api:fabric-api-lookup-api-v1:2.0.12+d5a053b64c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |    \--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.1+df84eb3d4c
+|    |         \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    +--- net.fabricmc.fabric-api:fabric-biome-api-v1:18.0.5+2fa62b4e4c
+|    +--- net.fabricmc.fabric-api:fabric-block-api-v1:3.0.2+ec56b6014c
+|    +--- net.fabricmc.fabric-api:fabric-block-getter-api-v2:2.0.6+ec56b6014c
+|    +--- net.fabricmc.fabric-api:fabric-client-gametest-api-v1:5.1.0+0a5283664c
+|    +--- net.fabricmc.fabric-api:fabric-command-api-v2:3.0.5+e2bdee784c
+|    |    \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    +--- net.fabricmc.fabric-api:fabric-content-registries-v0:11.2.1+76b0b6bb4c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |    +--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.1+df84eb3d4c (*)
+|    |    \--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c
+|    |         \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    +--- net.fabricmc.fabric-api:fabric-convention-tags-v2:4.6.2+4f11f7994c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |    \--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.1+df84eb3d4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-crash-report-info-v1:1.0.3+9f78a5a84c
+|    +--- net.fabricmc.fabric-api:fabric-creative-tab-api-v1:5.0.11+d871b99e4c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |    \--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c (*)
+|    +--- net.fabricmc.fabric-api:fabric-data-attachment-api-v1:2.2.9+44a0bd1d4c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |    +--- net.fabricmc.fabric-api:fabric-entity-events-v1:5.0.2+e2bdee784c
+|    |    |    \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |    +--- net.fabricmc.fabric-api:fabric-object-builder-api-v1:23.1.0+abb459f14c
+|    |    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |    |    +--- net.fabricmc.fabric-api:fabric-registry-sync-v0:7.1.0+2fa62b4e4c
+|    |    |    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |    |    |    \--- net.fabricmc.fabric-api:fabric-networking-api-v1:6.3.1+554860db4c
+|    |    |    |         \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |    |    \--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c (*)
+|    |    \--- net.fabricmc.fabric-api:fabric-networking-api-v1:6.3.1+554860db4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-data-generation-api-v1:24.3.2+574cf22d4c
+|    |    +--- net.fabricmc.fabric-api:fabric-convention-tags-v2:4.6.2+4f11f7994c (*)
+|    |    +--- net.fabricmc.fabric-api:fabric-recipe-api-v1:9.0.16+be4b75ae4c
+|    |    |    +--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.1+df84eb3d4c (*)
+|    |    |    \--- net.fabricmc.fabric-api:fabric-networking-api-v1:6.3.1+554860db4c (*)
+|    |    +--- net.fabricmc.fabric-api:fabric-registry-sync-v0:7.1.0+2fa62b4e4c (*)
+|    |    +--- net.fabricmc.fabric-api:fabric-resource-conditions-api-v1:6.1.0+83dd0ba34c
+|    |    \--- net.fabricmc.fabric-api:fabric-tag-api-v1:2.1.1+371cf5db4c
+|    |         +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |         \--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c (*)
+|    +--- net.fabricmc.fabric-api:fabric-debug-api-v1:1.0.1+c792624d4c
+|    |    \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    +--- net.fabricmc.fabric-api:fabric-dimensions-v1:5.1.6+9cbf5da54c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |    \--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.1+df84eb3d4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-entity-events-v1:5.0.2+e2bdee784c (*)
+|    +--- net.fabricmc.fabric-api:fabric-events-interaction-v0:5.2.2+07b380be4c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |    \--- net.fabricmc.fabric-api:fabric-networking-api-v1:6.3.1+554860db4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-game-rule-api-v1:4.0.5+d871b99e4c
+|    |    \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    +--- net.fabricmc.fabric-api:fabric-gametest-api-v1:4.0.17+867b87624c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |    +--- net.fabricmc.fabric-api:fabric-registry-sync-v0:7.1.0+2fa62b4e4c (*)
+|    |    \--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c (*)
+|    +--- net.fabricmc.fabric-api:fabric-item-api-v1:14.2.0+a2a3a8914c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |    \--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c (*)
+|    +--- net.fabricmc.fabric-api:fabric-key-mapping-api-v1:2.0.4+e2bdee784c
+|    +--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.1+df84eb3d4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-loot-api-v3:3.0.12+00a1fba64c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |    \--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c (*)
+|    +--- net.fabricmc.fabric-api:fabric-menu-api-v1:2.0.14+d871b99e4c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |    +--- net.fabricmc.fabric-api:fabric-networking-api-v1:6.3.1+554860db4c (*)
+|    |    \--- net.fabricmc.fabric-api:fabric-registry-sync-v0:7.1.0+2fa62b4e4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-message-api-v1:7.0.5+dae8ce3e4c
+|    |    \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    +--- net.fabricmc.fabric-api:fabric-model-loading-api-v1:8.0.10+c80601bb4c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |    \--- net.fabricmc.fabric-api:fabric-renderer-api-v1:13.0.7+c80601bb4c
+|    |         +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |         +--- net.fabricmc.fabric-api:fabric-rendering-v1:23.3.0+e9207d814c
+|    |         |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |         |    +--- net.fabricmc.fabric-api:fabric-transitive-access-wideners-v1:8.1.2+e9207d814c
+|    |         |    \--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.1+df84eb3d4c (*)
+|    |         \--- net.fabricmc.fabric-api:fabric-transitive-access-wideners-v1:8.1.2+e9207d814c
+|    +--- net.fabricmc.fabric-api:fabric-networking-api-v1:6.3.1+554860db4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-object-builder-api-v1:23.1.0+abb459f14c (*)
+|    +--- net.fabricmc.fabric-api:fabric-particles-v1:5.0.15+b61fef434c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |    \--- net.fabricmc.fabric-api:fabric-networking-api-v1:6.3.1+554860db4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-permission-api-v1:1.0.1+c3369b134c
+|    |    \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    +--- net.fabricmc.fabric-api:fabric-recipe-api-v1:9.0.16+be4b75ae4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-registry-sync-v0:7.1.0+2fa62b4e4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-renderer-api-v1:13.0.7+c80601bb4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-renderer-indigo:8.1.4+1403e82c4c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |    +--- net.fabricmc.fabric-api:fabric-renderer-api-v1:13.0.7+c80601bb4c (*)
+|    |    \--- net.fabricmc.fabric-api:fabric-rendering-v1:23.3.0+e9207d814c (*)
+|    +--- net.fabricmc.fabric-api:fabric-rendering-fluids-v1:6.0.1+d871b99e4c
+|    |    \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    +--- net.fabricmc.fabric-api:fabric-rendering-v1:23.3.0+e9207d814c (*)
+|    +--- net.fabricmc.fabric-api:fabric-resource-conditions-api-v1:6.1.0+83dd0ba34c
+|    +--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c (*)
+|    +--- net.fabricmc.fabric-api:fabric-screen-api-v1:5.1.0+981dd9b24c
+|    |    \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    +--- net.fabricmc.fabric-api:fabric-serialization-api-v1:2.0.3+11a26f314c
+|    +--- net.fabricmc.fabric-api:fabric-sound-api-v1:2.0.4+11a26f314c
+|    +--- net.fabricmc.fabric-api:fabric-tag-api-v1:2.1.1+371cf5db4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-transfer-api-v1:8.0.6+357ea7334c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-lookup-api-v1:2.0.12+d5a053b64c (*)
+|    |    +--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.1+df84eb3d4c (*)
+|    |    \--- net.fabricmc.fabric-api:fabric-rendering-fluids-v1:6.0.1+d871b99e4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-transitive-access-wideners-v1:8.1.2+e9207d814c
+|    \--- net.fabricmc.fabric-api:fabric-api-deprecated:0.154.0+26.1.2
+|         \--- net.fabricmc.fabric-api:fabric-resource-loader-v0:3.3.17+4fc5413f4c
+|              +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|              \--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c (*)
++--- com.terraformersmc:modmenu:18.0.0-beta.1
++--- org.ow2.asm:asm:9.10.1
++--- org.ow2.asm:asm-analysis:9.10.1
++--- org.ow2.asm:asm-commons:9.10.1
++--- org.ow2.asm:asm-tree:9.10.1
++--- org.ow2.asm:asm-util:9.10.1
++--- net.fabricmc:sponge-mixin:0.17.3+mixin.0.8.7
++--- io.github.llamalad7:mixinextras-fabric:0.5.4
++--- at.yawk.lz4:lz4-java:1.10.1
++--- com.azure:azure-json:1.4.0
++--- com.github.oshi:oshi-core:6.9.0
++--- com.google.code.gson:gson:2.13.2
++--- com.google.guava:failureaccess:1.0.3
++--- com.google.guava:guava:33.5.0-jre
++--- com.ibm.icu:icu4j:77.1
++--- com.microsoft.azure:msal4j:1.23.1
++--- com.mojang:authlib:7.0.63
++--- com.mojang:blocklist:1.0.10
++--- com.mojang:brigadier:1.3.10
++--- com.mojang:datafixerupper:9.0.19
++--- com.mojang:jtracy:1.0.37
++--- com.mojang:logging:1.6.11
++--- com.mojang:patchy:2.2.10
++--- com.mojang:text2speech:1.18.11
++--- commons-codec:commons-codec:1.19.0
++--- commons-io:commons-io:2.20.0
++--- io.netty:netty-buffer:4.2.7.Final
++--- io.netty:netty-codec-base:4.2.7.Final
++--- io.netty:netty-codec-compression:4.2.7.Final
++--- io.netty:netty-codec-http:4.2.7.Final
++--- io.netty:netty-common:4.2.7.Final
++--- io.netty:netty-handler:4.2.7.Final
++--- io.netty:netty-resolver:4.2.7.Final
++--- io.netty:netty-transport-classes-epoll:4.2.7.Final
++--- io.netty:netty-transport-classes-kqueue:4.2.7.Final
++--- io.netty:netty-transport-native-epoll:4.2.7.Final
++--- io.netty:netty-transport-native-unix-common:4.2.7.Final
++--- io.netty:netty-transport:4.2.7.Final
++--- it.unimi.dsi:fastutil:8.5.18
++--- net.java.dev.jna:jna-platform:5.17.0
++--- net.java.dev.jna:jna:5.17.0
++--- net.sf.jopt-simple:jopt-simple:5.0.4
++--- org.apache.commons:commons-compress:1.28.0
++--- org.apache.commons:commons-lang3:3.19.0
++--- org.apache.logging.log4j:log4j-api:2.25.2
++--- org.apache.logging.log4j:log4j-core:2.25.2
++--- org.apache.logging.log4j:log4j-slf4j2-impl:2.25.2
++--- org.jcraft:jorbis:0.0.17
++--- org.joml:joml:1.10.8
++--- org.jspecify:jspecify:1.0.0
++--- org.lwjgl:lwjgl-freetype:3.4.1
++--- org.lwjgl:lwjgl-glfw:3.4.1
++--- org.lwjgl:lwjgl-jemalloc:3.4.1
++--- org.lwjgl:lwjgl-openal:3.4.1
++--- org.lwjgl:lwjgl-opengl:3.4.1
++--- org.lwjgl:lwjgl-stb:3.4.1
++--- org.lwjgl:lwjgl-tinyfd:3.4.1
++--- org.lwjgl:lwjgl:3.4.1
++--- org.slf4j:slf4j-api:2.0.17
++--- net.minecraft:minecraft-clientOnly-043a8b3edf:26.1.2
++--- net.minecraft:minecraft-common-043a8b3edf:26.1.2
+\--- io.netty:netty-transport-native-kqueue:4.2.7.Final
+
+clientCompileDependencyResolve
+No dependencies
+
+clientCompileOnly - Compile only dependencies for source set 'client'. (n)
+No dependencies
+
+clientImplementation - Implementation only dependencies for source set 'client'. (n)
+No dependencies
+
+clientRuntimeClasspath - Runtime classpath of source set 'client'.
++--- net.fabricmc:fabric-loader:0.19.3
++--- net.fabricmc.fabric-api:fabric-api:0.154.0+26.1.2
+|    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    +--- net.fabricmc.fabric-api:fabric-api-lookup-api-v1:2.0.12+d5a053b64c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    \--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.1+df84eb3d4c
+|    |         \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    +--- net.fabricmc.fabric-api:fabric-biome-api-v1:18.0.5+2fa62b4e4c
+|    +--- net.fabricmc.fabric-api:fabric-block-api-v1:3.0.2+ec56b6014c
+|    +--- net.fabricmc.fabric-api:fabric-block-getter-api-v2:2.0.6+ec56b6014c
+|    +--- net.fabricmc.fabric-api:fabric-client-gametest-api-v1:5.1.0+0a5283664c
+|    +--- net.fabricmc.fabric-api:fabric-command-api-v2:3.0.5+e2bdee784c
+|    |    \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    +--- net.fabricmc.fabric-api:fabric-content-registries-v0:11.2.1+76b0b6bb4c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    +--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.1+df84eb3d4c (*)
+|    |    \--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c
+|    |         \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    +--- net.fabricmc.fabric-api:fabric-convention-tags-v2:4.6.2+4f11f7994c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    \--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.1+df84eb3d4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-crash-report-info-v1:1.0.3+9f78a5a84c
+|    +--- net.fabricmc.fabric-api:fabric-creative-tab-api-v1:5.0.11+d871b99e4c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    \--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c (*)
+|    +--- net.fabricmc.fabric-api:fabric-data-attachment-api-v1:2.2.9+44a0bd1d4c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    +--- net.fabricmc.fabric-api:fabric-entity-events-v1:5.0.2+e2bdee784c
+|    |    |    \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    +--- net.fabricmc.fabric-api:fabric-object-builder-api-v1:23.1.0+abb459f14c
+|    |    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    |    +--- net.fabricmc.fabric-api:fabric-registry-sync-v0:7.1.0+2fa62b4e4c
+|    |    |    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    |    |    \--- net.fabricmc.fabric-api:fabric-networking-api-v1:6.3.1+554860db4c
+|    |    |    |         \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    |    \--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c (*)
+|    |    \--- net.fabricmc.fabric-api:fabric-networking-api-v1:6.3.1+554860db4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-data-generation-api-v1:24.3.2+574cf22d4c
+|    |    +--- net.fabricmc.fabric-api:fabric-convention-tags-v2:4.6.2+4f11f7994c (*)
+|    |    +--- net.fabricmc.fabric-api:fabric-recipe-api-v1:9.0.16+be4b75ae4c
+|    |    |    +--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.1+df84eb3d4c (*)
+|    |    |    \--- net.fabricmc.fabric-api:fabric-networking-api-v1:6.3.1+554860db4c (*)
+|    |    +--- net.fabricmc.fabric-api:fabric-registry-sync-v0:7.1.0+2fa62b4e4c (*)
+|    |    +--- net.fabricmc.fabric-api:fabric-resource-conditions-api-v1:6.1.0+83dd0ba34c
+|    |    \--- net.fabricmc.fabric-api:fabric-tag-api-v1:2.1.1+371cf5db4c
+|    |         +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |         \--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c (*)
+|    +--- net.fabricmc.fabric-api:fabric-debug-api-v1:1.0.1+c792624d4c
+|    |    \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    +--- net.fabricmc.fabric-api:fabric-dimensions-v1:5.1.6+9cbf5da54c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    \--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.1+df84eb3d4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-entity-events-v1:5.0.2+e2bdee784c (*)
+|    +--- net.fabricmc.fabric-api:fabric-events-interaction-v0:5.2.2+07b380be4c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    \--- net.fabricmc.fabric-api:fabric-networking-api-v1:6.3.1+554860db4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-game-rule-api-v1:4.0.5+d871b99e4c
+|    |    \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    +--- net.fabricmc.fabric-api:fabric-gametest-api-v1:4.0.17+867b87624c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    +--- net.fabricmc.fabric-api:fabric-registry-sync-v0:7.1.0+2fa62b4e4c (*)
+|    |    \--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c (*)
+|    +--- net.fabricmc.fabric-api:fabric-item-api-v1:14.2.0+a2a3a8914c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    \--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c (*)
+|    +--- net.fabricmc.fabric-api:fabric-key-mapping-api-v1:2.0.4+e2bdee784c -> 2.0.4+e2bdee7859
+|    +--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.1+df84eb3d4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-loot-api-v3:3.0.12+00a1fba64c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    \--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c (*)
+|    +--- net.fabricmc.fabric-api:fabric-menu-api-v1:2.0.14+d871b99e4c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    +--- net.fabricmc.fabric-api:fabric-networking-api-v1:6.3.1+554860db4c (*)
+|    |    \--- net.fabricmc.fabric-api:fabric-registry-sync-v0:7.1.0+2fa62b4e4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-message-api-v1:7.0.5+dae8ce3e4c
+|    |    \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    +--- net.fabricmc.fabric-api:fabric-model-loading-api-v1:8.0.10+c80601bb4c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    \--- net.fabricmc.fabric-api:fabric-renderer-api-v1:13.0.7+c80601bb4c
+|    |         +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |         +--- net.fabricmc.fabric-api:fabric-rendering-v1:23.3.0+e9207d814c
+|    |         |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |         |    +--- net.fabricmc.fabric-api:fabric-transitive-access-wideners-v1:8.1.2+e9207d814c
+|    |         |    \--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.1+df84eb3d4c (*)
+|    |         \--- net.fabricmc.fabric-api:fabric-transitive-access-wideners-v1:8.1.2+e9207d814c
+|    +--- net.fabricmc.fabric-api:fabric-networking-api-v1:6.3.1+554860db4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-object-builder-api-v1:23.1.0+abb459f14c (*)
+|    +--- net.fabricmc.fabric-api:fabric-particles-v1:5.0.15+b61fef434c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    \--- net.fabricmc.fabric-api:fabric-networking-api-v1:6.3.1+554860db4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-permission-api-v1:1.0.1+c3369b134c
+|    |    \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    +--- net.fabricmc.fabric-api:fabric-recipe-api-v1:9.0.16+be4b75ae4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-registry-sync-v0:7.1.0+2fa62b4e4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-renderer-api-v1:13.0.7+c80601bb4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-renderer-indigo:8.1.4+1403e82c4c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    +--- net.fabricmc.fabric-api:fabric-renderer-api-v1:13.0.7+c80601bb4c (*)
+|    |    \--- net.fabricmc.fabric-api:fabric-rendering-v1:23.3.0+e9207d814c (*)
+|    +--- net.fabricmc.fabric-api:fabric-rendering-fluids-v1:6.0.1+d871b99e4c
+|    |    \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    +--- net.fabricmc.fabric-api:fabric-rendering-v1:23.3.0+e9207d814c (*)
+|    +--- net.fabricmc.fabric-api:fabric-resource-conditions-api-v1:6.1.0+83dd0ba34c
+|    +--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c (*)
+|    +--- net.fabricmc.fabric-api:fabric-screen-api-v1:5.1.0+981dd9b24c
+|    |    \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    +--- net.fabricmc.fabric-api:fabric-serialization-api-v1:2.0.3+11a26f314c
+|    +--- net.fabricmc.fabric-api:fabric-sound-api-v1:2.0.4+11a26f314c
+|    +--- net.fabricmc.fabric-api:fabric-tag-api-v1:2.1.1+371cf5db4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-transfer-api-v1:8.0.6+357ea7334c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    +--- net.fabricmc.fabric-api:fabric-api-lookup-api-v1:2.0.12+d5a053b64c (*)
+|    |    +--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.1+df84eb3d4c (*)
+|    |    \--- net.fabricmc.fabric-api:fabric-rendering-fluids-v1:6.0.1+d871b99e4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-transitive-access-wideners-v1:8.1.2+e9207d814c
+|    \--- net.fabricmc.fabric-api:fabric-api-deprecated:0.154.0+26.1.2
+|         \--- net.fabricmc.fabric-api:fabric-resource-loader-v0:3.3.17+4fc5413f4c
+|              +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|              \--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c (*)
++--- com.terraformersmc:modmenu:18.0.0-beta.1
+|    +--- net.fabricmc:fabric-loader:0.18.4 -> 0.19.3
+|    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece0632359
+|    +--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.9+d871b99e59 -> 2.0.10+7c44c7324c (*)
+|    +--- net.fabricmc.fabric-api:fabric-screen-api-v1:5.0.1+d871b99e59 -> 5.1.0+981dd9b24c (*)
+|    +--- net.fabricmc.fabric-api:fabric-key-mapping-api-v1:2.0.4+e2bdee7859
+|    \--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.0.6+a9b9c17659 -> 4.1.1+df84eb3d4c (*)
++--- org.ow2.asm:asm:9.10.1
++--- org.ow2.asm:asm-analysis:9.10.1
++--- org.ow2.asm:asm-commons:9.10.1
++--- org.ow2.asm:asm-tree:9.10.1
++--- org.ow2.asm:asm-util:9.10.1
++--- net.fabricmc:sponge-mixin:0.17.3+mixin.0.8.7
++--- io.github.llamalad7:mixinextras-fabric:0.5.4
++--- net.fabricmc:dev-launch-injector:0.2.1+build.8
++--- net.fabricmc:fabric-log4j-util:1.0.2
++--- at.yawk.lz4:lz4-java:1.10.1
++--- com.azure:azure-json:1.4.0
++--- com.github.oshi:oshi-core:6.9.0
++--- com.google.code.gson:gson:2.13.2
++--- com.google.guava:failureaccess:1.0.3
++--- com.google.guava:guava:33.5.0-jre
++--- com.ibm.icu:icu4j:77.1
++--- com.microsoft.azure:msal4j:1.23.1
++--- com.mojang:authlib:7.0.63
++--- com.mojang:blocklist:1.0.10
++--- com.mojang:brigadier:1.3.10
++--- com.mojang:datafixerupper:9.0.19
++--- com.mojang:jtracy:1.0.37
++--- com.mojang:logging:1.6.11
++--- com.mojang:patchy:2.2.10
++--- com.mojang:text2speech:1.18.11
++--- commons-codec:commons-codec:1.19.0
++--- commons-io:commons-io:2.20.0
++--- io.netty:netty-buffer:4.2.7.Final
++--- io.netty:netty-codec-base:4.2.7.Final
++--- io.netty:netty-codec-compression:4.2.7.Final
++--- io.netty:netty-codec-http:4.2.7.Final
++--- io.netty:netty-common:4.2.7.Final
++--- io.netty:netty-handler:4.2.7.Final
++--- io.netty:netty-resolver:4.2.7.Final
++--- io.netty:netty-transport-classes-epoll:4.2.7.Final
++--- io.netty:netty-transport-classes-kqueue:4.2.7.Final
++--- io.netty:netty-transport-native-epoll:4.2.7.Final
++--- io.netty:netty-transport-native-unix-common:4.2.7.Final
++--- io.netty:netty-transport:4.2.7.Final
++--- it.unimi.dsi:fastutil:8.5.18
++--- net.java.dev.jna:jna-platform:5.17.0
++--- net.java.dev.jna:jna:5.17.0
++--- net.sf.jopt-simple:jopt-simple:5.0.4
++--- org.apache.commons:commons-compress:1.28.0
++--- org.apache.commons:commons-lang3:3.19.0
++--- org.apache.logging.log4j:log4j-api:2.25.2
++--- org.apache.logging.log4j:log4j-core:2.25.2
++--- org.apache.logging.log4j:log4j-slf4j2-impl:2.25.2
++--- org.jcraft:jorbis:0.0.17
++--- org.joml:joml:1.10.8
++--- org.jspecify:jspecify:1.0.0
++--- org.lwjgl:lwjgl-freetype:3.4.1
++--- org.lwjgl:lwjgl-glfw:3.4.1
++--- org.lwjgl:lwjgl-jemalloc:3.4.1
++--- org.lwjgl:lwjgl-openal:3.4.1
++--- org.lwjgl:lwjgl-opengl:3.4.1
++--- org.lwjgl:lwjgl-stb:3.4.1
++--- org.lwjgl:lwjgl-tinyfd:3.4.1
++--- org.lwjgl:lwjgl:3.4.1
++--- org.slf4j:slf4j-api:2.0.17
++--- net.minecraft:minecraft-clientOnly-043a8b3edf:26.1.2
++--- net.minecraft:minecraft-common-043a8b3edf:26.1.2
+\--- io.netty:netty-transport-native-kqueue:4.2.7.Final
+
+clientRuntimeDependencyResolve
+No dependencies
+
+clientRuntimeOnly - Runtime only dependencies for source set 'client'. (n)
+No dependencies
+
+compileClasspath - Compile classpath for source set 'main'.
++--- org.jetbrains:annotations:26.0.2
++--- net.fabricmc:fabric-loader:0.19.3
++--- net.fabricmc.fabric-api:fabric-api:0.154.0+26.1.2
+|    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    +--- net.fabricmc.fabric-api:fabric-api-lookup-api-v1:2.0.12+d5a053b64c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |    \--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.1+df84eb3d4c
+|    |         \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    +--- net.fabricmc.fabric-api:fabric-biome-api-v1:18.0.5+2fa62b4e4c
+|    +--- net.fabricmc.fabric-api:fabric-block-api-v1:3.0.2+ec56b6014c
+|    +--- net.fabricmc.fabric-api:fabric-block-getter-api-v2:2.0.6+ec56b6014c
+|    +--- net.fabricmc.fabric-api:fabric-client-gametest-api-v1:5.1.0+0a5283664c
+|    +--- net.fabricmc.fabric-api:fabric-command-api-v2:3.0.5+e2bdee784c
+|    |    \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    +--- net.fabricmc.fabric-api:fabric-content-registries-v0:11.2.1+76b0b6bb4c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |    +--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.1+df84eb3d4c (*)
+|    |    \--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c
+|    |         \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    +--- net.fabricmc.fabric-api:fabric-convention-tags-v2:4.6.2+4f11f7994c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |    \--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.1+df84eb3d4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-crash-report-info-v1:1.0.3+9f78a5a84c
+|    +--- net.fabricmc.fabric-api:fabric-creative-tab-api-v1:5.0.11+d871b99e4c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |    \--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c (*)
+|    +--- net.fabricmc.fabric-api:fabric-data-attachment-api-v1:2.2.9+44a0bd1d4c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |    +--- net.fabricmc.fabric-api:fabric-entity-events-v1:5.0.2+e2bdee784c
+|    |    |    \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |    +--- net.fabricmc.fabric-api:fabric-object-builder-api-v1:23.1.0+abb459f14c
+|    |    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |    |    +--- net.fabricmc.fabric-api:fabric-registry-sync-v0:7.1.0+2fa62b4e4c
+|    |    |    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |    |    |    \--- net.fabricmc.fabric-api:fabric-networking-api-v1:6.3.1+554860db4c
+|    |    |    |         \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |    |    \--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c (*)
+|    |    \--- net.fabricmc.fabric-api:fabric-networking-api-v1:6.3.1+554860db4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-data-generation-api-v1:24.3.2+574cf22d4c
+|    |    +--- net.fabricmc.fabric-api:fabric-convention-tags-v2:4.6.2+4f11f7994c (*)
+|    |    +--- net.fabricmc.fabric-api:fabric-recipe-api-v1:9.0.16+be4b75ae4c
+|    |    |    +--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.1+df84eb3d4c (*)
+|    |    |    \--- net.fabricmc.fabric-api:fabric-networking-api-v1:6.3.1+554860db4c (*)
+|    |    +--- net.fabricmc.fabric-api:fabric-registry-sync-v0:7.1.0+2fa62b4e4c (*)
+|    |    +--- net.fabricmc.fabric-api:fabric-resource-conditions-api-v1:6.1.0+83dd0ba34c
+|    |    \--- net.fabricmc.fabric-api:fabric-tag-api-v1:2.1.1+371cf5db4c
+|    |         +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |         \--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c (*)
+|    +--- net.fabricmc.fabric-api:fabric-debug-api-v1:1.0.1+c792624d4c
+|    |    \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    +--- net.fabricmc.fabric-api:fabric-dimensions-v1:5.1.6+9cbf5da54c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |    \--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.1+df84eb3d4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-entity-events-v1:5.0.2+e2bdee784c (*)
+|    +--- net.fabricmc.fabric-api:fabric-events-interaction-v0:5.2.2+07b380be4c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |    \--- net.fabricmc.fabric-api:fabric-networking-api-v1:6.3.1+554860db4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-game-rule-api-v1:4.0.5+d871b99e4c
+|    |    \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    +--- net.fabricmc.fabric-api:fabric-gametest-api-v1:4.0.17+867b87624c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |    +--- net.fabricmc.fabric-api:fabric-registry-sync-v0:7.1.0+2fa62b4e4c (*)
+|    |    \--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c (*)
+|    +--- net.fabricmc.fabric-api:fabric-item-api-v1:14.2.0+a2a3a8914c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |    \--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c (*)
+|    +--- net.fabricmc.fabric-api:fabric-key-mapping-api-v1:2.0.4+e2bdee784c
+|    +--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.1+df84eb3d4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-loot-api-v3:3.0.12+00a1fba64c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |    \--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c (*)
+|    +--- net.fabricmc.fabric-api:fabric-menu-api-v1:2.0.14+d871b99e4c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |    +--- net.fabricmc.fabric-api:fabric-networking-api-v1:6.3.1+554860db4c (*)
+|    |    \--- net.fabricmc.fabric-api:fabric-registry-sync-v0:7.1.0+2fa62b4e4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-message-api-v1:7.0.5+dae8ce3e4c
+|    |    \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    +--- net.fabricmc.fabric-api:fabric-model-loading-api-v1:8.0.10+c80601bb4c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |    \--- net.fabricmc.fabric-api:fabric-renderer-api-v1:13.0.7+c80601bb4c
+|    |         +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |         +--- net.fabricmc.fabric-api:fabric-rendering-v1:23.3.0+e9207d814c
+|    |         |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |         |    +--- net.fabricmc.fabric-api:fabric-transitive-access-wideners-v1:8.1.2+e9207d814c
+|    |         |    \--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.1+df84eb3d4c (*)
+|    |         \--- net.fabricmc.fabric-api:fabric-transitive-access-wideners-v1:8.1.2+e9207d814c
+|    +--- net.fabricmc.fabric-api:fabric-networking-api-v1:6.3.1+554860db4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-object-builder-api-v1:23.1.0+abb459f14c (*)
+|    +--- net.fabricmc.fabric-api:fabric-particles-v1:5.0.15+b61fef434c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |    \--- net.fabricmc.fabric-api:fabric-networking-api-v1:6.3.1+554860db4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-permission-api-v1:1.0.1+c3369b134c
+|    |    \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    +--- net.fabricmc.fabric-api:fabric-recipe-api-v1:9.0.16+be4b75ae4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-registry-sync-v0:7.1.0+2fa62b4e4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-renderer-api-v1:13.0.7+c80601bb4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-renderer-indigo:8.1.4+1403e82c4c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |    +--- net.fabricmc.fabric-api:fabric-renderer-api-v1:13.0.7+c80601bb4c (*)
+|    |    \--- net.fabricmc.fabric-api:fabric-rendering-v1:23.3.0+e9207d814c (*)
+|    +--- net.fabricmc.fabric-api:fabric-rendering-fluids-v1:6.0.1+d871b99e4c
+|    |    \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    +--- net.fabricmc.fabric-api:fabric-rendering-v1:23.3.0+e9207d814c (*)
+|    +--- net.fabricmc.fabric-api:fabric-resource-conditions-api-v1:6.1.0+83dd0ba34c
+|    +--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c (*)
+|    +--- net.fabricmc.fabric-api:fabric-screen-api-v1:5.1.0+981dd9b24c
+|    |    \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    +--- net.fabricmc.fabric-api:fabric-serialization-api-v1:2.0.3+11a26f314c
+|    +--- net.fabricmc.fabric-api:fabric-sound-api-v1:2.0.4+11a26f314c
+|    +--- net.fabricmc.fabric-api:fabric-tag-api-v1:2.1.1+371cf5db4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-transfer-api-v1:8.0.6+357ea7334c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-lookup-api-v1:2.0.12+d5a053b64c (*)
+|    |    +--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.1+df84eb3d4c (*)
+|    |    \--- net.fabricmc.fabric-api:fabric-rendering-fluids-v1:6.0.1+d871b99e4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-transitive-access-wideners-v1:8.1.2+e9207d814c
+|    \--- net.fabricmc.fabric-api:fabric-api-deprecated:0.154.0+26.1.2
+|         \--- net.fabricmc.fabric-api:fabric-resource-loader-v0:3.3.17+4fc5413f4c
+|              +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|              \--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c (*)
++--- com.terraformersmc:modmenu:18.0.0-beta.1
++--- org.ow2.asm:asm:9.10.1
++--- org.ow2.asm:asm-analysis:9.10.1
++--- org.ow2.asm:asm-commons:9.10.1
++--- org.ow2.asm:asm-tree:9.10.1
++--- org.ow2.asm:asm-util:9.10.1
++--- net.fabricmc:sponge-mixin:0.17.3+mixin.0.8.7
++--- io.github.llamalad7:mixinextras-fabric:0.5.4
++--- at.yawk.lz4:lz4-java:1.10.1
++--- com.azure:azure-json:1.4.0
++--- com.github.oshi:oshi-core:6.9.0
++--- com.google.code.gson:gson:2.13.2
++--- com.google.guava:failureaccess:1.0.3
++--- com.google.guava:guava:33.5.0-jre
++--- com.ibm.icu:icu4j:77.1
++--- com.microsoft.azure:msal4j:1.23.1
++--- com.mojang:authlib:7.0.63
++--- com.mojang:blocklist:1.0.10
++--- com.mojang:brigadier:1.3.10
++--- com.mojang:datafixerupper:9.0.19
++--- com.mojang:jtracy:1.0.37
++--- com.mojang:logging:1.6.11
++--- com.mojang:patchy:2.2.10
++--- com.mojang:text2speech:1.18.11
++--- commons-codec:commons-codec:1.19.0
++--- commons-io:commons-io:2.20.0
++--- io.netty:netty-buffer:4.2.7.Final
++--- io.netty:netty-codec-base:4.2.7.Final
++--- io.netty:netty-codec-compression:4.2.7.Final
++--- io.netty:netty-codec-http:4.2.7.Final
++--- io.netty:netty-common:4.2.7.Final
++--- io.netty:netty-handler:4.2.7.Final
++--- io.netty:netty-resolver:4.2.7.Final
++--- io.netty:netty-transport-classes-epoll:4.2.7.Final
++--- io.netty:netty-transport-classes-kqueue:4.2.7.Final
++--- io.netty:netty-transport-native-epoll:4.2.7.Final
++--- io.netty:netty-transport-native-unix-common:4.2.7.Final
++--- io.netty:netty-transport:4.2.7.Final
++--- it.unimi.dsi:fastutil:8.5.18
++--- net.java.dev.jna:jna-platform:5.17.0
++--- net.java.dev.jna:jna:5.17.0
++--- net.sf.jopt-simple:jopt-simple:5.0.4
++--- org.apache.commons:commons-compress:1.28.0
++--- org.apache.commons:commons-lang3:3.19.0
++--- org.apache.logging.log4j:log4j-api:2.25.2
++--- org.apache.logging.log4j:log4j-core:2.25.2
++--- org.apache.logging.log4j:log4j-slf4j2-impl:2.25.2
++--- org.jcraft:jorbis:0.0.17
++--- org.joml:joml:1.10.8
++--- org.jspecify:jspecify:1.0.0
++--- org.lwjgl:lwjgl-freetype:3.4.1
++--- org.lwjgl:lwjgl-glfw:3.4.1
++--- org.lwjgl:lwjgl-jemalloc:3.4.1
++--- org.lwjgl:lwjgl-openal:3.4.1
++--- org.lwjgl:lwjgl-opengl:3.4.1
++--- org.lwjgl:lwjgl-stb:3.4.1
++--- org.lwjgl:lwjgl-tinyfd:3.4.1
++--- org.lwjgl:lwjgl:3.4.1
++--- org.slf4j:slf4j-api:2.0.17
++--- net.minecraft:minecraft-common-043a8b3edf:26.1.2
+\--- io.netty:netty-transport-native-kqueue:4.2.7.Final
+
+compileOnly - Compile-only dependencies for the 'main' feature. (n)
+\--- org.jetbrains:annotations:26.0.2 (n)
+
+compileOnlyApi - Compile-only API dependencies for the 'main' feature. (n)
+No dependencies
+
+default - Configuration for default artifacts. (n)
+No dependencies
+
+implementation - Implementation dependencies for the 'main' feature. (n)
++--- net.fabricmc:fabric-loader:0.19.3 (n)
++--- net.fabricmc.fabric-api:fabric-api:0.154.0+26.1.2 (n)
+\--- com.terraformersmc:modmenu:18.0.0-beta.1 (n)
+
+include (n)
+No dependencies
+
+includeInternal
+No dependencies
+
+loaderLibraries
++--- org.ow2.asm:asm:9.10.1
++--- org.ow2.asm:asm-analysis:9.10.1
++--- org.ow2.asm:asm-commons:9.10.1
++--- org.ow2.asm:asm-tree:9.10.1
++--- org.ow2.asm:asm-util:9.10.1
++--- net.fabricmc:sponge-mixin:0.17.3+mixin.0.8.7
+\--- io.github.llamalad7:mixinextras-fabric:0.5.4
+
+localRuntime
+No dependencies
+
+loomDevelopmentDependencies
++--- net.fabricmc:dev-launch-injector:0.2.1+build.8
+\--- net.fabricmc:fabric-log4j-util:1.0.2
+
+loomExportedClasspath (n)
+No dependencies
+
+mainCompileDependencyResolve
++--- org.jetbrains:annotations:26.0.2
++--- net.fabricmc:fabric-loader:0.19.3
++--- net.fabricmc.fabric-api:fabric-api:0.154.0+26.1.2
+|    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    +--- net.fabricmc.fabric-api:fabric-api-lookup-api-v1:2.0.12+d5a053b64c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    \--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.1+df84eb3d4c
+|    |         \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    +--- net.fabricmc.fabric-api:fabric-biome-api-v1:18.0.5+2fa62b4e4c
+|    +--- net.fabricmc.fabric-api:fabric-block-api-v1:3.0.2+ec56b6014c
+|    +--- net.fabricmc.fabric-api:fabric-block-getter-api-v2:2.0.6+ec56b6014c
+|    +--- net.fabricmc.fabric-api:fabric-client-gametest-api-v1:5.1.0+0a5283664c
+|    +--- net.fabricmc.fabric-api:fabric-command-api-v2:3.0.5+e2bdee784c
+|    |    \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    +--- net.fabricmc.fabric-api:fabric-content-registries-v0:11.2.1+76b0b6bb4c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    +--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.1+df84eb3d4c (*)
+|    |    \--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c
+|    |         \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    +--- net.fabricmc.fabric-api:fabric-convention-tags-v2:4.6.2+4f11f7994c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    \--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.1+df84eb3d4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-crash-report-info-v1:1.0.3+9f78a5a84c
+|    +--- net.fabricmc.fabric-api:fabric-creative-tab-api-v1:5.0.11+d871b99e4c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    \--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c (*)
+|    +--- net.fabricmc.fabric-api:fabric-data-attachment-api-v1:2.2.9+44a0bd1d4c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    +--- net.fabricmc.fabric-api:fabric-entity-events-v1:5.0.2+e2bdee784c
+|    |    |    \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    +--- net.fabricmc.fabric-api:fabric-object-builder-api-v1:23.1.0+abb459f14c
+|    |    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    |    +--- net.fabricmc.fabric-api:fabric-registry-sync-v0:7.1.0+2fa62b4e4c
+|    |    |    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    |    |    \--- net.fabricmc.fabric-api:fabric-networking-api-v1:6.3.1+554860db4c
+|    |    |    |         \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    |    \--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c (*)
+|    |    \--- net.fabricmc.fabric-api:fabric-networking-api-v1:6.3.1+554860db4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-data-generation-api-v1:24.3.2+574cf22d4c
+|    |    +--- net.fabricmc.fabric-api:fabric-convention-tags-v2:4.6.2+4f11f7994c (*)
+|    |    +--- net.fabricmc.fabric-api:fabric-recipe-api-v1:9.0.16+be4b75ae4c
+|    |    |    +--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.1+df84eb3d4c (*)
+|    |    |    \--- net.fabricmc.fabric-api:fabric-networking-api-v1:6.3.1+554860db4c (*)
+|    |    +--- net.fabricmc.fabric-api:fabric-registry-sync-v0:7.1.0+2fa62b4e4c (*)
+|    |    +--- net.fabricmc.fabric-api:fabric-resource-conditions-api-v1:6.1.0+83dd0ba34c
+|    |    \--- net.fabricmc.fabric-api:fabric-tag-api-v1:2.1.1+371cf5db4c
+|    |         +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |         \--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c (*)
+|    +--- net.fabricmc.fabric-api:fabric-debug-api-v1:1.0.1+c792624d4c
+|    |    \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    +--- net.fabricmc.fabric-api:fabric-dimensions-v1:5.1.6+9cbf5da54c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    \--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.1+df84eb3d4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-entity-events-v1:5.0.2+e2bdee784c (*)
+|    +--- net.fabricmc.fabric-api:fabric-events-interaction-v0:5.2.2+07b380be4c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    \--- net.fabricmc.fabric-api:fabric-networking-api-v1:6.3.1+554860db4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-game-rule-api-v1:4.0.5+d871b99e4c
+|    |    \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    +--- net.fabricmc.fabric-api:fabric-gametest-api-v1:4.0.17+867b87624c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    +--- net.fabricmc.fabric-api:fabric-registry-sync-v0:7.1.0+2fa62b4e4c (*)
+|    |    \--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c (*)
+|    +--- net.fabricmc.fabric-api:fabric-item-api-v1:14.2.0+a2a3a8914c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    \--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c (*)
+|    +--- net.fabricmc.fabric-api:fabric-key-mapping-api-v1:2.0.4+e2bdee784c -> 2.0.4+e2bdee7859
+|    +--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.1+df84eb3d4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-loot-api-v3:3.0.12+00a1fba64c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    \--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c (*)
+|    +--- net.fabricmc.fabric-api:fabric-menu-api-v1:2.0.14+d871b99e4c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    +--- net.fabricmc.fabric-api:fabric-networking-api-v1:6.3.1+554860db4c (*)
+|    |    \--- net.fabricmc.fabric-api:fabric-registry-sync-v0:7.1.0+2fa62b4e4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-message-api-v1:7.0.5+dae8ce3e4c
+|    |    \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    +--- net.fabricmc.fabric-api:fabric-model-loading-api-v1:8.0.10+c80601bb4c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    \--- net.fabricmc.fabric-api:fabric-renderer-api-v1:13.0.7+c80601bb4c
+|    |         +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |         +--- net.fabricmc.fabric-api:fabric-rendering-v1:23.3.0+e9207d814c
+|    |         |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |         |    +--- net.fabricmc.fabric-api:fabric-transitive-access-wideners-v1:8.1.2+e9207d814c
+|    |         |    \--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.1+df84eb3d4c (*)
+|    |         \--- net.fabricmc.fabric-api:fabric-transitive-access-wideners-v1:8.1.2+e9207d814c
+|    +--- net.fabricmc.fabric-api:fabric-networking-api-v1:6.3.1+554860db4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-object-builder-api-v1:23.1.0+abb459f14c (*)
+|    +--- net.fabricmc.fabric-api:fabric-particles-v1:5.0.15+b61fef434c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    \--- net.fabricmc.fabric-api:fabric-networking-api-v1:6.3.1+554860db4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-permission-api-v1:1.0.1+c3369b134c
+|    |    \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    +--- net.fabricmc.fabric-api:fabric-recipe-api-v1:9.0.16+be4b75ae4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-registry-sync-v0:7.1.0+2fa62b4e4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-renderer-api-v1:13.0.7+c80601bb4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-renderer-indigo:8.1.4+1403e82c4c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    +--- net.fabricmc.fabric-api:fabric-renderer-api-v1:13.0.7+c80601bb4c (*)
+|    |    \--- net.fabricmc.fabric-api:fabric-rendering-v1:23.3.0+e9207d814c (*)
+|    +--- net.fabricmc.fabric-api:fabric-rendering-fluids-v1:6.0.1+d871b99e4c
+|    |    \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    +--- net.fabricmc.fabric-api:fabric-rendering-v1:23.3.0+e9207d814c (*)
+|    +--- net.fabricmc.fabric-api:fabric-resource-conditions-api-v1:6.1.0+83dd0ba34c
+|    +--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c (*)
+|    +--- net.fabricmc.fabric-api:fabric-screen-api-v1:5.1.0+981dd9b24c
+|    |    \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    +--- net.fabricmc.fabric-api:fabric-serialization-api-v1:2.0.3+11a26f314c
+|    +--- net.fabricmc.fabric-api:fabric-sound-api-v1:2.0.4+11a26f314c
+|    +--- net.fabricmc.fabric-api:fabric-tag-api-v1:2.1.1+371cf5db4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-transfer-api-v1:8.0.6+357ea7334c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    +--- net.fabricmc.fabric-api:fabric-api-lookup-api-v1:2.0.12+d5a053b64c (*)
+|    |    +--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.1+df84eb3d4c (*)
+|    |    \--- net.fabricmc.fabric-api:fabric-rendering-fluids-v1:6.0.1+d871b99e4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-transitive-access-wideners-v1:8.1.2+e9207d814c
+|    \--- net.fabricmc.fabric-api:fabric-api-deprecated:0.154.0+26.1.2
+|         \--- net.fabricmc.fabric-api:fabric-resource-loader-v0:3.3.17+4fc5413f4c
+|              +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|              \--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c (*)
+\--- com.terraformersmc:modmenu:18.0.0-beta.1
+     +--- net.fabricmc:fabric-loader:0.18.4 -> 0.19.3
+     +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece0632359
+     +--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.9+d871b99e59 -> 2.0.10+7c44c7324c (*)
+     +--- net.fabricmc.fabric-api:fabric-screen-api-v1:5.0.1+d871b99e59 -> 5.1.0+981dd9b24c (*)
+     +--- net.fabricmc.fabric-api:fabric-key-mapping-api-v1:2.0.4+e2bdee7859
+     \--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.0.6+a9b9c17659 -> 4.1.1+df84eb3d4c (*)
+
+mainRuntimeDependencyResolve
++--- net.fabricmc:fabric-loader:0.19.3
++--- net.fabricmc.fabric-api:fabric-api:0.154.0+26.1.2
+|    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    +--- net.fabricmc.fabric-api:fabric-api-lookup-api-v1:2.0.12+d5a053b64c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    \--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.1+df84eb3d4c
+|    |         \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    +--- net.fabricmc.fabric-api:fabric-biome-api-v1:18.0.5+2fa62b4e4c
+|    +--- net.fabricmc.fabric-api:fabric-block-api-v1:3.0.2+ec56b6014c
+|    +--- net.fabricmc.fabric-api:fabric-block-getter-api-v2:2.0.6+ec56b6014c
+|    +--- net.fabricmc.fabric-api:fabric-client-gametest-api-v1:5.1.0+0a5283664c
+|    +--- net.fabricmc.fabric-api:fabric-command-api-v2:3.0.5+e2bdee784c
+|    |    \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    +--- net.fabricmc.fabric-api:fabric-content-registries-v0:11.2.1+76b0b6bb4c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    +--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.1+df84eb3d4c (*)
+|    |    \--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c
+|    |         \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    +--- net.fabricmc.fabric-api:fabric-convention-tags-v2:4.6.2+4f11f7994c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    \--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.1+df84eb3d4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-crash-report-info-v1:1.0.3+9f78a5a84c
+|    +--- net.fabricmc.fabric-api:fabric-creative-tab-api-v1:5.0.11+d871b99e4c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    \--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c (*)
+|    +--- net.fabricmc.fabric-api:fabric-data-attachment-api-v1:2.2.9+44a0bd1d4c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    +--- net.fabricmc.fabric-api:fabric-entity-events-v1:5.0.2+e2bdee784c
+|    |    |    \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    +--- net.fabricmc.fabric-api:fabric-object-builder-api-v1:23.1.0+abb459f14c
+|    |    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    |    +--- net.fabricmc.fabric-api:fabric-registry-sync-v0:7.1.0+2fa62b4e4c
+|    |    |    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    |    |    \--- net.fabricmc.fabric-api:fabric-networking-api-v1:6.3.1+554860db4c
+|    |    |    |         \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    |    \--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c (*)
+|    |    \--- net.fabricmc.fabric-api:fabric-networking-api-v1:6.3.1+554860db4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-data-generation-api-v1:24.3.2+574cf22d4c
+|    |    +--- net.fabricmc.fabric-api:fabric-convention-tags-v2:4.6.2+4f11f7994c (*)
+|    |    +--- net.fabricmc.fabric-api:fabric-recipe-api-v1:9.0.16+be4b75ae4c
+|    |    |    +--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.1+df84eb3d4c (*)
+|    |    |    \--- net.fabricmc.fabric-api:fabric-networking-api-v1:6.3.1+554860db4c (*)
+|    |    +--- net.fabricmc.fabric-api:fabric-registry-sync-v0:7.1.0+2fa62b4e4c (*)
+|    |    +--- net.fabricmc.fabric-api:fabric-resource-conditions-api-v1:6.1.0+83dd0ba34c
+|    |    \--- net.fabricmc.fabric-api:fabric-tag-api-v1:2.1.1+371cf5db4c
+|    |         +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |         \--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c (*)
+|    +--- net.fabricmc.fabric-api:fabric-debug-api-v1:1.0.1+c792624d4c
+|    |    \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    +--- net.fabricmc.fabric-api:fabric-dimensions-v1:5.1.6+9cbf5da54c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    \--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.1+df84eb3d4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-entity-events-v1:5.0.2+e2bdee784c (*)
+|    +--- net.fabricmc.fabric-api:fabric-events-interaction-v0:5.2.2+07b380be4c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    \--- net.fabricmc.fabric-api:fabric-networking-api-v1:6.3.1+554860db4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-game-rule-api-v1:4.0.5+d871b99e4c
+|    |    \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    +--- net.fabricmc.fabric-api:fabric-gametest-api-v1:4.0.17+867b87624c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    +--- net.fabricmc.fabric-api:fabric-registry-sync-v0:7.1.0+2fa62b4e4c (*)
+|    |    \--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c (*)
+|    +--- net.fabricmc.fabric-api:fabric-item-api-v1:14.2.0+a2a3a8914c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    \--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c (*)
+|    +--- net.fabricmc.fabric-api:fabric-key-mapping-api-v1:2.0.4+e2bdee784c -> 2.0.4+e2bdee7859
+|    +--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.1+df84eb3d4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-loot-api-v3:3.0.12+00a1fba64c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    \--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c (*)
+|    +--- net.fabricmc.fabric-api:fabric-menu-api-v1:2.0.14+d871b99e4c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    +--- net.fabricmc.fabric-api:fabric-networking-api-v1:6.3.1+554860db4c (*)
+|    |    \--- net.fabricmc.fabric-api:fabric-registry-sync-v0:7.1.0+2fa62b4e4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-message-api-v1:7.0.5+dae8ce3e4c
+|    |    \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    +--- net.fabricmc.fabric-api:fabric-model-loading-api-v1:8.0.10+c80601bb4c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    \--- net.fabricmc.fabric-api:fabric-renderer-api-v1:13.0.7+c80601bb4c
+|    |         +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |         +--- net.fabricmc.fabric-api:fabric-rendering-v1:23.3.0+e9207d814c
+|    |         |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |         |    +--- net.fabricmc.fabric-api:fabric-transitive-access-wideners-v1:8.1.2+e9207d814c
+|    |         |    \--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.1+df84eb3d4c (*)
+|    |         \--- net.fabricmc.fabric-api:fabric-transitive-access-wideners-v1:8.1.2+e9207d814c
+|    +--- net.fabricmc.fabric-api:fabric-networking-api-v1:6.3.1+554860db4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-object-builder-api-v1:23.1.0+abb459f14c (*)
+|    +--- net.fabricmc.fabric-api:fabric-particles-v1:5.0.15+b61fef434c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    \--- net.fabricmc.fabric-api:fabric-networking-api-v1:6.3.1+554860db4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-permission-api-v1:1.0.1+c3369b134c
+|    |    \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    +--- net.fabricmc.fabric-api:fabric-recipe-api-v1:9.0.16+be4b75ae4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-registry-sync-v0:7.1.0+2fa62b4e4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-renderer-api-v1:13.0.7+c80601bb4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-renderer-indigo:8.1.4+1403e82c4c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    +--- net.fabricmc.fabric-api:fabric-renderer-api-v1:13.0.7+c80601bb4c (*)
+|    |    \--- net.fabricmc.fabric-api:fabric-rendering-v1:23.3.0+e9207d814c (*)
+|    +--- net.fabricmc.fabric-api:fabric-rendering-fluids-v1:6.0.1+d871b99e4c
+|    |    \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    +--- net.fabricmc.fabric-api:fabric-rendering-v1:23.3.0+e9207d814c (*)
+|    +--- net.fabricmc.fabric-api:fabric-resource-conditions-api-v1:6.1.0+83dd0ba34c
+|    +--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c (*)
+|    +--- net.fabricmc.fabric-api:fabric-screen-api-v1:5.1.0+981dd9b24c
+|    |    \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    +--- net.fabricmc.fabric-api:fabric-serialization-api-v1:2.0.3+11a26f314c
+|    +--- net.fabricmc.fabric-api:fabric-sound-api-v1:2.0.4+11a26f314c
+|    +--- net.fabricmc.fabric-api:fabric-tag-api-v1:2.1.1+371cf5db4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-transfer-api-v1:8.0.6+357ea7334c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    +--- net.fabricmc.fabric-api:fabric-api-lookup-api-v1:2.0.12+d5a053b64c (*)
+|    |    +--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.1+df84eb3d4c (*)
+|    |    \--- net.fabricmc.fabric-api:fabric-rendering-fluids-v1:6.0.1+d871b99e4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-transitive-access-wideners-v1:8.1.2+e9207d814c
+|    \--- net.fabricmc.fabric-api:fabric-api-deprecated:0.154.0+26.1.2
+|         \--- net.fabricmc.fabric-api:fabric-resource-loader-v0:3.3.17+4fc5413f4c
+|              +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|              \--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c (*)
+\--- com.terraformersmc:modmenu:18.0.0-beta.1
+     +--- net.fabricmc:fabric-loader:0.18.4 -> 0.19.3
+     +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece0632359
+     +--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.9+d871b99e59 -> 2.0.10+7c44c7324c (*)
+     +--- net.fabricmc.fabric-api:fabric-screen-api-v1:5.0.1+d871b99e59 -> 5.1.0+981dd9b24c (*)
+     +--- net.fabricmc.fabric-api:fabric-key-mapping-api-v1:2.0.4+e2bdee7859
+     \--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.0.6+a9b9c17659 -> 4.1.1+df84eb3d4c (*)
+
+mainSourceElements - List of source directories contained in the Main SourceSet. (n)
+No dependencies
+
+minecraft (n)
+\--- com.mojang:minecraft:26.1.2 (n)
+
+minecraftClientLibraries
++--- at.yawk.lz4:lz4-java:1.10.1
++--- com.azure:azure-json:1.4.0
++--- com.github.oshi:oshi-core:6.9.0
++--- com.google.code.gson:gson:2.13.2
++--- com.google.guava:failureaccess:1.0.3
++--- com.google.guava:guava:33.5.0-jre
++--- com.ibm.icu:icu4j:77.1
++--- com.microsoft.azure:msal4j:1.23.1
++--- com.mojang:authlib:7.0.63
++--- com.mojang:blocklist:1.0.10
++--- com.mojang:brigadier:1.3.10
++--- com.mojang:datafixerupper:9.0.19
++--- com.mojang:jtracy:1.0.37
++--- com.mojang:logging:1.6.11
++--- com.mojang:patchy:2.2.10
++--- com.mojang:text2speech:1.18.11
++--- commons-codec:commons-codec:1.19.0
++--- commons-io:commons-io:2.20.0
++--- io.netty:netty-buffer:4.2.7.Final
++--- io.netty:netty-codec-base:4.2.7.Final
++--- io.netty:netty-codec-compression:4.2.7.Final
++--- io.netty:netty-codec-http:4.2.7.Final
++--- io.netty:netty-common:4.2.7.Final
++--- io.netty:netty-handler:4.2.7.Final
++--- io.netty:netty-resolver:4.2.7.Final
++--- io.netty:netty-transport-classes-epoll:4.2.7.Final
++--- io.netty:netty-transport-classes-kqueue:4.2.7.Final
++--- io.netty:netty-transport-native-epoll:4.2.7.Final
++--- io.netty:netty-transport-native-unix-common:4.2.7.Final
++--- io.netty:netty-transport:4.2.7.Final
++--- it.unimi.dsi:fastutil:8.5.18
++--- net.java.dev.jna:jna-platform:5.17.0
++--- net.java.dev.jna:jna:5.17.0
++--- net.sf.jopt-simple:jopt-simple:5.0.4
++--- org.apache.commons:commons-compress:1.28.0
++--- org.apache.commons:commons-lang3:3.19.0
++--- org.apache.logging.log4j:log4j-api:2.25.2
++--- org.apache.logging.log4j:log4j-core:2.25.2
++--- org.apache.logging.log4j:log4j-slf4j2-impl:2.25.2
++--- org.jcraft:jorbis:0.0.17
++--- org.joml:joml:1.10.8
++--- org.jspecify:jspecify:1.0.0
++--- org.lwjgl:lwjgl-freetype:3.4.1
++--- org.lwjgl:lwjgl-glfw:3.4.1
++--- org.lwjgl:lwjgl-jemalloc:3.4.1
++--- org.lwjgl:lwjgl-openal:3.4.1
++--- org.lwjgl:lwjgl-opengl:3.4.1
++--- org.lwjgl:lwjgl-stb:3.4.1
++--- org.lwjgl:lwjgl-tinyfd:3.4.1
++--- org.lwjgl:lwjgl:3.4.1
+\--- org.slf4j:slf4j-api:2.0.17
+
+minecraftClientOnlyNamedCompile
++--- org.ow2.asm:asm:9.10.1
++--- org.ow2.asm:asm-analysis:9.10.1
++--- org.ow2.asm:asm-commons:9.10.1
++--- org.ow2.asm:asm-tree:9.10.1
++--- org.ow2.asm:asm-util:9.10.1
++--- net.fabricmc:sponge-mixin:0.17.3+mixin.0.8.7
++--- io.github.llamalad7:mixinextras-fabric:0.5.4
++--- at.yawk.lz4:lz4-java:1.10.1
++--- com.azure:azure-json:1.4.0
++--- com.github.oshi:oshi-core:6.9.0
++--- com.google.code.gson:gson:2.13.2
++--- com.google.guava:failureaccess:1.0.3
++--- com.google.guava:guava:33.5.0-jre
++--- com.ibm.icu:icu4j:77.1
++--- com.microsoft.azure:msal4j:1.23.1
++--- com.mojang:authlib:7.0.63
++--- com.mojang:blocklist:1.0.10
++--- com.mojang:brigadier:1.3.10
++--- com.mojang:datafixerupper:9.0.19
++--- com.mojang:jtracy:1.0.37
++--- com.mojang:logging:1.6.11
++--- com.mojang:patchy:2.2.10
++--- com.mojang:text2speech:1.18.11
++--- commons-codec:commons-codec:1.19.0
++--- commons-io:commons-io:2.20.0
++--- io.netty:netty-buffer:4.2.7.Final
++--- io.netty:netty-codec-base:4.2.7.Final
++--- io.netty:netty-codec-compression:4.2.7.Final
++--- io.netty:netty-codec-http:4.2.7.Final
++--- io.netty:netty-common:4.2.7.Final
++--- io.netty:netty-handler:4.2.7.Final
++--- io.netty:netty-resolver:4.2.7.Final
++--- io.netty:netty-transport-classes-epoll:4.2.7.Final
++--- io.netty:netty-transport-classes-kqueue:4.2.7.Final
++--- io.netty:netty-transport-native-epoll:4.2.7.Final
++--- io.netty:netty-transport-native-unix-common:4.2.7.Final
++--- io.netty:netty-transport:4.2.7.Final
++--- it.unimi.dsi:fastutil:8.5.18
++--- net.java.dev.jna:jna-platform:5.17.0
++--- net.java.dev.jna:jna:5.17.0
++--- net.sf.jopt-simple:jopt-simple:5.0.4
++--- org.apache.commons:commons-compress:1.28.0
++--- org.apache.commons:commons-lang3:3.19.0
++--- org.apache.logging.log4j:log4j-api:2.25.2
++--- org.apache.logging.log4j:log4j-core:2.25.2
++--- org.apache.logging.log4j:log4j-slf4j2-impl:2.25.2
++--- org.jcraft:jorbis:0.0.17
++--- org.joml:joml:1.10.8
++--- org.jspecify:jspecify:1.0.0
++--- org.lwjgl:lwjgl-freetype:3.4.1
++--- org.lwjgl:lwjgl-glfw:3.4.1
++--- org.lwjgl:lwjgl-jemalloc:3.4.1
++--- org.lwjgl:lwjgl-openal:3.4.1
++--- org.lwjgl:lwjgl-opengl:3.4.1
++--- org.lwjgl:lwjgl-stb:3.4.1
++--- org.lwjgl:lwjgl-tinyfd:3.4.1
++--- org.lwjgl:lwjgl:3.4.1
++--- org.slf4j:slf4j-api:2.0.17
++--- net.minecraft:minecraft-clientOnly-043a8b3edf:26.1.2
++--- net.minecraft:minecraft-common-043a8b3edf:26.1.2
+\--- io.netty:netty-transport-native-kqueue:4.2.7.Final
+
+minecraftClientOnlyNamedRuntime
++--- org.ow2.asm:asm:9.10.1
++--- org.ow2.asm:asm-analysis:9.10.1
++--- org.ow2.asm:asm-commons:9.10.1
++--- org.ow2.asm:asm-tree:9.10.1
++--- org.ow2.asm:asm-util:9.10.1
++--- net.fabricmc:sponge-mixin:0.17.3+mixin.0.8.7
++--- io.github.llamalad7:mixinextras-fabric:0.5.4
++--- net.fabricmc:dev-launch-injector:0.2.1+build.8
++--- net.fabricmc:fabric-log4j-util:1.0.2
++--- at.yawk.lz4:lz4-java:1.10.1
++--- com.azure:azure-json:1.4.0
++--- com.github.oshi:oshi-core:6.9.0
++--- com.google.code.gson:gson:2.13.2
++--- com.google.guava:failureaccess:1.0.3
++--- com.google.guava:guava:33.5.0-jre
++--- com.ibm.icu:icu4j:77.1
++--- com.microsoft.azure:msal4j:1.23.1
++--- com.mojang:authlib:7.0.63
++--- com.mojang:blocklist:1.0.10
++--- com.mojang:brigadier:1.3.10
++--- com.mojang:datafixerupper:9.0.19
++--- com.mojang:jtracy:1.0.37
++--- com.mojang:logging:1.6.11
++--- com.mojang:patchy:2.2.10
++--- com.mojang:text2speech:1.18.11
++--- commons-codec:commons-codec:1.19.0
++--- commons-io:commons-io:2.20.0
++--- io.netty:netty-buffer:4.2.7.Final
++--- io.netty:netty-codec-base:4.2.7.Final
++--- io.netty:netty-codec-compression:4.2.7.Final
++--- io.netty:netty-codec-http:4.2.7.Final
++--- io.netty:netty-common:4.2.7.Final
++--- io.netty:netty-handler:4.2.7.Final
++--- io.netty:netty-resolver:4.2.7.Final
++--- io.netty:netty-transport-classes-epoll:4.2.7.Final
++--- io.netty:netty-transport-classes-kqueue:4.2.7.Final
++--- io.netty:netty-transport-native-epoll:4.2.7.Final
++--- io.netty:netty-transport-native-unix-common:4.2.7.Final
++--- io.netty:netty-transport:4.2.7.Final
++--- it.unimi.dsi:fastutil:8.5.18
++--- net.java.dev.jna:jna-platform:5.17.0
++--- net.java.dev.jna:jna:5.17.0
++--- net.sf.jopt-simple:jopt-simple:5.0.4
++--- org.apache.commons:commons-compress:1.28.0
++--- org.apache.commons:commons-lang3:3.19.0
++--- org.apache.logging.log4j:log4j-api:2.25.2
++--- org.apache.logging.log4j:log4j-core:2.25.2
++--- org.apache.logging.log4j:log4j-slf4j2-impl:2.25.2
++--- org.jcraft:jorbis:0.0.17
++--- org.joml:joml:1.10.8
++--- org.jspecify:jspecify:1.0.0
++--- org.lwjgl:lwjgl-freetype:3.4.1
++--- org.lwjgl:lwjgl-glfw:3.4.1
++--- org.lwjgl:lwjgl-jemalloc:3.4.1
++--- org.lwjgl:lwjgl-openal:3.4.1
++--- org.lwjgl:lwjgl-opengl:3.4.1
++--- org.lwjgl:lwjgl-stb:3.4.1
++--- org.lwjgl:lwjgl-tinyfd:3.4.1
++--- org.lwjgl:lwjgl:3.4.1
++--- org.slf4j:slf4j-api:2.0.17
++--- net.minecraft:minecraft-clientOnly-043a8b3edf:26.1.2
++--- net.minecraft:minecraft-common-043a8b3edf:26.1.2
+\--- io.netty:netty-transport-native-kqueue:4.2.7.Final
+
+minecraftClientRuntimeLibraries
++--- at.yawk.lz4:lz4-java:1.10.1
++--- com.azure:azure-json:1.4.0
++--- com.github.oshi:oshi-core:6.9.0
++--- com.google.code.gson:gson:2.13.2
++--- com.google.guava:failureaccess:1.0.3
++--- com.google.guava:guava:33.5.0-jre
++--- com.ibm.icu:icu4j:77.1
++--- com.microsoft.azure:msal4j:1.23.1
++--- com.mojang:authlib:7.0.63
++--- com.mojang:blocklist:1.0.10
++--- com.mojang:brigadier:1.3.10
++--- com.mojang:datafixerupper:9.0.19
++--- com.mojang:jtracy:1.0.37
++--- com.mojang:logging:1.6.11
++--- com.mojang:patchy:2.2.10
++--- com.mojang:text2speech:1.18.11
++--- commons-codec:commons-codec:1.19.0
++--- commons-io:commons-io:2.20.0
++--- io.netty:netty-buffer:4.2.7.Final
++--- io.netty:netty-codec-base:4.2.7.Final
++--- io.netty:netty-codec-compression:4.2.7.Final
++--- io.netty:netty-codec-http:4.2.7.Final
++--- io.netty:netty-common:4.2.7.Final
++--- io.netty:netty-handler:4.2.7.Final
++--- io.netty:netty-resolver:4.2.7.Final
++--- io.netty:netty-transport-classes-epoll:4.2.7.Final
++--- io.netty:netty-transport-classes-kqueue:4.2.7.Final
++--- io.netty:netty-transport-native-epoll:4.2.7.Final
++--- io.netty:netty-transport-native-unix-common:4.2.7.Final
++--- io.netty:netty-transport:4.2.7.Final
++--- it.unimi.dsi:fastutil:8.5.18
++--- net.java.dev.jna:jna-platform:5.17.0
++--- net.java.dev.jna:jna:5.17.0
++--- net.sf.jopt-simple:jopt-simple:5.0.4
++--- org.apache.commons:commons-compress:1.28.0
++--- org.apache.commons:commons-lang3:3.19.0
++--- org.apache.logging.log4j:log4j-api:2.25.2
++--- org.apache.logging.log4j:log4j-core:2.25.2
++--- org.apache.logging.log4j:log4j-slf4j2-impl:2.25.2
++--- org.jcraft:jorbis:0.0.17
++--- org.joml:joml:1.10.8
++--- org.jspecify:jspecify:1.0.0
++--- org.lwjgl:lwjgl-freetype:3.4.1
++--- org.lwjgl:lwjgl-glfw:3.4.1
++--- org.lwjgl:lwjgl-jemalloc:3.4.1
++--- org.lwjgl:lwjgl-openal:3.4.1
++--- org.lwjgl:lwjgl-opengl:3.4.1
++--- org.lwjgl:lwjgl-stb:3.4.1
++--- org.lwjgl:lwjgl-tinyfd:3.4.1
++--- org.lwjgl:lwjgl:3.4.1
+\--- org.slf4j:slf4j-api:2.0.17
+
+minecraftCommonNamedCompile
++--- org.ow2.asm:asm:9.10.1
++--- org.ow2.asm:asm-analysis:9.10.1
++--- org.ow2.asm:asm-commons:9.10.1
++--- org.ow2.asm:asm-tree:9.10.1
++--- org.ow2.asm:asm-util:9.10.1
++--- net.fabricmc:sponge-mixin:0.17.3+mixin.0.8.7
++--- io.github.llamalad7:mixinextras-fabric:0.5.4
++--- at.yawk.lz4:lz4-java:1.10.1
++--- com.azure:azure-json:1.4.0
++--- com.github.oshi:oshi-core:6.9.0
++--- com.google.code.gson:gson:2.13.2
++--- com.google.guava:failureaccess:1.0.3
++--- com.google.guava:guava:33.5.0-jre
++--- com.ibm.icu:icu4j:77.1
++--- com.microsoft.azure:msal4j:1.23.1
++--- com.mojang:authlib:7.0.63
++--- com.mojang:blocklist:1.0.10
++--- com.mojang:brigadier:1.3.10
++--- com.mojang:datafixerupper:9.0.19
++--- com.mojang:jtracy:1.0.37
++--- com.mojang:logging:1.6.11
++--- com.mojang:patchy:2.2.10
++--- com.mojang:text2speech:1.18.11
++--- commons-codec:commons-codec:1.19.0
++--- commons-io:commons-io:2.20.0
++--- io.netty:netty-buffer:4.2.7.Final
++--- io.netty:netty-codec-base:4.2.7.Final
++--- io.netty:netty-codec-compression:4.2.7.Final
++--- io.netty:netty-codec-http:4.2.7.Final
++--- io.netty:netty-common:4.2.7.Final
++--- io.netty:netty-handler:4.2.7.Final
++--- io.netty:netty-resolver:4.2.7.Final
++--- io.netty:netty-transport-classes-epoll:4.2.7.Final
++--- io.netty:netty-transport-classes-kqueue:4.2.7.Final
++--- io.netty:netty-transport-native-epoll:4.2.7.Final
++--- io.netty:netty-transport-native-unix-common:4.2.7.Final
++--- io.netty:netty-transport:4.2.7.Final
++--- it.unimi.dsi:fastutil:8.5.18
++--- net.java.dev.jna:jna-platform:5.17.0
++--- net.java.dev.jna:jna:5.17.0
++--- net.sf.jopt-simple:jopt-simple:5.0.4
++--- org.apache.commons:commons-compress:1.28.0
++--- org.apache.commons:commons-lang3:3.19.0
++--- org.apache.logging.log4j:log4j-api:2.25.2
++--- org.apache.logging.log4j:log4j-core:2.25.2
++--- org.apache.logging.log4j:log4j-slf4j2-impl:2.25.2
++--- org.jcraft:jorbis:0.0.17
++--- org.joml:joml:1.10.8
++--- org.jspecify:jspecify:1.0.0
++--- org.lwjgl:lwjgl-freetype:3.4.1
++--- org.lwjgl:lwjgl-glfw:3.4.1
++--- org.lwjgl:lwjgl-jemalloc:3.4.1
++--- org.lwjgl:lwjgl-openal:3.4.1
++--- org.lwjgl:lwjgl-opengl:3.4.1
++--- org.lwjgl:lwjgl-stb:3.4.1
++--- org.lwjgl:lwjgl-tinyfd:3.4.1
++--- org.lwjgl:lwjgl:3.4.1
++--- org.slf4j:slf4j-api:2.0.17
++--- net.minecraft:minecraft-common-043a8b3edf:26.1.2
+\--- io.netty:netty-transport-native-kqueue:4.2.7.Final
+
+minecraftCommonNamedRuntime
++--- org.ow2.asm:asm:9.10.1
++--- org.ow2.asm:asm-analysis:9.10.1
++--- org.ow2.asm:asm-commons:9.10.1
++--- org.ow2.asm:asm-tree:9.10.1
++--- org.ow2.asm:asm-util:9.10.1
++--- net.fabricmc:sponge-mixin:0.17.3+mixin.0.8.7
++--- io.github.llamalad7:mixinextras-fabric:0.5.4
++--- net.fabricmc:dev-launch-injector:0.2.1+build.8
++--- net.fabricmc:fabric-log4j-util:1.0.2
++--- at.yawk.lz4:lz4-java:1.10.1
++--- com.azure:azure-json:1.4.0
++--- com.github.oshi:oshi-core:6.9.0
++--- com.google.code.gson:gson:2.13.2
++--- com.google.guava:failureaccess:1.0.3
++--- com.google.guava:guava:33.5.0-jre
++--- com.ibm.icu:icu4j:77.1
++--- com.microsoft.azure:msal4j:1.23.1
++--- com.mojang:authlib:7.0.63
++--- com.mojang:blocklist:1.0.10
++--- com.mojang:brigadier:1.3.10
++--- com.mojang:datafixerupper:9.0.19
++--- com.mojang:jtracy:1.0.37
++--- com.mojang:logging:1.6.11
++--- com.mojang:patchy:2.2.10
++--- com.mojang:text2speech:1.18.11
++--- commons-codec:commons-codec:1.19.0
++--- commons-io:commons-io:2.20.0
++--- io.netty:netty-buffer:4.2.7.Final
++--- io.netty:netty-codec-base:4.2.7.Final
++--- io.netty:netty-codec-compression:4.2.7.Final
++--- io.netty:netty-codec-http:4.2.7.Final
++--- io.netty:netty-common:4.2.7.Final
++--- io.netty:netty-handler:4.2.7.Final
++--- io.netty:netty-resolver:4.2.7.Final
++--- io.netty:netty-transport-classes-epoll:4.2.7.Final
++--- io.netty:netty-transport-classes-kqueue:4.2.7.Final
++--- io.netty:netty-transport-native-epoll:4.2.7.Final
++--- io.netty:netty-transport-native-unix-common:4.2.7.Final
++--- io.netty:netty-transport:4.2.7.Final
++--- it.unimi.dsi:fastutil:8.5.18
++--- net.java.dev.jna:jna-platform:5.17.0
++--- net.java.dev.jna:jna:5.17.0
++--- net.sf.jopt-simple:jopt-simple:5.0.4
++--- org.apache.commons:commons-compress:1.28.0
++--- org.apache.commons:commons-lang3:3.19.0
++--- org.apache.logging.log4j:log4j-api:2.25.2
++--- org.apache.logging.log4j:log4j-core:2.25.2
++--- org.apache.logging.log4j:log4j-slf4j2-impl:2.25.2
++--- org.jcraft:jorbis:0.0.17
++--- org.joml:joml:1.10.8
++--- org.jspecify:jspecify:1.0.0
++--- org.lwjgl:lwjgl-freetype:3.4.1
++--- org.lwjgl:lwjgl-glfw:3.4.1
++--- org.lwjgl:lwjgl-jemalloc:3.4.1
++--- org.lwjgl:lwjgl-openal:3.4.1
++--- org.lwjgl:lwjgl-opengl:3.4.1
++--- org.lwjgl:lwjgl-stb:3.4.1
++--- org.lwjgl:lwjgl-tinyfd:3.4.1
++--- org.lwjgl:lwjgl:3.4.1
++--- org.slf4j:slf4j-api:2.0.17
++--- net.minecraft:minecraft-common-043a8b3edf:26.1.2
+\--- io.netty:netty-transport-native-kqueue:4.2.7.Final
+
+minecraftLibraries
++--- at.yawk.lz4:lz4-java:1.10.1
++--- com.azure:azure-json:1.4.0
++--- com.github.oshi:oshi-core:6.9.0
++--- com.google.code.gson:gson:2.13.2
++--- com.google.guava:failureaccess:1.0.3
++--- com.google.guava:guava:33.5.0-jre
++--- com.ibm.icu:icu4j:77.1
++--- com.microsoft.azure:msal4j:1.23.1
++--- com.mojang:authlib:7.0.63
++--- com.mojang:blocklist:1.0.10
++--- com.mojang:brigadier:1.3.10
++--- com.mojang:datafixerupper:9.0.19
++--- com.mojang:jtracy:1.0.37
++--- com.mojang:logging:1.6.11
++--- com.mojang:patchy:2.2.10
++--- com.mojang:text2speech:1.18.11
++--- commons-codec:commons-codec:1.19.0
++--- commons-io:commons-io:2.20.0
++--- io.netty:netty-buffer:4.2.7.Final
++--- io.netty:netty-codec-base:4.2.7.Final
++--- io.netty:netty-codec-compression:4.2.7.Final
++--- io.netty:netty-codec-http:4.2.7.Final
++--- io.netty:netty-common:4.2.7.Final
++--- io.netty:netty-handler:4.2.7.Final
++--- io.netty:netty-resolver:4.2.7.Final
++--- io.netty:netty-transport-classes-epoll:4.2.7.Final
++--- io.netty:netty-transport-classes-kqueue:4.2.7.Final
++--- io.netty:netty-transport-native-epoll:4.2.7.Final
++--- io.netty:netty-transport-native-unix-common:4.2.7.Final
++--- io.netty:netty-transport:4.2.7.Final
++--- it.unimi.dsi:fastutil:8.5.18
++--- net.java.dev.jna:jna-platform:5.17.0
++--- net.java.dev.jna:jna:5.17.0
++--- net.sf.jopt-simple:jopt-simple:5.0.4
++--- org.apache.commons:commons-compress:1.28.0
++--- org.apache.commons:commons-lang3:3.19.0
++--- org.apache.logging.log4j:log4j-api:2.25.2
++--- org.apache.logging.log4j:log4j-core:2.25.2
++--- org.apache.logging.log4j:log4j-slf4j2-impl:2.25.2
++--- org.jcraft:jorbis:0.0.17
++--- org.joml:joml:1.10.8
++--- org.jspecify:jspecify:1.0.0
++--- org.lwjgl:lwjgl-freetype:3.4.1
++--- org.lwjgl:lwjgl-glfw:3.4.1
++--- org.lwjgl:lwjgl-jemalloc:3.4.1
++--- org.lwjgl:lwjgl-openal:3.4.1
++--- org.lwjgl:lwjgl-opengl:3.4.1
++--- org.lwjgl:lwjgl-stb:3.4.1
++--- org.lwjgl:lwjgl-tinyfd:3.4.1
++--- org.lwjgl:lwjgl:3.4.1
++--- org.slf4j:slf4j-api:2.0.17
+\--- io.netty:netty-transport-native-kqueue:4.2.7.Final
+
+minecraftNatives
++--- com.mojang:jtracy:1.0.37
++--- org.lwjgl:lwjgl-freetype:3.4.1
++--- org.lwjgl:lwjgl-glfw:3.4.1
++--- org.lwjgl:lwjgl-jemalloc:3.4.1
++--- org.lwjgl:lwjgl-openal:3.4.1
++--- org.lwjgl:lwjgl-opengl:3.4.1
++--- org.lwjgl:lwjgl-stb:3.4.1
++--- org.lwjgl:lwjgl-tinyfd:3.4.1
+\--- org.lwjgl:lwjgl:3.4.1
+
+minecraftRuntimeLibraries
++--- at.yawk.lz4:lz4-java:1.10.1
++--- com.azure:azure-json:1.4.0
++--- com.github.oshi:oshi-core:6.9.0
++--- com.google.code.gson:gson:2.13.2
++--- com.google.guava:failureaccess:1.0.3
++--- com.google.guava:guava:33.5.0-jre
++--- com.ibm.icu:icu4j:77.1
++--- com.microsoft.azure:msal4j:1.23.1
++--- com.mojang:authlib:7.0.63
++--- com.mojang:blocklist:1.0.10
++--- com.mojang:brigadier:1.3.10
++--- com.mojang:datafixerupper:9.0.19
++--- com.mojang:jtracy:1.0.37
++--- com.mojang:logging:1.6.11
++--- com.mojang:patchy:2.2.10
++--- com.mojang:text2speech:1.18.11
++--- commons-codec:commons-codec:1.19.0
++--- commons-io:commons-io:2.20.0
++--- io.netty:netty-buffer:4.2.7.Final
++--- io.netty:netty-codec-base:4.2.7.Final
++--- io.netty:netty-codec-compression:4.2.7.Final
++--- io.netty:netty-codec-http:4.2.7.Final
++--- io.netty:netty-common:4.2.7.Final
++--- io.netty:netty-handler:4.2.7.Final
++--- io.netty:netty-resolver:4.2.7.Final
++--- io.netty:netty-transport-classes-epoll:4.2.7.Final
++--- io.netty:netty-transport-classes-kqueue:4.2.7.Final
++--- io.netty:netty-transport-native-epoll:4.2.7.Final
++--- io.netty:netty-transport-native-unix-common:4.2.7.Final
++--- io.netty:netty-transport:4.2.7.Final
++--- it.unimi.dsi:fastutil:8.5.18
++--- net.java.dev.jna:jna-platform:5.17.0
++--- net.java.dev.jna:jna:5.17.0
++--- net.sf.jopt-simple:jopt-simple:5.0.4
++--- org.apache.commons:commons-compress:1.28.0
++--- org.apache.commons:commons-lang3:3.19.0
++--- org.apache.logging.log4j:log4j-api:2.25.2
++--- org.apache.logging.log4j:log4j-core:2.25.2
++--- org.apache.logging.log4j:log4j-slf4j2-impl:2.25.2
++--- org.jcraft:jorbis:0.0.17
++--- org.joml:joml:1.10.8
++--- org.jspecify:jspecify:1.0.0
++--- org.lwjgl:lwjgl-freetype:3.4.1
++--- org.lwjgl:lwjgl-glfw:3.4.1
++--- org.lwjgl:lwjgl-jemalloc:3.4.1
++--- org.lwjgl:lwjgl-openal:3.4.1
++--- org.lwjgl:lwjgl-opengl:3.4.1
++--- org.lwjgl:lwjgl-stb:3.4.1
++--- org.lwjgl:lwjgl-tinyfd:3.4.1
++--- org.lwjgl:lwjgl:3.4.1
++--- org.slf4j:slf4j-api:2.0.17
+\--- io.netty:netty-transport-native-kqueue:4.2.7.Final
+
+minecraftServerLibraries
++--- at.yawk.lz4:lz4-java:1.10.1
++--- com.azure:azure-json:1.4.0
++--- com.github.oshi:oshi-core:6.9.0
++--- com.google.code.gson:gson:2.13.2
++--- com.google.guava:failureaccess:1.0.3
++--- com.google.guava:guava:33.5.0-jre
++--- com.microsoft.azure:msal4j:1.23.1
++--- com.mojang:authlib:7.0.63
++--- com.mojang:brigadier:1.3.10
++--- com.mojang:datafixerupper:9.0.19
++--- com.mojang:jtracy:1.0.37
++--- com.mojang:logging:1.6.11
++--- commons-io:commons-io:2.20.0
++--- io.netty:netty-buffer:4.2.7.Final
++--- io.netty:netty-codec-base:4.2.7.Final
++--- io.netty:netty-codec-compression:4.2.7.Final
++--- io.netty:netty-codec-http:4.2.7.Final
++--- io.netty:netty-common:4.2.7.Final
++--- io.netty:netty-handler:4.2.7.Final
++--- io.netty:netty-resolver:4.2.7.Final
++--- io.netty:netty-transport:4.2.7.Final
++--- io.netty:netty-transport-classes-epoll:4.2.7.Final
++--- io.netty:netty-transport-classes-kqueue:4.2.7.Final
++--- io.netty:netty-transport-native-epoll:4.2.7.Final
++--- io.netty:netty-transport-native-kqueue:4.2.7.Final
++--- io.netty:netty-transport-native-unix-common:4.2.7.Final
++--- it.unimi.dsi:fastutil:8.5.18
++--- net.java.dev.jna:jna:5.17.0
++--- net.java.dev.jna:jna-platform:5.17.0
++--- net.sf.jopt-simple:jopt-simple:5.0.4
++--- org.apache.commons:commons-lang3:3.19.0
++--- org.apache.logging.log4j:log4j-api:2.25.2
++--- org.apache.logging.log4j:log4j-core:2.25.2
++--- org.apache.logging.log4j:log4j-slf4j2-impl:2.25.2
++--- org.joml:joml:1.10.8
++--- org.jspecify:jspecify:1.0.0
+\--- org.slf4j:slf4j-api:2.0.17
+
+minecraftServerRuntimeLibraries
++--- at.yawk.lz4:lz4-java:1.10.1
++--- com.azure:azure-json:1.4.0
++--- com.github.oshi:oshi-core:6.9.0
++--- com.google.code.gson:gson:2.13.2
++--- com.google.guava:failureaccess:1.0.3
++--- com.google.guava:guava:33.5.0-jre
++--- com.microsoft.azure:msal4j:1.23.1
++--- com.mojang:authlib:7.0.63
++--- com.mojang:brigadier:1.3.10
++--- com.mojang:datafixerupper:9.0.19
++--- com.mojang:jtracy:1.0.37
++--- com.mojang:logging:1.6.11
++--- commons-io:commons-io:2.20.0
++--- io.netty:netty-buffer:4.2.7.Final
++--- io.netty:netty-codec-base:4.2.7.Final
++--- io.netty:netty-codec-compression:4.2.7.Final
++--- io.netty:netty-codec-http:4.2.7.Final
++--- io.netty:netty-common:4.2.7.Final
++--- io.netty:netty-handler:4.2.7.Final
++--- io.netty:netty-resolver:4.2.7.Final
++--- io.netty:netty-transport:4.2.7.Final
++--- io.netty:netty-transport-classes-epoll:4.2.7.Final
++--- io.netty:netty-transport-classes-kqueue:4.2.7.Final
++--- io.netty:netty-transport-native-epoll:4.2.7.Final
++--- io.netty:netty-transport-native-kqueue:4.2.7.Final
++--- io.netty:netty-transport-native-unix-common:4.2.7.Final
++--- it.unimi.dsi:fastutil:8.5.18
++--- net.java.dev.jna:jna:5.17.0
++--- net.java.dev.jna:jna-platform:5.17.0
++--- net.sf.jopt-simple:jopt-simple:5.0.4
++--- org.apache.commons:commons-lang3:3.19.0
++--- org.apache.logging.log4j:log4j-api:2.25.2
++--- org.apache.logging.log4j:log4j-core:2.25.2
++--- org.apache.logging.log4j:log4j-slf4j2-impl:2.25.2
++--- org.joml:joml:1.10.8
++--- org.jspecify:jspecify:1.0.0
+\--- org.slf4j:slf4j-api:2.0.17
+
+minecraftTestClientRuntimeLibraries
++--- org.ow2.asm:asm:9.10.1
++--- org.ow2.asm:asm-analysis:9.10.1
++--- org.ow2.asm:asm-commons:9.10.1
++--- org.ow2.asm:asm-tree:9.10.1
++--- org.ow2.asm:asm-util:9.10.1
++--- net.fabricmc:sponge-mixin:0.17.3+mixin.0.8.7
++--- io.github.llamalad7:mixinextras-fabric:0.5.4
++--- at.yawk.lz4:lz4-java:1.10.1
++--- com.azure:azure-json:1.4.0
++--- com.github.oshi:oshi-core:6.9.0
++--- com.google.code.gson:gson:2.13.2
++--- com.google.guava:failureaccess:1.0.3
++--- com.google.guava:guava:33.5.0-jre
++--- com.ibm.icu:icu4j:77.1
++--- com.microsoft.azure:msal4j:1.23.1
++--- com.mojang:authlib:7.0.63
++--- com.mojang:blocklist:1.0.10
++--- com.mojang:brigadier:1.3.10
++--- com.mojang:datafixerupper:9.0.19
++--- com.mojang:jtracy:1.0.37
++--- com.mojang:logging:1.6.11
++--- com.mojang:patchy:2.2.10
++--- com.mojang:text2speech:1.18.11
++--- commons-codec:commons-codec:1.19.0
++--- commons-io:commons-io:2.20.0
++--- io.netty:netty-buffer:4.2.7.Final
++--- io.netty:netty-codec-base:4.2.7.Final
++--- io.netty:netty-codec-compression:4.2.7.Final
++--- io.netty:netty-codec-http:4.2.7.Final
++--- io.netty:netty-common:4.2.7.Final
++--- io.netty:netty-handler:4.2.7.Final
++--- io.netty:netty-resolver:4.2.7.Final
++--- io.netty:netty-transport-classes-epoll:4.2.7.Final
++--- io.netty:netty-transport-classes-kqueue:4.2.7.Final
++--- io.netty:netty-transport-native-epoll:4.2.7.Final
++--- io.netty:netty-transport-native-unix-common:4.2.7.Final
++--- io.netty:netty-transport:4.2.7.Final
++--- it.unimi.dsi:fastutil:8.5.18
++--- net.java.dev.jna:jna-platform:5.17.0
++--- net.java.dev.jna:jna:5.17.0
++--- net.sf.jopt-simple:jopt-simple:5.0.4
++--- org.apache.commons:commons-compress:1.28.0
++--- org.apache.commons:commons-lang3:3.19.0
++--- org.apache.logging.log4j:log4j-api:2.25.2
++--- org.apache.logging.log4j:log4j-core:2.25.2
++--- org.apache.logging.log4j:log4j-slf4j2-impl:2.25.2
++--- org.jcraft:jorbis:0.0.17
++--- org.joml:joml:1.10.8
++--- org.jspecify:jspecify:1.0.0
++--- org.lwjgl:lwjgl-freetype:3.4.1
++--- org.lwjgl:lwjgl-glfw:3.4.1
++--- org.lwjgl:lwjgl-jemalloc:3.4.1
++--- org.lwjgl:lwjgl-openal:3.4.1
++--- org.lwjgl:lwjgl-opengl:3.4.1
++--- org.lwjgl:lwjgl-stb:3.4.1
++--- org.lwjgl:lwjgl-tinyfd:3.4.1
++--- org.lwjgl:lwjgl:3.4.1
+\--- org.slf4j:slf4j-api:2.0.17
+
+modCompileClasspath
+No dependencies
+
+modCompileClasspathMapped
+No dependencies
+
+productionRuntimeMods
+No dependencies
+
+runtimeClasspath - Runtime classpath of source set 'main'.
++--- net.fabricmc:fabric-loader:0.19.3
++--- net.fabricmc.fabric-api:fabric-api:0.154.0+26.1.2
+|    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    +--- net.fabricmc.fabric-api:fabric-api-lookup-api-v1:2.0.12+d5a053b64c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    \--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.1+df84eb3d4c
+|    |         \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    +--- net.fabricmc.fabric-api:fabric-biome-api-v1:18.0.5+2fa62b4e4c
+|    +--- net.fabricmc.fabric-api:fabric-block-api-v1:3.0.2+ec56b6014c
+|    +--- net.fabricmc.fabric-api:fabric-block-getter-api-v2:2.0.6+ec56b6014c
+|    +--- net.fabricmc.fabric-api:fabric-client-gametest-api-v1:5.1.0+0a5283664c
+|    +--- net.fabricmc.fabric-api:fabric-command-api-v2:3.0.5+e2bdee784c
+|    |    \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    +--- net.fabricmc.fabric-api:fabric-content-registries-v0:11.2.1+76b0b6bb4c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    +--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.1+df84eb3d4c (*)
+|    |    \--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c
+|    |         \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    +--- net.fabricmc.fabric-api:fabric-convention-tags-v2:4.6.2+4f11f7994c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    \--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.1+df84eb3d4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-crash-report-info-v1:1.0.3+9f78a5a84c
+|    +--- net.fabricmc.fabric-api:fabric-creative-tab-api-v1:5.0.11+d871b99e4c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    \--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c (*)
+|    +--- net.fabricmc.fabric-api:fabric-data-attachment-api-v1:2.2.9+44a0bd1d4c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    +--- net.fabricmc.fabric-api:fabric-entity-events-v1:5.0.2+e2bdee784c
+|    |    |    \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    +--- net.fabricmc.fabric-api:fabric-object-builder-api-v1:23.1.0+abb459f14c
+|    |    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    |    +--- net.fabricmc.fabric-api:fabric-registry-sync-v0:7.1.0+2fa62b4e4c
+|    |    |    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    |    |    \--- net.fabricmc.fabric-api:fabric-networking-api-v1:6.3.1+554860db4c
+|    |    |    |         \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    |    \--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c (*)
+|    |    \--- net.fabricmc.fabric-api:fabric-networking-api-v1:6.3.1+554860db4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-data-generation-api-v1:24.3.2+574cf22d4c
+|    |    +--- net.fabricmc.fabric-api:fabric-convention-tags-v2:4.6.2+4f11f7994c (*)
+|    |    +--- net.fabricmc.fabric-api:fabric-recipe-api-v1:9.0.16+be4b75ae4c
+|    |    |    +--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.1+df84eb3d4c (*)
+|    |    |    \--- net.fabricmc.fabric-api:fabric-networking-api-v1:6.3.1+554860db4c (*)
+|    |    +--- net.fabricmc.fabric-api:fabric-registry-sync-v0:7.1.0+2fa62b4e4c (*)
+|    |    +--- net.fabricmc.fabric-api:fabric-resource-conditions-api-v1:6.1.0+83dd0ba34c
+|    |    \--- net.fabricmc.fabric-api:fabric-tag-api-v1:2.1.1+371cf5db4c
+|    |         +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |         \--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c (*)
+|    +--- net.fabricmc.fabric-api:fabric-debug-api-v1:1.0.1+c792624d4c
+|    |    \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    +--- net.fabricmc.fabric-api:fabric-dimensions-v1:5.1.6+9cbf5da54c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    \--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.1+df84eb3d4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-entity-events-v1:5.0.2+e2bdee784c (*)
+|    +--- net.fabricmc.fabric-api:fabric-events-interaction-v0:5.2.2+07b380be4c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    \--- net.fabricmc.fabric-api:fabric-networking-api-v1:6.3.1+554860db4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-game-rule-api-v1:4.0.5+d871b99e4c
+|    |    \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    +--- net.fabricmc.fabric-api:fabric-gametest-api-v1:4.0.17+867b87624c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    +--- net.fabricmc.fabric-api:fabric-registry-sync-v0:7.1.0+2fa62b4e4c (*)
+|    |    \--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c (*)
+|    +--- net.fabricmc.fabric-api:fabric-item-api-v1:14.2.0+a2a3a8914c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    \--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c (*)
+|    +--- net.fabricmc.fabric-api:fabric-key-mapping-api-v1:2.0.4+e2bdee784c -> 2.0.4+e2bdee7859
+|    +--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.1+df84eb3d4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-loot-api-v3:3.0.12+00a1fba64c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    \--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c (*)
+|    +--- net.fabricmc.fabric-api:fabric-menu-api-v1:2.0.14+d871b99e4c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    +--- net.fabricmc.fabric-api:fabric-networking-api-v1:6.3.1+554860db4c (*)
+|    |    \--- net.fabricmc.fabric-api:fabric-registry-sync-v0:7.1.0+2fa62b4e4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-message-api-v1:7.0.5+dae8ce3e4c
+|    |    \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    +--- net.fabricmc.fabric-api:fabric-model-loading-api-v1:8.0.10+c80601bb4c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    \--- net.fabricmc.fabric-api:fabric-renderer-api-v1:13.0.7+c80601bb4c
+|    |         +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |         +--- net.fabricmc.fabric-api:fabric-rendering-v1:23.3.0+e9207d814c
+|    |         |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |         |    +--- net.fabricmc.fabric-api:fabric-transitive-access-wideners-v1:8.1.2+e9207d814c
+|    |         |    \--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.1+df84eb3d4c (*)
+|    |         \--- net.fabricmc.fabric-api:fabric-transitive-access-wideners-v1:8.1.2+e9207d814c
+|    +--- net.fabricmc.fabric-api:fabric-networking-api-v1:6.3.1+554860db4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-object-builder-api-v1:23.1.0+abb459f14c (*)
+|    +--- net.fabricmc.fabric-api:fabric-particles-v1:5.0.15+b61fef434c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    \--- net.fabricmc.fabric-api:fabric-networking-api-v1:6.3.1+554860db4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-permission-api-v1:1.0.1+c3369b134c
+|    |    \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    +--- net.fabricmc.fabric-api:fabric-recipe-api-v1:9.0.16+be4b75ae4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-registry-sync-v0:7.1.0+2fa62b4e4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-renderer-api-v1:13.0.7+c80601bb4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-renderer-indigo:8.1.4+1403e82c4c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    +--- net.fabricmc.fabric-api:fabric-renderer-api-v1:13.0.7+c80601bb4c (*)
+|    |    \--- net.fabricmc.fabric-api:fabric-rendering-v1:23.3.0+e9207d814c (*)
+|    +--- net.fabricmc.fabric-api:fabric-rendering-fluids-v1:6.0.1+d871b99e4c
+|    |    \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    +--- net.fabricmc.fabric-api:fabric-rendering-v1:23.3.0+e9207d814c (*)
+|    +--- net.fabricmc.fabric-api:fabric-resource-conditions-api-v1:6.1.0+83dd0ba34c
+|    +--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c (*)
+|    +--- net.fabricmc.fabric-api:fabric-screen-api-v1:5.1.0+981dd9b24c
+|    |    \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    +--- net.fabricmc.fabric-api:fabric-serialization-api-v1:2.0.3+11a26f314c
+|    +--- net.fabricmc.fabric-api:fabric-sound-api-v1:2.0.4+11a26f314c
+|    +--- net.fabricmc.fabric-api:fabric-tag-api-v1:2.1.1+371cf5db4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-transfer-api-v1:8.0.6+357ea7334c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    +--- net.fabricmc.fabric-api:fabric-api-lookup-api-v1:2.0.12+d5a053b64c (*)
+|    |    +--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.1+df84eb3d4c (*)
+|    |    \--- net.fabricmc.fabric-api:fabric-rendering-fluids-v1:6.0.1+d871b99e4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-transitive-access-wideners-v1:8.1.2+e9207d814c
+|    \--- net.fabricmc.fabric-api:fabric-api-deprecated:0.154.0+26.1.2
+|         \--- net.fabricmc.fabric-api:fabric-resource-loader-v0:3.3.17+4fc5413f4c
+|              +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|              \--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c (*)
++--- com.terraformersmc:modmenu:18.0.0-beta.1
+|    +--- net.fabricmc:fabric-loader:0.18.4 -> 0.19.3
+|    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece0632359
+|    +--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.9+d871b99e59 -> 2.0.10+7c44c7324c (*)
+|    +--- net.fabricmc.fabric-api:fabric-screen-api-v1:5.0.1+d871b99e59 -> 5.1.0+981dd9b24c (*)
+|    +--- net.fabricmc.fabric-api:fabric-key-mapping-api-v1:2.0.4+e2bdee7859
+|    \--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.0.6+a9b9c17659 -> 4.1.1+df84eb3d4c (*)
++--- org.ow2.asm:asm:9.10.1
++--- org.ow2.asm:asm-analysis:9.10.1
++--- org.ow2.asm:asm-commons:9.10.1
++--- org.ow2.asm:asm-tree:9.10.1
++--- org.ow2.asm:asm-util:9.10.1
++--- net.fabricmc:sponge-mixin:0.17.3+mixin.0.8.7
++--- io.github.llamalad7:mixinextras-fabric:0.5.4
++--- net.fabricmc:dev-launch-injector:0.2.1+build.8
++--- net.fabricmc:fabric-log4j-util:1.0.2
++--- at.yawk.lz4:lz4-java:1.10.1
++--- com.azure:azure-json:1.4.0
++--- com.github.oshi:oshi-core:6.9.0
++--- com.google.code.gson:gson:2.13.2
++--- com.google.guava:failureaccess:1.0.3
++--- com.google.guava:guava:33.5.0-jre
++--- com.ibm.icu:icu4j:77.1
++--- com.microsoft.azure:msal4j:1.23.1
++--- com.mojang:authlib:7.0.63
++--- com.mojang:blocklist:1.0.10
++--- com.mojang:brigadier:1.3.10
++--- com.mojang:datafixerupper:9.0.19
++--- com.mojang:jtracy:1.0.37
++--- com.mojang:logging:1.6.11
++--- com.mojang:patchy:2.2.10
++--- com.mojang:text2speech:1.18.11
++--- commons-codec:commons-codec:1.19.0
++--- commons-io:commons-io:2.20.0
++--- io.netty:netty-buffer:4.2.7.Final
++--- io.netty:netty-codec-base:4.2.7.Final
++--- io.netty:netty-codec-compression:4.2.7.Final
++--- io.netty:netty-codec-http:4.2.7.Final
++--- io.netty:netty-common:4.2.7.Final
++--- io.netty:netty-handler:4.2.7.Final
++--- io.netty:netty-resolver:4.2.7.Final
++--- io.netty:netty-transport-classes-epoll:4.2.7.Final
++--- io.netty:netty-transport-classes-kqueue:4.2.7.Final
++--- io.netty:netty-transport-native-epoll:4.2.7.Final
++--- io.netty:netty-transport-native-unix-common:4.2.7.Final
++--- io.netty:netty-transport:4.2.7.Final
++--- it.unimi.dsi:fastutil:8.5.18
++--- net.java.dev.jna:jna-platform:5.17.0
++--- net.java.dev.jna:jna:5.17.0
++--- net.sf.jopt-simple:jopt-simple:5.0.4
++--- org.apache.commons:commons-compress:1.28.0
++--- org.apache.commons:commons-lang3:3.19.0
++--- org.apache.logging.log4j:log4j-api:2.25.2
++--- org.apache.logging.log4j:log4j-core:2.25.2
++--- org.apache.logging.log4j:log4j-slf4j2-impl:2.25.2
++--- org.jcraft:jorbis:0.0.17
++--- org.joml:joml:1.10.8
++--- org.jspecify:jspecify:1.0.0
++--- org.lwjgl:lwjgl-freetype:3.4.1
++--- org.lwjgl:lwjgl-glfw:3.4.1
++--- org.lwjgl:lwjgl-jemalloc:3.4.1
++--- org.lwjgl:lwjgl-openal:3.4.1
++--- org.lwjgl:lwjgl-opengl:3.4.1
++--- org.lwjgl:lwjgl-stb:3.4.1
++--- org.lwjgl:lwjgl-tinyfd:3.4.1
++--- org.lwjgl:lwjgl:3.4.1
++--- org.slf4j:slf4j-api:2.0.17
++--- net.minecraft:minecraft-common-043a8b3edf:26.1.2
+\--- io.netty:netty-transport-native-kqueue:4.2.7.Final
+
+runtimeElements - Runtime elements for the 'main' feature. (n)
+No dependencies
+
+runtimeOnly - Runtime-only dependencies for the 'main' feature. (n)
+No dependencies
+
+testAnnotationProcessor - Annotation processors and their dependencies for source set 'test'.
+No dependencies
+
+testCompileClasspath - Compile classpath for source set 'test'.
++--- org.jetbrains:annotations:26.0.2
++--- net.fabricmc:fabric-loader:0.19.3
++--- net.fabricmc.fabric-api:fabric-api:0.154.0+26.1.2
+|    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    +--- net.fabricmc.fabric-api:fabric-api-lookup-api-v1:2.0.12+d5a053b64c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |    \--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.1+df84eb3d4c
+|    |         \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    +--- net.fabricmc.fabric-api:fabric-biome-api-v1:18.0.5+2fa62b4e4c
+|    +--- net.fabricmc.fabric-api:fabric-block-api-v1:3.0.2+ec56b6014c
+|    +--- net.fabricmc.fabric-api:fabric-block-getter-api-v2:2.0.6+ec56b6014c
+|    +--- net.fabricmc.fabric-api:fabric-client-gametest-api-v1:5.1.0+0a5283664c
+|    +--- net.fabricmc.fabric-api:fabric-command-api-v2:3.0.5+e2bdee784c
+|    |    \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    +--- net.fabricmc.fabric-api:fabric-content-registries-v0:11.2.1+76b0b6bb4c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |    +--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.1+df84eb3d4c (*)
+|    |    \--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c
+|    |         \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    +--- net.fabricmc.fabric-api:fabric-convention-tags-v2:4.6.2+4f11f7994c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |    \--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.1+df84eb3d4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-crash-report-info-v1:1.0.3+9f78a5a84c
+|    +--- net.fabricmc.fabric-api:fabric-creative-tab-api-v1:5.0.11+d871b99e4c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |    \--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c (*)
+|    +--- net.fabricmc.fabric-api:fabric-data-attachment-api-v1:2.2.9+44a0bd1d4c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |    +--- net.fabricmc.fabric-api:fabric-entity-events-v1:5.0.2+e2bdee784c
+|    |    |    \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |    +--- net.fabricmc.fabric-api:fabric-object-builder-api-v1:23.1.0+abb459f14c
+|    |    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |    |    +--- net.fabricmc.fabric-api:fabric-registry-sync-v0:7.1.0+2fa62b4e4c
+|    |    |    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |    |    |    \--- net.fabricmc.fabric-api:fabric-networking-api-v1:6.3.1+554860db4c
+|    |    |    |         \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |    |    \--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c (*)
+|    |    \--- net.fabricmc.fabric-api:fabric-networking-api-v1:6.3.1+554860db4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-data-generation-api-v1:24.3.2+574cf22d4c
+|    |    +--- net.fabricmc.fabric-api:fabric-convention-tags-v2:4.6.2+4f11f7994c (*)
+|    |    +--- net.fabricmc.fabric-api:fabric-recipe-api-v1:9.0.16+be4b75ae4c
+|    |    |    +--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.1+df84eb3d4c (*)
+|    |    |    \--- net.fabricmc.fabric-api:fabric-networking-api-v1:6.3.1+554860db4c (*)
+|    |    +--- net.fabricmc.fabric-api:fabric-registry-sync-v0:7.1.0+2fa62b4e4c (*)
+|    |    +--- net.fabricmc.fabric-api:fabric-resource-conditions-api-v1:6.1.0+83dd0ba34c
+|    |    \--- net.fabricmc.fabric-api:fabric-tag-api-v1:2.1.1+371cf5db4c
+|    |         +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |         \--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c (*)
+|    +--- net.fabricmc.fabric-api:fabric-debug-api-v1:1.0.1+c792624d4c
+|    |    \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    +--- net.fabricmc.fabric-api:fabric-dimensions-v1:5.1.6+9cbf5da54c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |    \--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.1+df84eb3d4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-entity-events-v1:5.0.2+e2bdee784c (*)
+|    +--- net.fabricmc.fabric-api:fabric-events-interaction-v0:5.2.2+07b380be4c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |    \--- net.fabricmc.fabric-api:fabric-networking-api-v1:6.3.1+554860db4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-game-rule-api-v1:4.0.5+d871b99e4c
+|    |    \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    +--- net.fabricmc.fabric-api:fabric-gametest-api-v1:4.0.17+867b87624c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |    +--- net.fabricmc.fabric-api:fabric-registry-sync-v0:7.1.0+2fa62b4e4c (*)
+|    |    \--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c (*)
+|    +--- net.fabricmc.fabric-api:fabric-item-api-v1:14.2.0+a2a3a8914c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |    \--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c (*)
+|    +--- net.fabricmc.fabric-api:fabric-key-mapping-api-v1:2.0.4+e2bdee784c
+|    +--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.1+df84eb3d4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-loot-api-v3:3.0.12+00a1fba64c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |    \--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c (*)
+|    +--- net.fabricmc.fabric-api:fabric-menu-api-v1:2.0.14+d871b99e4c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |    +--- net.fabricmc.fabric-api:fabric-networking-api-v1:6.3.1+554860db4c (*)
+|    |    \--- net.fabricmc.fabric-api:fabric-registry-sync-v0:7.1.0+2fa62b4e4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-message-api-v1:7.0.5+dae8ce3e4c
+|    |    \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    +--- net.fabricmc.fabric-api:fabric-model-loading-api-v1:8.0.10+c80601bb4c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |    \--- net.fabricmc.fabric-api:fabric-renderer-api-v1:13.0.7+c80601bb4c
+|    |         +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |         +--- net.fabricmc.fabric-api:fabric-rendering-v1:23.3.0+e9207d814c
+|    |         |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |         |    +--- net.fabricmc.fabric-api:fabric-transitive-access-wideners-v1:8.1.2+e9207d814c
+|    |         |    \--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.1+df84eb3d4c (*)
+|    |         \--- net.fabricmc.fabric-api:fabric-transitive-access-wideners-v1:8.1.2+e9207d814c
+|    +--- net.fabricmc.fabric-api:fabric-networking-api-v1:6.3.1+554860db4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-object-builder-api-v1:23.1.0+abb459f14c (*)
+|    +--- net.fabricmc.fabric-api:fabric-particles-v1:5.0.15+b61fef434c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |    \--- net.fabricmc.fabric-api:fabric-networking-api-v1:6.3.1+554860db4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-permission-api-v1:1.0.1+c3369b134c
+|    |    \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    +--- net.fabricmc.fabric-api:fabric-recipe-api-v1:9.0.16+be4b75ae4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-registry-sync-v0:7.1.0+2fa62b4e4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-renderer-api-v1:13.0.7+c80601bb4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-renderer-indigo:8.1.4+1403e82c4c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |    +--- net.fabricmc.fabric-api:fabric-renderer-api-v1:13.0.7+c80601bb4c (*)
+|    |    \--- net.fabricmc.fabric-api:fabric-rendering-v1:23.3.0+e9207d814c (*)
+|    +--- net.fabricmc.fabric-api:fabric-rendering-fluids-v1:6.0.1+d871b99e4c
+|    |    \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    +--- net.fabricmc.fabric-api:fabric-rendering-v1:23.3.0+e9207d814c (*)
+|    +--- net.fabricmc.fabric-api:fabric-resource-conditions-api-v1:6.1.0+83dd0ba34c
+|    +--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c (*)
+|    +--- net.fabricmc.fabric-api:fabric-screen-api-v1:5.1.0+981dd9b24c
+|    |    \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    +--- net.fabricmc.fabric-api:fabric-serialization-api-v1:2.0.3+11a26f314c
+|    +--- net.fabricmc.fabric-api:fabric-sound-api-v1:2.0.4+11a26f314c
+|    +--- net.fabricmc.fabric-api:fabric-tag-api-v1:2.1.1+371cf5db4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-transfer-api-v1:8.0.6+357ea7334c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-lookup-api-v1:2.0.12+d5a053b64c (*)
+|    |    +--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.1+df84eb3d4c (*)
+|    |    \--- net.fabricmc.fabric-api:fabric-rendering-fluids-v1:6.0.1+d871b99e4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-transitive-access-wideners-v1:8.1.2+e9207d814c
+|    \--- net.fabricmc.fabric-api:fabric-api-deprecated:0.154.0+26.1.2
+|         \--- net.fabricmc.fabric-api:fabric-resource-loader-v0:3.3.17+4fc5413f4c
+|              +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c
+|              \--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c (*)
++--- com.terraformersmc:modmenu:18.0.0-beta.1
++--- org.ow2.asm:asm:9.10.1
++--- org.ow2.asm:asm-analysis:9.10.1
++--- org.ow2.asm:asm-commons:9.10.1
++--- org.ow2.asm:asm-tree:9.10.1
++--- org.ow2.asm:asm-util:9.10.1
++--- net.fabricmc:sponge-mixin:0.17.3+mixin.0.8.7
++--- io.github.llamalad7:mixinextras-fabric:0.5.4
++--- at.yawk.lz4:lz4-java:1.10.1
++--- com.azure:azure-json:1.4.0
++--- com.github.oshi:oshi-core:6.9.0
++--- com.google.code.gson:gson:2.13.2
++--- com.google.guava:failureaccess:1.0.3
++--- com.google.guava:guava:33.5.0-jre
++--- com.ibm.icu:icu4j:77.1
++--- com.microsoft.azure:msal4j:1.23.1
++--- com.mojang:authlib:7.0.63
++--- com.mojang:blocklist:1.0.10
++--- com.mojang:brigadier:1.3.10
++--- com.mojang:datafixerupper:9.0.19
++--- com.mojang:jtracy:1.0.37
++--- com.mojang:logging:1.6.11
++--- com.mojang:patchy:2.2.10
++--- com.mojang:text2speech:1.18.11
++--- commons-codec:commons-codec:1.19.0
++--- commons-io:commons-io:2.20.0
++--- io.netty:netty-buffer:4.2.7.Final
++--- io.netty:netty-codec-base:4.2.7.Final
++--- io.netty:netty-codec-compression:4.2.7.Final
++--- io.netty:netty-codec-http:4.2.7.Final
++--- io.netty:netty-common:4.2.7.Final
++--- io.netty:netty-handler:4.2.7.Final
++--- io.netty:netty-resolver:4.2.7.Final
++--- io.netty:netty-transport-classes-epoll:4.2.7.Final
++--- io.netty:netty-transport-classes-kqueue:4.2.7.Final
++--- io.netty:netty-transport-native-epoll:4.2.7.Final
++--- io.netty:netty-transport-native-unix-common:4.2.7.Final
++--- io.netty:netty-transport:4.2.7.Final
++--- it.unimi.dsi:fastutil:8.5.18
++--- net.java.dev.jna:jna-platform:5.17.0
++--- net.java.dev.jna:jna:5.17.0
++--- net.sf.jopt-simple:jopt-simple:5.0.4
++--- org.apache.commons:commons-compress:1.28.0
++--- org.apache.commons:commons-lang3:3.19.0
++--- org.apache.logging.log4j:log4j-api:2.25.2
++--- org.apache.logging.log4j:log4j-core:2.25.2
++--- org.apache.logging.log4j:log4j-slf4j2-impl:2.25.2
++--- org.jcraft:jorbis:0.0.17
++--- org.joml:joml:1.10.8
++--- org.jspecify:jspecify:1.0.0
++--- org.lwjgl:lwjgl-freetype:3.4.1
++--- org.lwjgl:lwjgl-glfw:3.4.1
++--- org.lwjgl:lwjgl-jemalloc:3.4.1
++--- org.lwjgl:lwjgl-openal:3.4.1
++--- org.lwjgl:lwjgl-opengl:3.4.1
++--- org.lwjgl:lwjgl-stb:3.4.1
++--- org.lwjgl:lwjgl-tinyfd:3.4.1
++--- org.lwjgl:lwjgl:3.4.1
++--- org.slf4j:slf4j-api:2.0.17
++--- net.minecraft:minecraft-clientOnly-043a8b3edf:26.1.2
++--- net.minecraft:minecraft-common-043a8b3edf:26.1.2
+\--- io.netty:netty-transport-native-kqueue:4.2.7.Final
+
+testCompileOnly - Compile only dependencies for source set 'test'. (n)
+\--- org.jetbrains:annotations:26.0.2 (n)
+
+testImplementation - Implementation only dependencies for source set 'test'. (n)
+\--- unspecified (n)
+
+testRuntimeClasspath - Runtime classpath of source set 'test'.
++--- net.fabricmc:fabric-loader:0.19.3
++--- net.fabricmc.fabric-api:fabric-api:0.154.0+26.1.2
+|    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    +--- net.fabricmc.fabric-api:fabric-api-lookup-api-v1:2.0.12+d5a053b64c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    \--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.1+df84eb3d4c
+|    |         \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    +--- net.fabricmc.fabric-api:fabric-biome-api-v1:18.0.5+2fa62b4e4c
+|    +--- net.fabricmc.fabric-api:fabric-block-api-v1:3.0.2+ec56b6014c
+|    +--- net.fabricmc.fabric-api:fabric-block-getter-api-v2:2.0.6+ec56b6014c
+|    +--- net.fabricmc.fabric-api:fabric-client-gametest-api-v1:5.1.0+0a5283664c
+|    +--- net.fabricmc.fabric-api:fabric-command-api-v2:3.0.5+e2bdee784c
+|    |    \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    +--- net.fabricmc.fabric-api:fabric-content-registries-v0:11.2.1+76b0b6bb4c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    +--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.1+df84eb3d4c (*)
+|    |    \--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c
+|    |         \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    +--- net.fabricmc.fabric-api:fabric-convention-tags-v2:4.6.2+4f11f7994c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    \--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.1+df84eb3d4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-crash-report-info-v1:1.0.3+9f78a5a84c
+|    +--- net.fabricmc.fabric-api:fabric-creative-tab-api-v1:5.0.11+d871b99e4c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    \--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c (*)
+|    +--- net.fabricmc.fabric-api:fabric-data-attachment-api-v1:2.2.9+44a0bd1d4c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    +--- net.fabricmc.fabric-api:fabric-entity-events-v1:5.0.2+e2bdee784c
+|    |    |    \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    +--- net.fabricmc.fabric-api:fabric-object-builder-api-v1:23.1.0+abb459f14c
+|    |    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    |    +--- net.fabricmc.fabric-api:fabric-registry-sync-v0:7.1.0+2fa62b4e4c
+|    |    |    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    |    |    \--- net.fabricmc.fabric-api:fabric-networking-api-v1:6.3.1+554860db4c
+|    |    |    |         \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    |    \--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c (*)
+|    |    \--- net.fabricmc.fabric-api:fabric-networking-api-v1:6.3.1+554860db4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-data-generation-api-v1:24.3.2+574cf22d4c
+|    |    +--- net.fabricmc.fabric-api:fabric-convention-tags-v2:4.6.2+4f11f7994c (*)
+|    |    +--- net.fabricmc.fabric-api:fabric-recipe-api-v1:9.0.16+be4b75ae4c
+|    |    |    +--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.1+df84eb3d4c (*)
+|    |    |    \--- net.fabricmc.fabric-api:fabric-networking-api-v1:6.3.1+554860db4c (*)
+|    |    +--- net.fabricmc.fabric-api:fabric-registry-sync-v0:7.1.0+2fa62b4e4c (*)
+|    |    +--- net.fabricmc.fabric-api:fabric-resource-conditions-api-v1:6.1.0+83dd0ba34c
+|    |    \--- net.fabricmc.fabric-api:fabric-tag-api-v1:2.1.1+371cf5db4c
+|    |         +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |         \--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c (*)
+|    +--- net.fabricmc.fabric-api:fabric-debug-api-v1:1.0.1+c792624d4c
+|    |    \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    +--- net.fabricmc.fabric-api:fabric-dimensions-v1:5.1.6+9cbf5da54c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    \--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.1+df84eb3d4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-entity-events-v1:5.0.2+e2bdee784c (*)
+|    +--- net.fabricmc.fabric-api:fabric-events-interaction-v0:5.2.2+07b380be4c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    \--- net.fabricmc.fabric-api:fabric-networking-api-v1:6.3.1+554860db4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-game-rule-api-v1:4.0.5+d871b99e4c
+|    |    \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    +--- net.fabricmc.fabric-api:fabric-gametest-api-v1:4.0.17+867b87624c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    +--- net.fabricmc.fabric-api:fabric-registry-sync-v0:7.1.0+2fa62b4e4c (*)
+|    |    \--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c (*)
+|    +--- net.fabricmc.fabric-api:fabric-item-api-v1:14.2.0+a2a3a8914c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    \--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c (*)
+|    +--- net.fabricmc.fabric-api:fabric-key-mapping-api-v1:2.0.4+e2bdee784c -> 2.0.4+e2bdee7859
+|    +--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.1+df84eb3d4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-loot-api-v3:3.0.12+00a1fba64c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    \--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c (*)
+|    +--- net.fabricmc.fabric-api:fabric-menu-api-v1:2.0.14+d871b99e4c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    +--- net.fabricmc.fabric-api:fabric-networking-api-v1:6.3.1+554860db4c (*)
+|    |    \--- net.fabricmc.fabric-api:fabric-registry-sync-v0:7.1.0+2fa62b4e4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-message-api-v1:7.0.5+dae8ce3e4c
+|    |    \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    +--- net.fabricmc.fabric-api:fabric-model-loading-api-v1:8.0.10+c80601bb4c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    \--- net.fabricmc.fabric-api:fabric-renderer-api-v1:13.0.7+c80601bb4c
+|    |         +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |         +--- net.fabricmc.fabric-api:fabric-rendering-v1:23.3.0+e9207d814c
+|    |         |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |         |    +--- net.fabricmc.fabric-api:fabric-transitive-access-wideners-v1:8.1.2+e9207d814c
+|    |         |    \--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.1+df84eb3d4c (*)
+|    |         \--- net.fabricmc.fabric-api:fabric-transitive-access-wideners-v1:8.1.2+e9207d814c
+|    +--- net.fabricmc.fabric-api:fabric-networking-api-v1:6.3.1+554860db4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-object-builder-api-v1:23.1.0+abb459f14c (*)
+|    +--- net.fabricmc.fabric-api:fabric-particles-v1:5.0.15+b61fef434c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    \--- net.fabricmc.fabric-api:fabric-networking-api-v1:6.3.1+554860db4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-permission-api-v1:1.0.1+c3369b134c
+|    |    \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    +--- net.fabricmc.fabric-api:fabric-recipe-api-v1:9.0.16+be4b75ae4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-registry-sync-v0:7.1.0+2fa62b4e4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-renderer-api-v1:13.0.7+c80601bb4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-renderer-indigo:8.1.4+1403e82c4c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    +--- net.fabricmc.fabric-api:fabric-renderer-api-v1:13.0.7+c80601bb4c (*)
+|    |    \--- net.fabricmc.fabric-api:fabric-rendering-v1:23.3.0+e9207d814c (*)
+|    +--- net.fabricmc.fabric-api:fabric-rendering-fluids-v1:6.0.1+d871b99e4c
+|    |    \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    +--- net.fabricmc.fabric-api:fabric-rendering-v1:23.3.0+e9207d814c (*)
+|    +--- net.fabricmc.fabric-api:fabric-resource-conditions-api-v1:6.1.0+83dd0ba34c
+|    +--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c (*)
+|    +--- net.fabricmc.fabric-api:fabric-screen-api-v1:5.1.0+981dd9b24c
+|    |    \--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    +--- net.fabricmc.fabric-api:fabric-serialization-api-v1:2.0.3+11a26f314c
+|    +--- net.fabricmc.fabric-api:fabric-sound-api-v1:2.0.4+11a26f314c
+|    +--- net.fabricmc.fabric-api:fabric-tag-api-v1:2.1.1+371cf5db4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-transfer-api-v1:8.0.6+357ea7334c
+|    |    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|    |    +--- net.fabricmc.fabric-api:fabric-api-lookup-api-v1:2.0.12+d5a053b64c (*)
+|    |    +--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.1+df84eb3d4c (*)
+|    |    \--- net.fabricmc.fabric-api:fabric-rendering-fluids-v1:6.0.1+d871b99e4c (*)
+|    +--- net.fabricmc.fabric-api:fabric-transitive-access-wideners-v1:8.1.2+e9207d814c
+|    \--- net.fabricmc.fabric-api:fabric-api-deprecated:0.154.0+26.1.2
+|         \--- net.fabricmc.fabric-api:fabric-resource-loader-v0:3.3.17+4fc5413f4c
+|              +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece063234c -> 2.0.3+ece0632359
+|              \--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.10+7c44c7324c (*)
++--- com.terraformersmc:modmenu:18.0.0-beta.1
+|    +--- net.fabricmc:fabric-loader:0.18.4 -> 0.19.3
+|    +--- net.fabricmc.fabric-api:fabric-api-base:2.0.3+ece0632359
+|    +--- net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.9+d871b99e59 -> 2.0.10+7c44c7324c (*)
+|    +--- net.fabricmc.fabric-api:fabric-screen-api-v1:5.0.1+d871b99e59 -> 5.1.0+981dd9b24c (*)
+|    +--- net.fabricmc.fabric-api:fabric-key-mapping-api-v1:2.0.4+e2bdee7859
+|    \--- net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.0.6+a9b9c17659 -> 4.1.1+df84eb3d4c (*)
++--- org.ow2.asm:asm:9.10.1
++--- org.ow2.asm:asm-analysis:9.10.1
++--- org.ow2.asm:asm-commons:9.10.1
++--- org.ow2.asm:asm-tree:9.10.1
++--- org.ow2.asm:asm-util:9.10.1
++--- net.fabricmc:sponge-mixin:0.17.3+mixin.0.8.7
++--- io.github.llamalad7:mixinextras-fabric:0.5.4
++--- net.fabricmc:dev-launch-injector:0.2.1+build.8
++--- net.fabricmc:fabric-log4j-util:1.0.2
++--- at.yawk.lz4:lz4-java:1.10.1
++--- com.azure:azure-json:1.4.0
++--- com.github.oshi:oshi-core:6.9.0
++--- com.google.code.gson:gson:2.13.2
++--- com.google.guava:failureaccess:1.0.3
++--- com.google.guava:guava:33.5.0-jre
++--- com.ibm.icu:icu4j:77.1
++--- com.microsoft.azure:msal4j:1.23.1
++--- com.mojang:authlib:7.0.63
++--- com.mojang:blocklist:1.0.10
++--- com.mojang:brigadier:1.3.10
++--- com.mojang:datafixerupper:9.0.19
++--- com.mojang:jtracy:1.0.37
++--- com.mojang:logging:1.6.11
++--- com.mojang:patchy:2.2.10
++--- com.mojang:text2speech:1.18.11
++--- commons-codec:commons-codec:1.19.0
++--- commons-io:commons-io:2.20.0
++--- io.netty:netty-buffer:4.2.7.Final
++--- io.netty:netty-codec-base:4.2.7.Final
++--- io.netty:netty-codec-compression:4.2.7.Final
++--- io.netty:netty-codec-http:4.2.7.Final
++--- io.netty:netty-common:4.2.7.Final
++--- io.netty:netty-handler:4.2.7.Final
++--- io.netty:netty-resolver:4.2.7.Final
++--- io.netty:netty-transport-classes-epoll:4.2.7.Final
++--- io.netty:netty-transport-classes-kqueue:4.2.7.Final
++--- io.netty:netty-transport-native-epoll:4.2.7.Final
++--- io.netty:netty-transport-native-unix-common:4.2.7.Final
++--- io.netty:netty-transport:4.2.7.Final
++--- it.unimi.dsi:fastutil:8.5.18
++--- net.java.dev.jna:jna-platform:5.17.0
++--- net.java.dev.jna:jna:5.17.0
++--- net.sf.jopt-simple:jopt-simple:5.0.4
++--- org.apache.commons:commons-compress:1.28.0
++--- org.apache.commons:commons-lang3:3.19.0
++--- org.apache.logging.log4j:log4j-api:2.25.2
++--- org.apache.logging.log4j:log4j-core:2.25.2
++--- org.apache.logging.log4j:log4j-slf4j2-impl:2.25.2
++--- org.jcraft:jorbis:0.0.17
++--- org.joml:joml:1.10.8
++--- org.jspecify:jspecify:1.0.0
++--- org.lwjgl:lwjgl-freetype:3.4.1
++--- org.lwjgl:lwjgl-glfw:3.4.1
++--- org.lwjgl:lwjgl-jemalloc:3.4.1
++--- org.lwjgl:lwjgl-openal:3.4.1
++--- org.lwjgl:lwjgl-opengl:3.4.1
++--- org.lwjgl:lwjgl-stb:3.4.1
++--- org.lwjgl:lwjgl-tinyfd:3.4.1
++--- org.lwjgl:lwjgl:3.4.1
++--- org.slf4j:slf4j-api:2.0.17
++--- net.minecraft:minecraft-clientOnly-043a8b3edf:26.1.2
++--- net.minecraft:minecraft-common-043a8b3edf:26.1.2
+\--- io.netty:netty-transport-native-kqueue:4.2.7.Final
+
+testRuntimeOnly - Runtime only dependencies for source set 'test'. (n)
+No dependencies
+
+vineflowerDecompilerClasspath
+\--- org.vineflower:vineflower:1.12.0
+
+(*) - Indicates repeated occurrences of a transitive dependency subtree. Gradle expands transitive dependency subtrees only once per project; repeat occurrences only display the root of the subtree, followed by this annotation.
+
+(n) - A dependency or dependency configuration that cannot be resolved.
+
+A web-based, searchable dependency report is available by adding the --scan option.
+
+BUILD SUCCESSFUL in 1s
+1 actionable task: 1 executed
