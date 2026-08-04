@@ -1,93 +1,22 @@
 plugins {
-	id 'net.fabricmc.fabric-loom-remap' version "${loom_version}"
+	id 'net.fabricmc.fabric-loom' version "${loom_version}" apply false
 	id 'maven-publish'
 }
 
-version = "${project.mod_version}-mc1.21.x"
-group = project.maven_group
-
-repositories {
-	mavenCentral()
-	maven {
-		name = "TerraformersMC"
-		url = "https://maven.terraformersmc.com/releases/"
-	}
-}
-
-loom {
-	splitEnvironmentSourceSets()
-
-	mods {
-		"redfx" {
-			sourceSet sourceSets.main
-			sourceSet sourceSets.client
-		}
-	}
-}
-
-dependencies {
-	minecraft "com.mojang:minecraft:${project.minecraft_version}"
-	mappings loom.officialMojangMappings()
-	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
-	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
-	modImplementation "com.terraformersmc:modmenu:17.0.1-beta.1"
-}
-
-processResources {
-	def version = project.version
-	def minecraftDependency = project.minecraft_dependency
-	inputs.property "version", version
-	inputs.property "minecraftDependency", minecraftDependency
-
-	filesMatching("fabric.mod.json") {
-		expand "version": version, "minecraftDependency": minecraftDependency
-	}
-}
-
-tasks.withType(JavaCompile).configureEach {
-	it.options.release = 21
-}
-
-java {
-	withSourcesJar()
-
-	toolchain {
-		languageVersion = JavaLanguageVersion.of(25)
-	}
-}
-
-jar {
-	def projectName = project.name
-	inputs.property "projectName", projectName
-
-	from("LICENSE") {
-		rename { "${it}_$projectName"}
-	}
-}
-
-remapJar {
-	archiveFileName = "redfx-${project.mod_version}-mc1.21.x.jar"
-}
-
-publishing {
-	publications {
-		create("mavenJava", MavenPublication) {
-			from components.java
-		}
-	}
+allprojects {
 	repositories {
-		// Place optional publishing repository definitions here
+		mavenCentral()
+		maven {
+			name = "Fabric"
+			url = "https://maven.fabricmc.net/"
+		}
+		maven {
+			name = "TerraformersMC"
+			url = "https://maven.terraformersmc.com/releases/"
+		}
+		maven {
+			name = "NeoForge"
+			url = "https://maven.neoforged.net/releases/"
+		}
 	}
-}
-
-// Automatically copy built remapped jar to release directory in the project root
-tasks.register('copyJarToRelease', Copy) {
-	from tasks.named('remapJar')
-	into "${project.rootDir}/release"
-
-	mustRunAfter tasks.named('remapJar')
-}
-
-tasks.named('build') {
-	finalizedBy('copyJarToRelease')
 }

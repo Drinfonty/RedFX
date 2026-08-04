@@ -4,6 +4,10 @@ pluginManagement {
 			name = 'Fabric'
 			url = 'https://maven.fabricmc.net/'
 		}
+		maven {
+			name = 'NeoForge'
+			url = 'https://maven.neoforged.net/releases/'
+		}
 		mavenCentral()
 		gradlePluginPortal()
 	}
@@ -21,3 +25,7 @@ plugins {
 }
 
 rootProject.name = 'redfx'
+
+include 'common'
+include 'fabric'
+include 'neoforge'
