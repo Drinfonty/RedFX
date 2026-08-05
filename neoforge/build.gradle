@@ -74,11 +74,13 @@ afterEvaluate {
 	tasks.named('runClient') {
 		if (project.hasProperty('testJar')) {
 			dependsOn(tasks.named('jar'))
-			setClasspath(files())
-			classpath.from(tasks.named('jar'))
-			classpath.from(configurations.runtimeClasspath.filter { File file ->
-				!file.path.contains("build/classes") && !file.path.contains("build/resources")
+			setClasspath(classpath.filter { File file ->
+				!file.path.contains("common/build/classes") &&
+				!file.path.contains("common/build/resources") &&
+				!file.path.contains("neoforge/build/classes") &&
+				!file.path.contains("neoforge/build/resources")
 			})
+			classpath.from(tasks.named('jar'))
 		}
 	}
 }
