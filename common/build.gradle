@@ -1,19 +1,31 @@
 plugins {
-	id 'net.fabricmc.fabric-loom' version "${loom_version}"
+	id 'net.fabricmc.fabric-loom-remap'
 }
 
 dependencies {
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	mappings loom.officialMojangMappings()
 	compileOnly "org.spongepowered:mixin:0.8.7"
 }
 
 tasks.withType(JavaCompile).configureEach {
-	it.options.release = 25
+	it.options.release = 21
 }
 
 java {
 	withSourcesJar()
 	toolchain {
-		languageVersion = JavaLanguageVersion.of(25)
+		languageVersion = JavaLanguageVersion.of(21)
 	}
+}
+
+loom {
+	mixin {
+		defaultRefmapName = "redfx-refmap.json"
+		useLegacyMixinAp = true
+	}
+}
+
+remapJar {
+	targetNamespace = "named"
 }

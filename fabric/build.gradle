@@ -1,5 +1,5 @@
 plugins {
-	id 'net.fabricmc.fabric-loom' version "${loom_version}"
+	id 'net.fabricmc.fabric-loom-remap'
 }
 
 loom {
@@ -16,9 +16,10 @@ loom {
 
 dependencies {
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
-	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
-	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
-	compileOnly "com.terraformersmc:modmenu:18.0.0"
+	mappings loom.officialMojangMappings()
+	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+	modCompileOnly "com.terraformersmc:modmenu:11.0.1"
 
 	implementation project(":common")
 }
@@ -35,14 +36,14 @@ processResources {
 }
 
 tasks.withType(JavaCompile).configureEach {
-	it.options.release = 25
+	it.options.release = 21
 }
 
 java {
 	withSourcesJar()
 
 	toolchain {
-		languageVersion = JavaLanguageVersion.of(25)
+		languageVersion = JavaLanguageVersion.of(21)
 	}
 }
 
@@ -81,5 +82,16 @@ tasks.register('copyJarToRelease', Copy) {
 }
 
 tasks.named('build') {
-	finalizedBy('copyJarToRelease')
+	finalizedBy('copyJarToMods', 'copyJarToRelease')
+}
+
+loom {
+	mixin {
+		defaultRefmapName = "redfx-refmap.json"
+		useLegacyMixinAp = true
+	}
+}
+
+tasks.named('runClient') {
+	classpath.from(project(":common").tasks.named('jar'))
 }
