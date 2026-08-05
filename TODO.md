@@ -35,8 +35,8 @@
 - [x] **Underwater blood effect**: Instead of splatting down like on land, blood underwater should disperse, maybe using smoke particles.
 
 ## Version 1.1.1
-- [ ] Allows adjusting the particle sizes
-- [ ] Allows adjusting the color saturation of the particles
+- [x] Allows adjusting the particle sizes
+- [x] Allows adjusting the color saturation of the particles
 
 ---
 
