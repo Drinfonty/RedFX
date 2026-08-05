@@ -34,6 +34,10 @@
 - [x] **Drip effect**: When a mob or player is low on health, have blood dripping from them (not spewing) even when they are not being damaged.
 - [x] **Underwater blood effect**: Instead of splatting down like on land, blood underwater should disperse, maybe using smoke particles.
 
+## Version 1.1.1
+- [ ] Allows adjusting the particle sizes
+- [ ] Allows adjusting the color saturation of the particles
+
 ---
 
 ## Future Features

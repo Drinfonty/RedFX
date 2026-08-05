@@ -67,7 +67,7 @@ public class BloodParticle extends TerrainParticle {
 
         // Randomize size on spawn (ranging from 0.8x to 1.8x of base size)
         float sizeScale = 0.8F + this.random.nextFloat() * 1.0F;
-        this.quadSize *= sizeScale;
+        this.quadSize *= sizeScale * RedfxConfig.get().particleSizeScale;
 
         // If using splat textures, start at half size while flying to prevent shrinking on landing
         if (RedfxConfig.get().useSplatTexture) {
