@@ -51,6 +51,8 @@ jar {
 	def projectName = project.name
 	inputs.property "projectName", projectName
 
+	from project(":common").sourceSets.main.output
+
 	from("LICENSE") {
 		rename { "${it}_$projectName"}
 	}
@@ -82,4 +84,17 @@ tasks.register('copyJarToRelease', Copy) {
 
 tasks.named('build') {
 	finalizedBy('copyJarToRelease')
+}
+
+afterEvaluate {
+	tasks.named('runClient') {
+		if (project.hasProperty('testJar')) {
+			dependsOn(tasks.named('jar'))
+			setClasspath(files())
+			classpath.from(tasks.named('jar'))
+			classpath.from(configurations.runtimeClasspath.filter { File file ->
+				!file.path.contains("build/classes") && !file.path.contains("build/resources")
+			})
+		}
+	}
 }
