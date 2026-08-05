@@ -23,9 +23,9 @@ The project maintains different branches to target different major Minecraft and
 
 | Branch Name | Minecraft Target | Mod Version | Build System Notes |
 | :--- | :--- | :--- | :--- |
-| **`main`** | **`26.2`** (1.21.4) | `1.1.0` | Uses Loom 1.17. |
-| **`legacy-26.1`** | **`26.1.2`** (1.21.2 - 1.21.3) | `1.1.0` | Uses Loom 1.17. |
-| **`legacy-1.21`** | **`1.21.11`** (1.20.5 - 1.21.1) | `1.1.0` | Uses Loom 1.14.10. Requires remapped common classes. |
+| **`main`** | **`26.2`** (1.21.4) | `1.1.1` | Uses Loom 1.17. |
+| **`legacy-26.1`** | **`26.1.2`** (1.21.2 - 1.21.3) | `1.1.1` | Uses Loom 1.17. |
+| **`legacy-1.21`** | **`1.21.11`** (1.20.5 - 1.21.1) | `1.1.1` | Uses Loom 1.14.10. Requires remapped common classes. |
 
 ---
 
