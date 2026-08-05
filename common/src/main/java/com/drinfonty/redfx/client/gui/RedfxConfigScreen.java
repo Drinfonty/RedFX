@@ -176,7 +176,7 @@ public class RedfxConfigScreen extends Screen {
 
         // Button 11: Reset Defaults
         Button resetButton = Button.builder(
-            Component.literal("Reset Defaults"),
+            Component.literal("Reset"),
             btn -> {
                 config.resetToDefaults();
                 this.rebuildWidgets();
@@ -190,7 +190,7 @@ public class RedfxConfigScreen extends Screen {
     }
 
     private Component getAmountButtonMessage(RedfxConfig config) {
-        return Component.literal("Particle Amount: " + config.particleAmount);
+        return Component.literal("Amount: " + config.particleAmount);
     }
 
     private Component getStyleButtonMessage(RedfxConfig config) {
@@ -200,7 +200,7 @@ public class RedfxConfigScreen extends Screen {
             case "RedWool" -> "Default";
             default -> "Default";
         };
-        return Component.literal("Particle Style: " + displayName);
+        return Component.literal("Style: " + displayName);
     }
 
     private Component getSplatButtonMessage(RedfxConfig config) {
@@ -213,7 +213,7 @@ public class RedfxConfigScreen extends Screen {
 
     private Component getWaterParticleButtonMessage(RedfxConfig config) {
         String displayName = config.waterParticleType.equals("CampfireSmoke") ? "Big" : "Small";
-        return Component.literal("Underwater Blood Style: " + displayName);
+        return Component.literal("Underwater: " + displayName);
     }
 
     @Override
