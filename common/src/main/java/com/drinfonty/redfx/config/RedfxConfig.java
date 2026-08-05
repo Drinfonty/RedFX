@@ -80,6 +80,18 @@ public class RedfxConfig {
         }
     }
 
+    public void resetToDefaults() {
+        this.bloodEnabled = true;
+        this.particleAmount = "High";
+        this.particleType = "RedWool";
+        this.particleLifetimeSeconds = 5;
+        this.useSplatTexture = true;
+        this.enableSplatDust = true;
+        this.waterParticleType = "Smoke";
+        this.particleSizeScale = 1.0f;
+        this.colorSaturation = 1.0f;
+    }
+
     public float getMultiplier() {
         return switch (particleAmount) {
             case "Low" -> 0.4f;

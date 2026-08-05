@@ -37,6 +37,7 @@
 ## Version 1.1.1
 - [x] Allows adjusting the particle sizes
 - [x] Allows adjusting the color saturation of the particles
+- [x] Add a reset button in the config for people to reset all settings to default
 
 ---
 

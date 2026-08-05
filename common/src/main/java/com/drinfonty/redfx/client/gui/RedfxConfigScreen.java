@@ -169,8 +169,18 @@ public class RedfxConfigScreen extends Screen {
                 config.save();
                 this.onClose();
             }
-        ).bounds(x, startY + 130, buttonWidth, buttonHeight).build();
+        ).bounds(leftX, startY + 130, colWidth, buttonHeight).build();
         this.addRenderableWidget(doneButton);
+
+        // Button 11: Reset Defaults
+        Button resetButton = Button.builder(
+            Component.literal("Reset Defaults"),
+            btn -> {
+                config.resetToDefaults();
+                this.rebuildWidgets();
+            }
+        ).bounds(rightX, startY + 130, colWidth, buttonHeight).build();
+        this.addRenderableWidget(resetButton);
     }
 
     private Component getBloodButtonMessage(RedfxConfig config) {
