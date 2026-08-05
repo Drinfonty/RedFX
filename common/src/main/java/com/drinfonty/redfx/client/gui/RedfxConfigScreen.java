@@ -22,7 +22,10 @@ public class RedfxConfigScreen extends Screen {
         int buttonWidth = 220;
         int buttonHeight = 20;
         int x = (this.width - buttonWidth) / 2;
-        int startY = this.height / 2 - 90;
+        int startY = this.height / 2 - 75;
+        int colWidth = 108;
+        int leftX = x;
+        int rightX = x + 112;
 
         // Button 1: Toggle Blood Enabled
         Button bloodToggle = Button.builder(
@@ -46,7 +49,7 @@ public class RedfxConfigScreen extends Screen {
                 };
                 btn.setMessage(getAmountButtonMessage(config));
             }
-        ).bounds(x, startY + 25, buttonWidth, buttonHeight).build();
+        ).bounds(leftX, startY + 25, colWidth, buttonHeight).build();
         this.addRenderableWidget(amountToggle);
 
         // Button 3: Toggle Particle Style
@@ -60,7 +63,7 @@ public class RedfxConfigScreen extends Screen {
                 };
                 btn.setMessage(getStyleButtonMessage(config));
             }
-        ).bounds(x, startY + 50, buttonWidth, buttonHeight).build();
+        ).bounds(rightX, startY + 25, colWidth, buttonHeight).build();
         this.addRenderableWidget(styleToggle);
 
         // Button 4: Toggle Splat Decal Texture
@@ -70,7 +73,7 @@ public class RedfxConfigScreen extends Screen {
                 config.useSplatTexture = !config.useSplatTexture;
                 btn.setMessage(getSplatButtonMessage(config));
             }
-        ).bounds(x, startY + 75, buttonWidth, buttonHeight).build();
+        ).bounds(leftX, startY + 50, colWidth, buttonHeight).build();
         this.addRenderableWidget(splatToggle);
 
         // Button 5: Toggle Splat Dust Particle
@@ -80,7 +83,7 @@ public class RedfxConfigScreen extends Screen {
                 config.enableSplatDust = !config.enableSplatDust;
                 btn.setMessage(getSplatDustButtonMessage(config));
             }
-        ).bounds(x, startY + 100, buttonWidth, buttonHeight).build();
+        ).bounds(rightX, startY + 50, colWidth, buttonHeight).build();
         this.addRenderableWidget(splatDustToggle);
 
         // Button 6: Toggle Underwater Particle Type
@@ -90,12 +93,12 @@ public class RedfxConfigScreen extends Screen {
                 config.waterParticleType = config.waterParticleType.equals("CampfireSmoke") ? "Smoke" : "CampfireSmoke";
                 btn.setMessage(getWaterParticleButtonMessage(config));
             }
-        ).bounds(x, startY + 125, buttonWidth, buttonHeight).build();
+        ).bounds(leftX, startY + 75, colWidth, buttonHeight).build();
         this.addRenderableWidget(waterParticleToggle);
 
         // Button 7: Slider for Particle Lifetime
         AbstractSliderButton lifetimeSlider = new AbstractSliderButton(
-            x, startY + 150, buttonWidth, buttonHeight,
+            rightX, startY + 75, colWidth, buttonHeight,
             Component.empty(),
             (double) (config.particleLifetimeSeconds - 1) / 29.0
         ) {
@@ -105,7 +108,7 @@ public class RedfxConfigScreen extends Screen {
 
             @Override
             protected void updateMessage() {
-                this.setMessage(Component.literal("Landed Lifetime: " + config.particleLifetimeSeconds + "s"));
+                this.setMessage(Component.literal("Lifetime: " + config.particleLifetimeSeconds + "s"));
             }
 
             @Override
@@ -115,14 +118,58 @@ public class RedfxConfigScreen extends Screen {
         };
         this.addRenderableWidget(lifetimeSlider);
 
-        // Button 8: Done / Close
+        // Slider for Particle Size Scale
+        AbstractSliderButton sizeSlider = new AbstractSliderButton(
+            leftX, startY + 100, colWidth, buttonHeight,
+            Component.empty(),
+            (double) (config.particleSizeScale - 0.5f) / 1.5f
+        ) {
+            {
+                this.updateMessage();
+            }
+
+            @Override
+            protected void updateMessage() {
+                this.setMessage(Component.literal("Size: " + (Math.round(config.particleSizeScale * 10.0f) / 10.0f) + "x"));
+            }
+
+            @Override
+            protected void applyValue() {
+                config.particleSizeScale = 0.5f + (float) (this.value * 1.5f);
+            }
+        };
+        this.addRenderableWidget(sizeSlider);
+
+        // Slider for Color Saturation
+        AbstractSliderButton saturationSlider = new AbstractSliderButton(
+            rightX, startY + 100, colWidth, buttonHeight,
+            Component.empty(),
+            (double) (config.colorSaturation) / 2.0f
+        ) {
+            {
+                this.updateMessage();
+            }
+
+            @Override
+            protected void updateMessage() {
+                this.setMessage(Component.literal("Saturation: " + (Math.round(config.colorSaturation * 10.0f) / 10.0f) + "x"));
+            }
+
+            @Override
+            protected void applyValue() {
+                config.colorSaturation = (float) (this.value * 2.0f);
+            }
+        };
+        this.addRenderableWidget(saturationSlider);
+
+        // Button 10: Done / Close
         Button doneButton = Button.builder(
             Component.literal("Done"),
             btn -> {
                 config.save();
                 this.onClose();
             }
-        ).bounds(x, startY + 180, buttonWidth, buttonHeight).build();
+        ).bounds(x, startY + 130, buttonWidth, buttonHeight).build();
         this.addRenderableWidget(doneButton);
     }
 

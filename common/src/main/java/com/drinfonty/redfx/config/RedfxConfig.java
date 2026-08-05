@@ -17,6 +17,8 @@ public class RedfxConfig {
     public boolean useSplatTexture = true; // Use custom splatter texture on landing
     public boolean enableSplatDust = true; // Spawn falling dust particle on landing
     public String waterParticleType = "Smoke"; // CampfireSmoke or Smoke
+    public float particleSizeScale = 1.0f; // Range: 0.5 to 2.0
+    public float colorSaturation = 1.0f; // Range: 0.0 to 2.0
 
     private static RedfxConfig instance;
 
@@ -46,6 +48,12 @@ public class RedfxConfig {
                     }
                     if (config.waterParticleType == null) {
                         config.waterParticleType = "Smoke";
+                    }
+                    if (config.particleSizeScale < 0.1f) {
+                        config.particleSizeScale = 1.0f;
+                    }
+                    if (config.colorSaturation < 0.0f) {
+                        config.colorSaturation = 1.0f;
                     }
                     return config;
                 }
