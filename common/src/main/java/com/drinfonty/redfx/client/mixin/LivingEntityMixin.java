@@ -199,6 +199,14 @@ public class LivingEntityMixin {
             g = 0.3F;
             b = 0.7F;
         }
+        float sat = com.drinfonty.redfx.config.RedfxConfig.get().colorSaturation;
+        float l = 0.2126f * r + 0.7152f * g + 0.0722f * b;
+        r = l + sat * (r - l);
+        g = l + sat * (g - l);
+        b = l + sat * (b - l);
+        r = Math.max(0.0f, Math.min(1.0f, r));
+        g = Math.max(0.0f, Math.min(1.0f, g));
+        b = Math.max(0.0f, Math.min(1.0f, b));
         return new float[]{r, g, b};
     }
 
