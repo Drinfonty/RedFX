@@ -1,5 +1,6 @@
 plugins {
 	id 'net.neoforged.moddev' version '2.0.143'
+	id 'com.modrinth.minotaur'
 }
 
 neoForge {
@@ -80,5 +81,21 @@ afterEvaluate {
 				!file.path.contains("build/classes") && !file.path.contains("build/resources")
 			})
 		}
+	}
+}
+
+modrinth {
+	token = rootProject.getModrinthToken()
+	projectId = project.modrinth_project_id
+	versionNumber = "${project.mod_version}-neoforge"
+	versionName = "RedFX ${project.mod_version} (NeoForge)"
+	versionType = "release"
+	uploadFile = layout.buildDirectory.file("libs/redfx-${project.mod_version}-${project.mc_version_suffix}-neoforge.jar")
+	gameVersions = project.modrinth_game_versions.split(",") as List
+	loaders = ["neoforge"]
+
+	def notesFile = rootProject.file("release/release-note-${project.mod_version}.md")
+	if (notesFile.exists()) {
+		changelog = notesFile.text
 	}
 }
