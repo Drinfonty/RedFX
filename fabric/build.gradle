@@ -1,5 +1,6 @@
 plugins {
 	id 'net.fabricmc.fabric-loom' version "${loom_version}"
+	id 'com.modrinth.minotaur'
 }
 
 loom {
@@ -98,5 +99,25 @@ afterEvaluate {
 			})
 			classpath.from(tasks.named('jar'))
 		}
+	}
+}
+
+modrinth {
+	token = rootProject.getModrinthToken()
+	projectId = project.modrinth_project_id
+	versionNumber = "${project.mod_version}-fabric"
+	versionName = "RedFX ${project.mod_version} (Fabric)"
+	versionType = "release"
+	uploadFile = layout.buildDirectory.file("libs/redfx-${project.mod_version}-${project.mc_version_suffix}-fabric.jar")
+	gameVersions = project.modrinth_game_versions.split(",") as List
+	loaders = ["fabric"]
+
+	def notesFile = rootProject.file("release/release-note-${project.mod_version}.md")
+	if (notesFile.exists()) {
+		changelog = notesFile.text
+	}
+
+	dependencies {
+		required.project "P7dR8mSH" // Fabric API
 	}
 }

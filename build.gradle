@@ -1,6 +1,7 @@
 plugins {
 	id 'net.fabricmc.fabric-loom' version "${loom_version}" apply false
 	id 'maven-publish'
+	id 'com.modrinth.minotaur' version '2.9.0' apply false
 }
 
 allprojects {
@@ -19,4 +20,17 @@ allprojects {
 			url = "https://maven.neoforged.net/releases/"
 		}
 	}
+}
+
+ext.getModrinthToken = {
+	def token = System.getenv("MODRINTH_TOKEN")
+	if (token == null || token.isEmpty()) {
+		def localPropertiesFile = project.rootProject.file('local.properties')
+		if (localPropertiesFile.exists()) {
+			def localProperties = new Properties()
+			localPropertiesFile.withInputStream { localProperties.load(it) }
+			token = localProperties.getProperty('modrinth.token')
+		}
+	}
+	return token
 }
