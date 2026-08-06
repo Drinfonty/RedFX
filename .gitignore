@@ -33,4 +33,4 @@ replay_*.log
 *.jfr
 
 # Output Releases
-/release/
+/release/*.jar
