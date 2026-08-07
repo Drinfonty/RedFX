@@ -129,6 +129,9 @@ afterEvaluate {
 					"Use:  ./gradlew :fabric:runProdClient")
 		} else {
 			classpath.from(project(":common").tasks.named('jar'))
+			// Per-hit diagnostics for development only. Deliberately not set under
+			// -PtestJar, so that run stays a faithful rehearsal of what a player sees.
+			systemProperty 'redfx.debug', 'true'
 		}
 	}
 }
