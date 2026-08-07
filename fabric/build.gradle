@@ -54,7 +54,9 @@ jar {
 
 	from project(":common").sourceSets.main.output
 
-	from("LICENSE") {
+	// LICENSE lives at the repo root; a bare "LICENSE" resolves against the subproject
+	// directory, so this silently packaged nothing.
+	from(rootProject.file("LICENSE")) {
 		rename { "${it}_$projectName"}
 	}
 }
@@ -91,11 +93,18 @@ afterEvaluate {
 	tasks.named('runClient') {
 		if (project.hasProperty('testJar')) {
 			dependsOn(tasks.named('jar'))
-			setClasspath(files())
-			classpath.from(tasks.named('jar'))
-			classpath.from(configurations.runtimeClasspath.filter { File file ->
-				!file.path.contains("build/classes") && !file.path.contains("build/resources")
+			// Filter Loom's own run classpath rather than rebuilding it from
+			// runtimeClasspath - setClasspath(files()) dropped the entries Loom adds for
+			// the run (natives, log config, the game jar) that runtimeClasspath does not
+			// carry. Removing the loose output directories leaves the jar as the only
+			// source of the mod.
+			setClasspath(classpath.filter { File file ->
+				!file.path.contains("common/build/classes") &&
+				!file.path.contains("common/build/resources") &&
+				!file.path.contains("fabric/build/classes") &&
+				!file.path.contains("fabric/build/resources")
 			})
+			classpath.from(tasks.named('jar'))
 		}
 	}
 }

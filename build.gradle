@@ -5,6 +5,11 @@ plugins {
 }
 
 allprojects {
+	// Without this project.version is "unspecified", which is what fabric.mod.json's
+	// ${version} placeholder was being expanded to.
+	version = rootProject.mod_version
+	group = rootProject.maven_group
+
 	repositories {
 		mavenCentral()
 		maven {
