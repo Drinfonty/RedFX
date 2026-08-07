@@ -27,8 +27,9 @@ bin/
 # Fabric
 run/
 
-# -PtestJar isolated run directories
+# -PtestJar / production-client isolated run directories
 run-testjar/
+run-prod/
 
 # Java / Crash logs
 hs_err_*.log
