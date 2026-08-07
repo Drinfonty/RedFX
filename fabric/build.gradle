@@ -60,6 +60,10 @@ jar {
 	}
 }
 
+remapJar {
+	archiveFileName = "redfx-${project.mod_version}-${project.mc_version_suffix}-fabric.jar"
+}
+
 // Automatically deploy built jar to Minecraft mods directory
 tasks.register('copyJarToMods', Copy) {
 	from tasks.named('remapJar')
