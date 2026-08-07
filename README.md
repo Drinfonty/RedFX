@@ -21,11 +21,33 @@ For feature specifications and roadmap details, see:
 
 The project maintains different branches to target different major Minecraft and loader versions:
 
-| Branch Name | Minecraft Target | Mod Version | Build System Notes |
-| :--- | :--- | :--- | :--- |
-| **`main`** | **`26.2`** (1.21.4) | `1.1.2` | Uses Loom 1.17. |
-| **`legacy-26.1`** | **`26.1.2`** (1.21.2 - 1.21.3) | `1.1.2` | Uses Loom 1.17. |
-| **`legacy-1.21`** | **`1.21.11`** (1.20.5 - 1.21.1) | `1.1.2` | Uses Loom 1.14.10. Requires remapped common classes. |
+| Branch Name | Built Against | Supported Minecraft | Mod Version | NeoForge | Java |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **`main`** | **`26.2`** | `26.2` | `1.1.2` | `26.2.0.45-beta` | 25 |
+| **`legacy-26.1`** | **`26.1.2`** | `26.1` – `26.1.2` | `1.1.2` | `26.1.2.94` | 25 |
+| **`legacy-1.21`** | **`1.21.11`** | `1.21` – `1.21.11` | `1.1.2` | `21.11.45` | 21 |
+
+"Supported Minecraft" is the range declared in `minecraft_dependency`, and is what
+`modrinth_game_versions` publishes. Only the "Built Against" version is compiled and
+launched during verification.
+
+### Fabric mapping namespaces
+
+This differs per branch and decides how a Fabric jar must be verified before publishing:
+
+| Branch Name | Loom | Loom Plugin | Fabric Production Namespace | Verify Fabric With |
+| :--- | :--- | :--- | :--- | :--- |
+| **`main`** | 1.17 | `fabric-loom` | Mojang (`official`) — no remap step | `:fabric:runClient -PtestJar` |
+| **`legacy-26.1`** | 1.17 | `fabric-loom` | Mojang (`official`) — no remap step | `:fabric:runClient -PtestJar` |
+| **`legacy-1.21`** | 1.14.10 | `fabric-loom-remap` | **`intermediary`** — `remapJar` rewrites the mod | `:fabric:runProdClient` |
+
+Fabric does not publish intermediary mappings for Minecraft 26.x, so on `main` and
+`legacy-26.1` the `jar` output *is* the publishable artifact and the dev client runs in the
+same namespace as production. On `legacy-1.21` the published artifact is `remapJar`'s
+output, and the dev client namespace does **not** match production — see
+[Pre-Publish Verification](#2-pre-publish-verification).
+
+NeoForge runs Mojang mappings on every branch, so its jar is never remapped.
 
 ---
 
@@ -65,18 +87,46 @@ By default, running the standard client tasks loads Minecraft using loose class 
   ./gradlew :neoforge:runClient
   ```
 
-### 2. Standalone Package Testing (`-PtestJar`)
-To perform integration testing using the actual built production `.jar` file on the classpath (to verify mixin refmaps, class packaging, resource folders, and manifest generation work outside the IDE):
-- **Test Packaged Fabric Jar:**
+### 2. Pre-Publish Verification
+
+**Always run these before publishing.** A dev client is not enough to tell you a jar works.
+
+- **Fabric — packaged jar:**
   ```bash
   ./gradlew :fabric:runClient -PtestJar
   ```
-- **Test Packaged NeoForge Jar:**
+- **NeoForge — packaged jar:**
   ```bash
   ./gradlew :neoforge:runClient -PtestJar
   ```
 
-*Note: The `-PtestJar` argument triggers the `jar` task and filters compile folders out of the loader classpath, forcing Minecraft to load only the resulting `.jar` file.*
+#### Why `-PtestJar` is sufficient on this branch
+
+Fabric does not publish intermediary mappings for Minecraft 26.x, so this branch uses the
+`fabric-loom` plugin, there is no `remapJar` step, and the `jar` output is the publishable
+artifact. The dev client runs in the **same** Mojang namespace as production, so a mixin
+that resolves here resolves for a user.
+
+That is **not** true on `legacy-1.21`, where the published jar is remapped to the
+`intermediary` namespace while `runClient` stays named. There, a production jar loaded into
+a dev client cannot match its own mixin targets — Mixin logs `@Mixin target
+net.minecraft.class_703 was not found`, skips every mixin, and the client still reaches the
+main menu looking healthy. That false pass is how 1.1.1 and 1.1.2 were published broken.
+That branch has a dedicated `:fabric:runProdClient` task, and its `-PtestJar` refuses to
+run. Do not assume a verification step is portable between branches.
+
+#### NeoForge `-PtestJar`
+
+NeoForge runs Mojang mappings in both dev and production, so `-PtestJar` is faithful — but
+it must actually load the jar. Declaring source sets in `neoForge.mods` hands them to FML's
+in-dev folder locator, which **wins over** a jar in `mods/`. Check the log says:
+
+```
+ - redfx (jar(mods/redfx-<version>-<mc>-neoforge.jar))
+```
+
+and *not* `composite(folder(...build/classes/java/main), ...)`. The build now arranges the
+former by staging the jar as the only mod in an isolated `neoforge/run-testjar/`.
 
 ---
 
@@ -94,14 +144,28 @@ To maintain consistency across all Minecraft targets and avoid duplicating manua
    git cherry-pick <commit-hash-from-main>
    ```
 4. **Resolve conflicts**:
-   Resolve any differences in build files or package configurations. Ensure that:
-   - Mixin refmaps remain properly configured for the target loader versions.
-   - Resource locations and mappings align.
-5. **Verify package build locally**:
-   Always run a full build and run testing on the legacy branch using the packaged jar command before pushing:
+   Resolve any differences in build files or package configurations. Note that build
+   configuration is **not** uniformly portable between branches — `main` and `legacy-26.1`
+   use the `fabric-loom` plugin with no remap step, while `legacy-1.21` uses
+   `fabric-loom-remap` and publishes `remapJar`'s output. Anything touching mappings,
+   mixins, or which task produces the published jar has to be re-derived per branch rather
+   than cherry-picked blindly.
+5. **Verify package build locally** — always, before pushing:
    ```bash
    ./gradlew clean build
+   ```
+   Then run the Fabric verification for the branch you are on, plus NeoForge:
+   ```bash
+   # this branch (main / legacy-26.1)
    ./gradlew :fabric:runClient -PtestJar
+
+   # legacy-1.21 only
+   ./gradlew :fabric:runProdClient
+
+   # every branch
    ./gradlew :neoforge:runClient -PtestJar
    ```
+   See [Pre-Publish Verification](#2-pre-publish-verification) for what each one proves and
+   what to check in the log. A dev client reaching the main menu is **not** sufficient
+   evidence that a Fabric jar works on `legacy-1.21`.
 6. **Push changes** to the remote branch once verification succeeds.
