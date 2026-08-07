@@ -119,7 +119,7 @@ afterEvaluate {
 modrinth {
 	token = rootProject.getModrinthToken()
 	projectId = project.modrinth_project_id
-	versionNumber = "${project.mod_version}-neoforge"
+	versionNumber = "${project.mod_version}-${project.mc_version_suffix}-neoforge"
 	versionName = "RedFX ${project.mod_version} (NeoForge)"
 	versionType = "release"
 	uploadFile = layout.buildDirectory.file("libs/redfx-${project.mod_version}-${project.mc_version_suffix}-neoforge.jar")

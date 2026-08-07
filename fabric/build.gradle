@@ -107,7 +107,7 @@ afterEvaluate {
 modrinth {
 	token = rootProject.getModrinthToken()
 	projectId = project.modrinth_project_id
-	versionNumber = "${project.mod_version}-fabric"
+	versionNumber = "${project.mod_version}-${project.mc_version_suffix}-fabric"
 	versionName = "RedFX ${project.mod_version} (Fabric)"
 	versionType = "release"
 	uploadFile = layout.buildDirectory.file("libs/redfx-${project.mod_version}-${project.mc_version_suffix}-fabric.jar")
