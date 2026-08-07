@@ -62,7 +62,7 @@ jar {
 
 // Automatically deploy built jar to Minecraft mods directory
 tasks.register('copyJarToMods', Copy) {
-	from tasks.named('jar')
+	from tasks.named('remapJar')
 	into "/home/ptphong/.minecraft/mods"
 
 	doFirst {
@@ -72,16 +72,12 @@ tasks.register('copyJarToMods', Copy) {
 			delete file
 		}
 	}
-
-	mustRunAfter tasks.named('jar')
 }
 
 // Automatically copy built jar to release directory in the project root
 tasks.register('copyJarToRelease', Copy) {
-	from tasks.named('jar')
+	from tasks.named('remapJar')
 	into "${project.rootDir}/release"
-
-	mustRunAfter tasks.named('jar')
 }
 
 tasks.named('build') {
@@ -98,14 +94,14 @@ loom {
 afterEvaluate {
 	tasks.named('runClient') {
 		if (project.hasProperty('testJar')) {
-			dependsOn(tasks.named('jar'))
+			dependsOn(tasks.named('remapJar'))
 			setClasspath(classpath.filter { File file ->
 				!file.path.contains("common/build/classes") &&
 				!file.path.contains("common/build/resources") &&
 				!file.path.contains("fabric/build/classes") &&
 				!file.path.contains("fabric/build/resources")
 			})
-			classpath.from(tasks.named('jar'))
+			classpath.from(tasks.named('remapJar'))
 		} else {
 			classpath.from(project(":common").tasks.named('jar'))
 		}
