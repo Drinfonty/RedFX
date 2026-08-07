@@ -8,7 +8,7 @@ modId="redfx"
 version="${modVersion}"
 displayName="RedFX"
 description="A blood particle and visual effects mod."
-authors="YourName"
+authors="Drinfonty"
 
 [[dependencies.redfx]]
 modId="neoforge"
