@@ -100,6 +100,10 @@ afterEvaluate {
 				!file.path.contains("fabric/build/resources")
 			})
 			classpath.from(tasks.named('jar'))
+		} else {
+			// Per-hit diagnostics for development only. Deliberately not set under
+			// -PtestJar, so that run stays a faithful rehearsal of what a player sees.
+			systemProperty 'redfx.debug', 'true'
 		}
 	}
 }

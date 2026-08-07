@@ -59,7 +59,9 @@ public class LivingEntityMixin {
         LivingEntity self = (LivingEntity) (Object) this;
         if (status == 3 && RedfxConfig.get().bloodEnabled) {
             // Entity death status code is 3
-            com.drinfonty.redfx.RedfxMod.LOGGER.info("Death status (3) detected for entity {}!", self.getType().getDescriptionId());
+            if (com.drinfonty.redfx.RedfxMod.DEBUG) {
+                com.drinfonty.redfx.RedfxMod.LOGGER.info("Death status (3) detected for entity {}!", self.getType().getDescriptionId());
+            }
             if (self.level().isClientSide()) {
                 spawnBloodParticles(self, 0.0f, true); // Larger burst on death
             }
@@ -76,8 +78,10 @@ public class LivingEntityMixin {
         
         if (count <= 0) return;
         
-        com.drinfonty.redfx.RedfxMod.LOGGER.info("Spawning {} blood particles (totalMultiplier={}, weaponScale={}) for entity {} (yaw={})", 
-            count, totalMultiplier, weaponMultiplier, entity.getType().getDescriptionId(), yaw);
+        if (com.drinfonty.redfx.RedfxMod.DEBUG) {
+            com.drinfonty.redfx.RedfxMod.LOGGER.info("Spawning {} blood particles (totalMultiplier={}, weaponScale={}) for entity {} (yaw={})",
+                count, totalMultiplier, weaponMultiplier, entity.getType().getDescriptionId(), yaw);
+        }
         
         // Calculate force direction away from the source of the blow
         float absoluteAngle = entity.getYRot() + yaw;
