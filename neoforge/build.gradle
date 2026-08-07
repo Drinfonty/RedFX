@@ -3,19 +3,46 @@ plugins {
 	id 'com.modrinth.minotaur'
 }
 
+// -PtestJar must load the mod from the packaged jar and nothing else.
+def isTestJar = project.hasProperty('testJar')
+
 neoForge {
 	version = "${project.neoforge_version}"
 
 	runs {
 		client {
 			client()
+
+			// A separate game directory so the packaged jar in mods/ is the only copy
+			// present, and so it never pollutes the normal dev run directory.
+			if (isTestJar) {
+				gameDirectory = project.file('run-testjar')
+			}
 		}
 	}
 
-	mods {
-		redfx {
-			sourceSet sourceSets.main
-			sourceSet project(":common").sourceSets.main
+	// Declaring the source sets here makes ModDev hand them to FML's in-dev folder
+	// locator, which wins over a jar in mods/ - FML reports "Found 2 mod files for modid
+	// redfx" and then loads the loose build/classes folders. That made -PtestJar silently
+	// test the dev classes rather than the artifact being published.
+	if (!isTestJar) {
+		mods {
+			redfx {
+				sourceSet sourceSets.main
+				sourceSet project(":common").sourceSets.main
+			}
+		}
+	}
+}
+
+// Stage the packaged jar as the only mod in the -PtestJar run directory.
+tasks.register('installTestJar', Copy) {
+	from tasks.named('jar')
+	into layout.projectDirectory.dir('run-testjar/mods')
+
+	doFirst {
+		delete fileTree(layout.projectDirectory.dir('run-testjar/mods')) {
+			include 'redfx-*.jar'
 		}
 	}
 }
@@ -54,7 +81,9 @@ jar {
 
 	from project(":common").sourceSets.main.output
 
-	from("LICENSE") {
+	// LICENSE lives at the repo root; a bare "LICENSE" resolves against the subproject
+	// directory, so this silently packaged nothing.
+	from(rootProject.file("LICENSE")) {
 		rename { "${it}_$projectName"}
 	}
 }
@@ -73,15 +102,16 @@ tasks.named('build') {
 
 afterEvaluate {
 	tasks.named('runClient') {
-		if (project.hasProperty('testJar')) {
-			dependsOn(tasks.named('jar'))
+		if (isTestJar) {
+			dependsOn(tasks.named('installTestJar'))
+			// Keep the loose classes off the JVM classpath too, so nothing can be
+			// resolved from them behind FML's back. The jar is loaded from mods/.
 			setClasspath(classpath.filter { File file ->
 				!file.path.contains("common/build/classes") &&
 				!file.path.contains("common/build/resources") &&
 				!file.path.contains("neoforge/build/classes") &&
 				!file.path.contains("neoforge/build/resources")
 			})
-			classpath.from(tasks.named('jar'))
 		}
 	}
 }

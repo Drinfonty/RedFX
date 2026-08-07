@@ -54,7 +54,9 @@ jar {
 
 	from project(":common").sourceSets.main.output
 
-	from("LICENSE") {
+	// LICENSE lives at the repo root; a bare "LICENSE" resolves against the subproject
+	// directory, so this silently packaged nothing.
+	from(rootProject.file("LICENSE")) {
 		rename { "${it}_$projectName"}
 	}
 }
