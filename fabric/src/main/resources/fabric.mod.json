@@ -3,12 +3,12 @@
 	"id": "redfx",
 	"version": "${version}",
 	"name": "RedFX",
-	"description": "A Fabric mod: RedFX.",
+	"description": "A blood particle and visual effects mod.",
 	"authors": [
 		"Drinfonty"
 	],
 	"contact": {
-		"homepage": "https://fabricmc.net/"
+		"homepage": "https://modrinth.com/mod/redfx-blood-particle"
 	},
 	"license": "CC0-1.0",
 	"icon": "assets/redfx/icon.png",
