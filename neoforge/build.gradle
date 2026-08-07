@@ -119,6 +119,11 @@ afterEvaluate {
 modrinth {
 	token = rootProject.getModrinthToken()
 	projectId = project.modrinth_project_id
+
+	// ./gradlew modrinth -PmodrinthDebug validates the release and prints what would
+	// be sent, without uploading, so a publish can be rehearsed. Gated on a property
+	// rather than a hardcoded true so it cannot be left switched on by accident.
+	debugMode = project.hasProperty('modrinthDebug')
 	versionNumber = "${project.mod_version}-${project.mc_version_suffix}-neoforge"
 	versionName = "RedFX ${project.mod_version} (NeoForge)"
 	versionType = "release"
