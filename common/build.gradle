@@ -5,6 +5,14 @@ plugins {
 dependencies {
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
 	compileOnly "org.spongepowered:mixin:0.8.7"
+
+	// Loom's Minecraft jar annotates client-only classes with
+	// @net.fabricmc.api.Environment(EnvType.CLIENT). Without fabric-loader on the compile
+	// classpath javac cannot resolve that enum and emits "unknown enum constant
+	// EnvType.CLIENT" once per annotated class it loads. compileOnly keeps it out of the
+	// runtime classpath and out of the published jars, so :neoforge is unaffected - this
+	// only gives javac the annotation classes it is already being asked to read.
+	compileOnly "net.fabricmc:fabric-loader:${project.loader_version}"
 }
 
 tasks.withType(JavaCompile).configureEach {
