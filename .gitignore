@@ -27,6 +27,10 @@ bin/
 # Fabric
 run/
 
+# -PtestJar / production test run directories
+run-testjar/
+run-prod/
+
 # Java / Crash logs
 hs_err_*.log
 replay_*.log

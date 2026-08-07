@@ -55,7 +55,9 @@ jar {
 
 	from project(":common").sourceSets.main.output
 
-	from("LICENSE") {
+	// LICENSE lives at the repo root; a bare "LICENSE" resolves against the subproject
+	// directory, so this silently packaged nothing.
+	from(rootProject.file("LICENSE")) {
 		rename { "${it}_$projectName"}
 	}
 }
@@ -65,6 +67,7 @@ remapJar {
 }
 
 apply from: rootProject.file('gradle/verify-remapped-mixins.gradle')
+apply from: rootProject.file('gradle/prod-client.gradle')
 
 // Any remapJar is validated, and a jar that would crash a production client never reaches
 // the release folder or the mods directory.
@@ -112,15 +115,18 @@ loom {
 afterEvaluate {
 	tasks.named('runClient') {
 		if (project.hasProperty('testJar')) {
-			dependsOn(tasks.named('remapJar'))
-			setClasspath(classpath.filter { File file ->
-				!file.path.contains("common/build/classes") &&
-				!file.path.contains("common/build/resources") &&
-				!file.path.contains("fabric/build/classes") &&
-				!file.path.contains("fabric/build/resources")
-			})
-			classpath.from(tasks.named('remapJar'))
-			systemProperty "fabric.development", "false"
+			// -PtestJar cannot validate a production jar on this branch. Loom's runClient
+			// is a named-namespace game, but the published jar is remapped to
+			// intermediary, so Mixin cannot find net.minecraft.class_703, logs
+			// "@Mixin target ... was not found" at WARN, skips every mixin, and still
+			// reaches the main menu. That false pass is exactly how 1.1.1 and 1.1.2 were
+			// published broken. Use runProdClient, which launches a real
+			// intermediary-namespace client.
+			throw new GradleException(
+					"-PtestJar cannot verify a production Fabric jar on this branch: the\n" +
+					"published jar is in the intermediary namespace but runClient is named,\n" +
+					"so mixins are silently skipped and the client boots looking healthy.\n\n" +
+					"Use:  ./gradlew :fabric:runProdClient")
 		} else {
 			classpath.from(project(":common").tasks.named('jar'))
 		}

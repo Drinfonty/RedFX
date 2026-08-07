@@ -1,0 +1,111 @@
+// Launches a REAL production Fabric client against the jar that will be published.
+//
+// Why this exists: on this branch Minecraft runs in the *intermediary* namespace in
+// production, but Loom's runClient runs in the *named* (Mojang) namespace. A production
+// jar therefore cannot be validated by `runClient -PtestJar` - Mixin cannot find
+// net.minecraft.class_703 in a named-namespace game, so it logs
+//
+//   @Mixin target net.minecraft.class_703 was not found ... ParticleMixin
+//
+// as a WARNING, skips the mixin, and the client boots to the main menu looking healthy.
+// That false pass is why 1.1.1 and 1.1.2 were published broken.
+//
+// This task instead launches Fabric Loader the way the vanilla launcher does: the
+// obfuscated Minecraft client jar plus the intermediary mappings, with the mod loaded from
+// an isolated mods/ directory. Loader remaps the game to intermediary at runtime, exactly
+// as it does for a real install, so a mapping mistake fails here the same way it fails for
+// a user.
+//
+// Everything is taken from caches Loom has already populated, so there is nothing extra to
+// download and it does not touch ~/.minecraft.
+
+def mcVersion = project.minecraft_version
+def loomCache = new File(project.gradle.gradleUserHomeDir, 'caches/fabric-loom')
+def versionCache = new File(loomCache, mcVersion)
+def obfClientJar = new File(versionCache, 'minecraft-client.jar')
+def assetsDir = new File(loomCache, 'assets')
+def gameDir = layout.projectDirectory.dir('run-prod')
+
+configurations {
+	// Deliberately plain configurations: Loom only remaps the mod* ones, so these resolve
+	// to the original production artifacts rather than named-namespace copies.
+	prodLoader
+	prodMods
+}
+
+dependencies {
+	prodLoader "net.fabricmc:fabric-loader:${project.loader_version}"
+	prodLoader "net.fabricmc:intermediary:${project.minecraft_version}:v2"
+
+	// The published Fabric API bundle, nested jars and all - the same file a user installs.
+	prodMods("net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}") {
+		transitive = false
+	}
+}
+
+tasks.register('installProdMods', Copy) {
+	description = 'Stages the production jar and its dependencies as the only mods for runProdClient.'
+	from tasks.named('remapJar')
+	from configurations.prodMods
+	into gameDir.dir('mods')
+
+	doFirst {
+		delete fileTree(gameDir.dir('mods'))
+	}
+}
+
+tasks.register('runProdClient', JavaExec) {
+	group = 'fabric'
+	description = 'Runs a production-namespace Fabric client using the jar that will be published.'
+	dependsOn 'installProdMods'
+
+	mainClass = 'net.fabricmc.loader.impl.launch.knot.KnotClient'
+	workingDir = gameDir
+
+	javaLauncher = javaToolchains.launcherFor {
+		languageVersion = java.toolchain.languageVersion
+	}
+
+	// fabric-loader's POM declares no transitive dependencies (the real launcher takes them
+	// from Fabric's launcher JSON instead), so ASM/sponge-mixin/mixinextras have to come
+	// from Loom's loaderLibraries configuration.
+	classpath = files(obfClientJar) +
+			configurations.prodLoader +
+			configurations.loaderLibraries +
+			configurations.minecraftClientRuntimeLibraries +
+			// The natives-classifier LWJGL jars; LWJGL unpacks them from the classpath.
+			configurations.minecraftNatives
+
+	doFirst {
+		if (!obfClientJar.exists()) {
+			throw new GradleException("Minecraft client jar not found at ${obfClientJar}.\n" +
+					"Run any Loom task first (e.g. ./gradlew :fabric:runClient) so Loom downloads it.")
+		}
+
+		// Loom stores asset indexes as <mcVersion>-<id>.json; the game wants that basename.
+		def indexes = new File(assetsDir, 'indexes').listFiles()?.findAll {
+			it.name.startsWith("${mcVersion}-") && it.name.endsWith('.json')
+		} ?: []
+		if (indexes.isEmpty()) {
+			throw new GradleException("No asset index for ${mcVersion} under ${assetsDir}/indexes.\n" +
+					"Run ./gradlew :fabric:downloadAssets first.")
+		}
+		def assetIndex = indexes.first().name - '.json'
+
+		gameDir.asFile.mkdirs()
+		args = [
+				'--gameDir', gameDir.asFile.absolutePath,
+				'--assetsDir', assetsDir.absolutePath,
+				'--assetIndex', assetIndex,
+				'--accessToken', '0',
+				'--version', "redfx-prod-${project.mod_version}",
+				'--username', 'ProdTest',
+				'--userType', 'legacy',
+		]
+
+		logger.lifecycle("Production client: Minecraft ${mcVersion} (intermediary namespace)")
+		logger.lifecycle("  game jar : ${obfClientJar}")
+		logger.lifecycle("  mods     : ${gameDir.dir('mods').asFile}")
+		gameDir.dir('mods').asFile.listFiles()?.sort()?.each { logger.lifecycle("             ${it.name}") }
+	}
+}
