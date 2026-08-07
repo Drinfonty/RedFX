@@ -1,0 +1,286 @@
+// Guards against the class of bug that shipped in 1.1.1 and 1.1.2.
+//
+// The mixins live in :common but are remapped by :fabric. When a mapping source goes
+// missing, Loom does not fail - it just leaves the affected references in Mojang names
+// inside an otherwise intermediary-remapped jar. Nothing catches that locally, because a
+// dev client runs in the named namespace and simply logs "@Mixin target ... was not found"
+// and skips the mixin. The break only shows up on a production client, as
+//
+//   InvalidMixinException: @Shadow method remove()V ... was not located in the target
+//   class net.minecraft.class_703
+//
+// So this task reads the remapped jar back and asserts that every mixin reference into an
+// obfuscated Minecraft class actually came out in intermediary names.
+
+// Loom bundles ASM in an isolated classloader that build scripts cannot see, and an
+// `apply from:` script does not inherit the root project's buildscript classpath either,
+// so it is declared here.
+buildscript {
+	repositories {
+		mavenCentral()
+	}
+	dependencies {
+		classpath 'org.ow2.asm:asm:9.8'
+	}
+}
+
+import org.objectweb.asm.AnnotationVisitor
+import org.objectweb.asm.ClassReader
+import org.objectweb.asm.ClassVisitor
+import org.objectweb.asm.FieldVisitor
+import org.objectweb.asm.MethodVisitor
+import org.objectweb.asm.Opcodes
+import org.objectweb.asm.Type
+
+import groovy.json.JsonSlurper
+
+import java.util.zip.ZipFile
+
+tasks.register('verifyRemappedMixins') {
+	group = 'verification'
+	description = 'Checks that mixin references in the remapped production jar are in the intermediary namespace.'
+
+	def jarProvider = tasks.named('remapJar').flatMap { it.archiveFile }
+	def reportFile = layout.buildDirectory.file('reports/verify-remapped-mixins.txt')
+
+	inputs.file(jarProvider)
+	outputs.file(reportFile)
+
+	doLast {
+		final int ASM = Opcodes.ASM9
+
+		// Intermediary leaves anything Mojang did not obfuscate alone, so only these three
+		// shapes prove a reference was actually remapped.
+		final def MC_CLASS = ~/^net\/minecraft\/class_\d+(\$[A-Za-z0-9_$]+)?$/
+		final def MC_METHOD = ~/^method_\d+$/
+		final def MC_FIELD = ~/^field_\d+$/
+		final def SPECIAL_METHODS = ['<init>', '<clinit>'] as Set
+
+		final def SHADOW = 'Lorg/spongepowered/asm/mixin/Shadow;'
+		final def MIXIN = 'Lorg/spongepowered/asm/mixin/Mixin;'
+		final def ACCESSORS = ['Lorg/spongepowered/asm/mixin/gen/Accessor;',
+							   'Lorg/spongepowered/asm/mixin/gen/Invoker;'] as Set
+
+		// Everything that carries a "method" selector and/or nested @At targets. Anything
+		// under org/spongepowered/asm/mixin/injection or com/llamalad7/mixinextras counts,
+		// so third-party injectors are covered without listing them one by one.
+		def isInjector = { String desc ->
+			desc.startsWith('Lorg/spongepowered/asm/mixin/injection/') ||
+			desc.startsWith('Lcom/llamalad7/mixinextras/injector/') ||
+			desc == 'Lorg/spongepowered/asm/mixin/Overwrite;'
+		}
+
+		// Splits "Lnet/minecraft/class_703;method_3069(DDD)V" into owner and member name.
+		// Also copes with the bare ("method_3069") and unqualified ("method_3069(DDD)V")
+		// forms that @Inject(method = ...) accepts, and with field targets whose descriptor
+		// contains its own semicolon ("Lnet/minecraft/class_703;field_3851:Lnet/…/class_638;").
+		def split = { String ref ->
+			String owner = null
+			String rest = ref.trim()
+			if (rest.startsWith('L')) {
+				int semi = rest.indexOf(';')
+				if (semi > 0) {
+					owner = rest.substring(1, semi)
+					rest = rest.substring(semi + 1)
+				}
+			}
+			int cut = rest.indexOf('(')
+			if (cut < 0) cut = rest.indexOf(':')
+			if (cut >= 0) rest = rest.substring(0, cut)
+			return [owner: owner, name: rest.trim()]
+		}
+
+		// Recursively pulls string values out of an annotation, remembering which key they
+		// belong to. Array elements arrive with a null name, hence the inherited key.
+		def collector
+		collector = { List sink, String key ->
+			new AnnotationVisitor(ASM) {
+				@Override void visit(String name, Object value) {
+					if (value instanceof String) sink << [key: (name ?: key), value: value]
+				}
+
+				@Override AnnotationVisitor visitArray(String name) {
+					collector(sink, name ?: key)
+				}
+
+				@Override AnnotationVisitor visitAnnotation(String name, String desc) {
+					collector(sink, name ?: key)
+				}
+			}
+		}
+
+		def mixins = []
+		def refmaps = [] as Set
+
+		new ZipFile(jarProvider.get().asFile).withCloseable { zip ->
+			// A packaged refmap resolves @Inject selectors and @At targets at runtime, so
+			// those are allowed to stay in Mojang names when one is present. It never covers
+			// @Mixin targets or @Shadow members, which are checked either way.
+			def names = zip.entries().findAll { !it.directory }*.name
+			names.findAll { it ==~ /^[^\/]+\.mixins\.json$/ }.each { configName ->
+				def config = zip.getInputStream(zip.getEntry(configName)).withCloseable {
+					new JsonSlurper().parse(it)
+				}
+				if (config.refmap && names.contains(config.refmap.toString())) {
+					refmaps << config.refmap.toString()
+				}
+			}
+
+			zip.entries().findAll { !it.directory && it.name.endsWith('.class') }.each { entry ->
+				def mixin = [name: null, targets: [], shadowFields: [], shadowMethods: [],
+							 selectors: [], memberRefs: []]
+
+				def reader = zip.getInputStream(entry).withCloseable { new ClassReader(it) }
+				reader.accept(new ClassVisitor(ASM) {
+					@Override
+					void visit(int v, int access, String name, String sig, String supr, String[] ifaces) {
+						mixin.name = name
+					}
+
+					@Override
+					AnnotationVisitor visitAnnotation(String desc, boolean visible) {
+						if (desc != MIXIN) return null
+						return new AnnotationVisitor(ASM) {
+							@Override AnnotationVisitor visitArray(String arrayName) {
+								new AnnotationVisitor(ASM) {
+									@Override void visit(String n, Object value) {
+										// value = Class[], targets = String[]
+										if (value instanceof Type) mixin.targets << ((Type) value).internalName
+										else if (value instanceof String) mixin.targets << value.replace('.', '/')
+									}
+								}
+							}
+						}
+					}
+
+					@Override
+					FieldVisitor visitField(int access, String name, String desc, String sig, Object val) {
+						new FieldVisitor(ASM) {
+							@Override AnnotationVisitor visitAnnotation(String d, boolean visible) {
+								if (d == SHADOW) mixin.shadowFields << name
+								return null
+							}
+						}
+					}
+
+					@Override
+					MethodVisitor visitMethod(int access, String name, String desc, String sig, String[] exc) {
+						new MethodVisitor(ASM) {
+							@Override AnnotationVisitor visitAnnotation(String d, boolean visible) {
+								if (d == SHADOW) {
+									mixin.shadowMethods << name
+									return null
+								}
+								def values = []
+								if (ACCESSORS.contains(d)) {
+									// @Accessor("field_3874") / @Invoker("method_3085")
+									return new AnnotationVisitor(ASM) {
+										@Override void visit(String n, Object value) {
+											if (n == 'value' && value instanceof String) {
+												mixin.memberRefs << [origin: "${name}() ${d}", ref: value]
+											}
+										}
+									}
+								}
+								if (!isInjector(d)) return null
+								def sink = []
+								mixin.selectors << [origin: name, sink: sink]
+								return collector(sink, null)
+							}
+						}
+					}
+				}, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES)
+
+				if (!mixin.targets.isEmpty()) mixins << mixin
+			}
+		}
+
+		def problems = []
+
+		if (mixins.isEmpty()) {
+			problems << "No @Mixin classes found in ${jarProvider.get().asFile.name} - the mixins " +
+					"were not packaged. Check that :fabric:jar still pulls in :common's output."
+		}
+
+		mixins.each { mixin ->
+			mixin.targets.each { target ->
+				if (target.startsWith('net/minecraft/') && !(target ==~ MC_CLASS)) {
+					problems << "${mixin.name}: @Mixin target '${target}' is still a Mojang name - " +
+							"the class was not remapped."
+				}
+			}
+
+			// Only obfuscated Minecraft targets let us judge shadow member names. A mixin into
+			// com/mojang/**, another mod, or an unobfuscated class keeps its original names.
+			def obfuscatedTarget = !mixin.targets.isEmpty() && mixin.targets.every { it ==~ MC_CLASS }
+
+			if (obfuscatedTarget) {
+				mixin.shadowFields.each { field ->
+					if (!(field ==~ MC_FIELD)) {
+						problems << "${mixin.name}: @Shadow field '${field}' is still a Mojang name."
+					}
+				}
+				mixin.shadowMethods.each { method ->
+					if (!(method ==~ MC_METHOD) && !SPECIAL_METHODS.contains(method)) {
+						problems << "${mixin.name}: @Shadow method '${method}' is still a Mojang name."
+					}
+				}
+			}
+
+			// Injector selectors ("method") are resolved against the mixin's own target;
+			// @At targets ("target") name their owner explicitly and are checked either way.
+			mixin.selectors.each { injector ->
+				if (!refmaps.isEmpty()) return
+				injector.sink.each { value ->
+					if (value.key == 'method' && obfuscatedTarget) {
+						mixin.memberRefs << [origin: "${injector.origin}() method", ref: value.value,
+											 assumedOwner: mixin.targets.first()]
+					} else if (value.key == 'target') {
+						mixin.memberRefs << [origin: "${injector.origin}() @At target", ref: value.value]
+					}
+				}
+			}
+
+			mixin.memberRefs.each { entry ->
+				// Selectors accept wildcards and regex forms; those cannot be checked by name.
+				if (entry.ref.contains('*') || entry.ref.startsWith('/')) return
+
+				def parts = split(entry.ref)
+				def owner = parts.owner ?: entry.assumedOwner
+				def name = parts.name
+
+				if (owner == null || !owner.startsWith('net/minecraft/')) return
+
+				if (!(owner ==~ MC_CLASS)) {
+					problems << "${mixin.name}.${entry.origin}: owner '${owner}' in '${entry.ref}' " +
+							"is still a Mojang name."
+					return
+				}
+				if (name.isEmpty() || SPECIAL_METHODS.contains(name)) return
+				if (!(name ==~ MC_METHOD) && !(name ==~ MC_FIELD)) {
+					problems << "${mixin.name}.${entry.origin}: '${name}' in '${entry.ref}' " +
+							"is still a Mojang name."
+				}
+			}
+		}
+
+		def report = reportFile.get().asFile
+		report.parentFile.mkdirs()
+
+		if (!problems.isEmpty()) {
+			report.text = problems.collect { " - ${it}" }.join('\n') + '\n'
+			throw new GradleException(
+					"${jarProvider.get().asFile.name} would crash on a production client: " +
+					"mixin references were left in Mojang names.\n" +
+					problems.collect { "  - ${it}" }.join('\n') +
+					"\n\nA dev client cannot catch this - it runs in the named namespace and " +
+					"silently skips mixins whose target it cannot find.")
+		}
+
+		def checked = mixins.sum { it.shadowFields.size() + it.shadowMethods.size() + it.memberRefs.size() } ?: 0
+		def note = refmaps.isEmpty() ? '' :
+				" Injector selectors were skipped - refmap ${refmaps.join(', ')} resolves them at runtime."
+		report.text = "OK - ${mixins.size()} mixin class(es), ${checked} reference(s) verified as intermediary.${note}\n"
+		logger.lifecycle("verifyRemappedMixins: ${mixins.size()} mixin class(es), ${checked} reference(s) OK.${note}")
+	}
+}
