@@ -21,8 +21,13 @@ java {
 
 loom {
 	mixin {
-		defaultRefmapName = "redfx-refmap.json"
-		useLegacyMixinAp = true
+		// The mixins live in :common but are packaged and remapped by the platform
+		// subprojects. Loom's legacy annotation-processor path writes its shadow/accessor
+		// mappings into *this* project's build cache, and :fabric:remapJar looks for them
+		// under its own build cache, so they were silently dropped and @Shadow members were
+		// left in Mojang names. Hard remapping reads the @Mixin annotations straight from
+		// the bytecode, so it works no matter which project compiled the class.
+		useLegacyMixinAp = false
 	}
 }
 

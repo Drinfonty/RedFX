@@ -64,8 +64,21 @@ remapJar {
 	archiveFileName = "redfx-${project.mod_version}-${project.mc_version_suffix}-fabric.jar"
 }
 
+apply from: rootProject.file('gradle/verify-remapped-mixins.gradle')
+
+// Any remapJar is validated, and a jar that would crash a production client never reaches
+// the release folder or the mods directory.
+remapJar {
+	finalizedBy 'verifyRemappedMixins'
+}
+
+tasks.named('check') {
+	dependsOn 'verifyRemappedMixins'
+}
+
 // Automatically deploy built jar to Minecraft mods directory
 tasks.register('copyJarToMods', Copy) {
+	dependsOn 'verifyRemappedMixins'
 	from tasks.named('remapJar')
 	into "/home/ptphong/.minecraft/mods"
 
@@ -80,6 +93,7 @@ tasks.register('copyJarToMods', Copy) {
 
 // Automatically copy built jar to release directory in the project root
 tasks.register('copyJarToRelease', Copy) {
+	dependsOn 'verifyRemappedMixins'
 	from tasks.named('remapJar')
 	into "${project.rootDir}/release"
 }
@@ -90,8 +104,8 @@ tasks.named('build') {
 
 loom {
 	mixin {
-		defaultRefmapName = "redfx-refmap.json"
-		useLegacyMixinAp = true
+		// Must match :common - see the comment there.
+		useLegacyMixinAp = false
 	}
 }
 
@@ -106,6 +120,7 @@ afterEvaluate {
 				!file.path.contains("fabric/build/resources")
 			})
 			classpath.from(tasks.named('remapJar'))
+			systemProperty "fabric.development", "false"
 		} else {
 			classpath.from(project(":common").tasks.named('jar'))
 		}
