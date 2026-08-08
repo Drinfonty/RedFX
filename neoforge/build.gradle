@@ -1,6 +1,7 @@
 plugins {
 	id 'net.neoforged.moddev' version '2.0.143'
 	id 'com.modrinth.minotaur'
+	id 'net.darkhax.curseforgegradle'
 }
 
 // -PtestJar must load the mod from the packaged jar and nothing else.
@@ -124,10 +125,10 @@ modrinth {
 	token = rootProject.getModrinthToken()
 	projectId = project.modrinth_project_id
 
-	// ./gradlew modrinth -PmodrinthDebug validates the release and prints what would
+	// ./gradlew modrinth -PpublishDebug validates the release and prints what would
 	// be sent, without uploading, so a publish can be rehearsed. Gated on a property
 	// rather than a hardcoded true so it cannot be left switched on by accident.
-	debugMode = project.hasProperty('modrinthDebug')
+	debugMode = project.hasProperty('publishDebug')
 	versionNumber = "${project.mod_version}-${project.mc_version_suffix}-neoforge"
 	versionName = "RedFX ${project.mod_version} (NeoForge)"
 	versionType = "release"
@@ -138,5 +139,28 @@ modrinth {
 	def notesFile = rootProject.file("release/release-note-${project.mod_version}.md")
 	if (notesFile.exists()) {
 		changelog = notesFile.text
+	}
+}
+
+tasks.register("curseforge", net.darkhax.curseforgegradle.TaskPublishCurseForge) {
+	apiToken = rootProject.getCurseForgeToken()
+
+	// ./gradlew curseforge -PpublishDebug validates the release and prints what would
+	// be sent, without uploading, so a publish can be rehearsed.
+	debugMode = project.hasProperty('publishDebug')
+
+	def mainFile = upload(project.curseforge_project_id, tasks.named('jar'))
+	mainFile.displayName = "RedFX ${project.mod_version} (NeoForge)"
+	mainFile.releaseType = "release"
+	mainFile.changelogType = "markdown"
+
+	project.curseforge_game_versions.split(",").each {
+		mainFile.addGameVersion(it)
+	}
+	mainFile.addModLoader("NeoForge")
+
+	def notesFile = rootProject.file("release/release-note-${project.mod_version}.md")
+	if (notesFile.exists()) {
+		mainFile.changelog = notesFile.text
 	}
 }
