@@ -1,6 +1,7 @@
 plugins {
 	id 'net.fabricmc.fabric-loom' version "${loom_version}"
 	id 'com.modrinth.minotaur'
+	id 'net.darkhax.curseforgegradle'
 }
 
 loom {
@@ -117,10 +118,10 @@ modrinth {
 	token = rootProject.getModrinthToken()
 	projectId = project.modrinth_project_id
 
-	// ./gradlew modrinth -PmodrinthDebug validates the release and prints what would
+	// ./gradlew modrinth -PpublishDebug validates the release and prints what would
 	// be sent, without uploading, so a publish can be rehearsed. Gated on a property
 	// rather than a hardcoded true so it cannot be left switched on by accident.
-	debugMode = project.hasProperty('modrinthDebug')
+	debugMode = project.hasProperty('publishDebug')
 	versionNumber = "${project.mod_version}-${project.mc_version_suffix}-fabric"
 	versionName = "RedFX ${project.mod_version} (Fabric)"
 	versionType = "release"
@@ -136,4 +137,29 @@ modrinth {
 	dependencies {
 		required.project "P7dR8mSH" // Fabric API
 	}
+}
+
+tasks.register("curseforge", net.darkhax.curseforgegradle.TaskPublishCurseForge) {
+	apiToken = rootProject.getCurseForgeToken()
+
+	// ./gradlew curseforge -PpublishDebug validates the release and prints what would
+	// be sent, without uploading, so a publish can be rehearsed.
+	debugMode = project.hasProperty('publishDebug')
+
+	def mainFile = upload(project.curseforge_project_id, tasks.named('jar'))
+	mainFile.displayName = "RedFX ${project.mod_version} (Fabric)"
+	mainFile.releaseType = "release"
+	mainFile.changelogType = "markdown"
+
+	project.curseforge_game_versions.split(",").each {
+		mainFile.addGameVersion(it)
+	}
+	mainFile.addModLoader("Fabric")
+
+	def notesFile = rootProject.file("release/release-note-${project.mod_version}.md")
+	if (notesFile.exists()) {
+		mainFile.changelog = notesFile.text
+	}
+
+	mainFile.addRequirement("fabric-api")
 }
