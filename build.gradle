@@ -3,6 +3,7 @@ plugins {
 	id 'maven-publish'
 	id 'com.modrinth.minotaur' version '2.9.0' apply false
 	id 'net.darkhax.curseforgegradle' version '1.3.33' apply false
+	id 'com.github.breadmoirai.github-release' version '2.5.2'
 }
 
 allprojects {
@@ -52,4 +53,65 @@ ext.getCurseForgeToken = {
 		}
 	}
 	return token
+}
+
+ext.getGithubToken = {
+	def token = System.getenv("GITHUB_TOKEN")
+	if (token == null || token.isEmpty()) {
+		def localPropertiesFile = project.rootProject.file('local.properties')
+		if (localPropertiesFile.exists()) {
+			def localProperties = new Properties()
+			localPropertiesFile.withInputStream { localProperties.load(it) }
+			token = localProperties.getProperty('github.token')
+		}
+	}
+	return token
+}
+
+def getBranchName() {
+	try {
+		def stdout = new ByteArrayOutputStream()
+		exec {
+			commandLine 'git', 'rev-parse', '--abbrev-ref', 'HEAD'
+			standardOutput = stdout
+		}
+		def branch = stdout.toString().trim()
+		return (branch == "HEAD" || branch.isEmpty()) ? "main" : branch
+	} catch (Exception e) {
+		return "main"
+	}
+}
+
+githubRelease {
+	def ghToken = rootProject.getGithubToken()
+	token = ghToken != null ? ghToken : ""
+	owner = "Drinfonty"
+	repo = "RedFX"
+	tagName = "v${project.mod_version}"
+	releaseName = "RedFX ${project.mod_version}"
+	targetCommitish = getBranchName()
+	overwrite = true
+	dryRun = project.hasProperty('publishDebug')
+
+	releaseAssets = files(
+		project(":fabric").layout.buildDirectory.file("libs/redfx-${project.mod_version}-${project.mc_version_suffix}-fabric.jar"),
+		project(":neoforge").layout.buildDirectory.file("libs/redfx-${project.mod_version}-${project.mc_version_suffix}-neoforge.jar")
+	)
+
+	def notesFile = rootProject.file("release/release-note-${project.mod_version}.md")
+	if (notesFile.exists()) {
+		body = notesFile.text
+	}
+}
+
+tasks.named("githubRelease") {
+	dependsOn(":fabric:jar", ":neoforge:jar")
+	onlyIf {
+		def ghToken = rootProject.getGithubToken()
+		if (ghToken == null || ghToken.isEmpty()) {
+			logger.warn("Skipping githubRelease task because GITHUB_TOKEN/github.token is not set.")
+			return false
+		}
+		return true
+	}
 }
