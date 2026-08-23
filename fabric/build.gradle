@@ -161,7 +161,13 @@ tasks.register("curseforge", net.darkhax.curseforgegradle.TaskPublishCurseForge)
 	// be sent, without uploading, so a publish can be rehearsed.
 	debugMode = project.hasProperty('publishDebug')
 
-	def mainFile = upload(project.curseforge_project_id, tasks.named('jar'))
+	// remapJar, not jar. On this branch the publishable Fabric artifact is remapJar's
+	// intermediary output; `jar` is the named-namespace build. Both are configured with the
+	// same archiveFileName, so uploading `jar` only produced correct bytes when remapJar
+	// happened to have run first - on a clean tree `./gradlew curseforge` would have
+	// published an unremapped jar that silently skips every mixin. Modrinth was unaffected
+	// because it uploads by path rather than by task.
+	def mainFile = upload(project.curseforge_project_id, tasks.named('remapJar'))
 	mainFile.displayName = "RedFX ${project.mod_version} (Fabric)"
 	mainFile.releaseType = "release"
 	mainFile.changelogType = "markdown"
