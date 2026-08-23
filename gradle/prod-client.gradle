@@ -69,12 +69,41 @@ tasks.register('runProdClient', JavaExec) {
 	// fabric-loader's POM declares no transitive dependencies (the real launcher takes them
 	// from Fabric's launcher JSON instead), so ASM/sponge-mixin/mixinextras have to come
 	// from Loom's loaderLibraries configuration.
+	// loaderLibraries and minecraftClientRuntimeLibraries can each carry their own ASM
+	// build (9.6 vs 9.10.1 on 1.21.10), and Fabric Loader hard-fails with "duplicate ASM
+	// classes found on classpath". Keep the highest version of each ASM artifact and drop
+	// the rest; the real launcher resolves a single set the same way.
+	def asmJar = ~/^(asm(?:-[a-z]+)?)-([0-9][0-9.]*)\.jar$/
+	def isNewer = { List a, List b ->
+		for (int i = 0; i < Math.min(a.size(), b.size()); i++) {
+			if (a[i] != b[i]) return a[i] > b[i]
+		}
+		return a.size() > b.size()
+	}
+	def dedupeAsm = { FileCollection files ->
+		def best = [:]
+		files.files.each { File f ->
+			def m = asmJar.matcher(f.name)
+			if (!m.matches()) return
+			def version = m.group(2).tokenize('.').collect { it.toInteger() }
+			if (best[m.group(1)] == null || isNewer(version, best[m.group(1)].version)) {
+				best[m.group(1)] = [file: f, version: version]
+			}
+		}
+		def keep = best.values().collect { it.file } as Set
+		files.filter { File f -> !asmJar.matcher(f.name).matches() || keep.contains(f) }
+	}
+
 	classpath = files(obfClientJar) +
 			configurations.prodLoader +
-			configurations.loaderLibraries +
-			configurations.minecraftClientRuntimeLibraries +
+			dedupeAsm(configurations.loaderLibraries + configurations.minecraftClientRuntimeLibraries) +
 			// The natives-classifier LWJGL jars; LWJGL unpacks them from the classpath.
 			configurations.minecraftNatives
+
+	// Loom only fetches the asset index for a version once something asks for it. On a
+	// freshly created branch nothing has, so this task failed with "No asset index for
+	// <version>" and a manual step. Depend on it instead.
+	dependsOn tasks.named('downloadAssets')
 
 	doFirst {
 		if (!obfClientJar.exists()) {
