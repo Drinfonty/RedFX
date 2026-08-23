@@ -12,8 +12,8 @@ It is built as a multi-platform project with a shared `:common` codebase support
 - **Multi-Platform Config GUI**: Fully integrated with in-game mod menus (via **ModMenu** on Fabric, and NeoForge's built-in **Mods List Config** button on NeoForge) to adjust particle styles, lifetimes, and count multipliers on the fly.
 
 For feature specifications and roadmap details, see:
-*   [SPEC.md](file:///home/ptphong/Projects/Minecraft/RedFX/SPEC.md): Feature specifications and technical design.
-*   [TODO.md](file:///home/ptphong/Projects/Minecraft/RedFX/TODO.md): Task lists and progress tracking.
+*   [SPEC.md](SPEC.md): Feature specifications and technical design.
+*   [TODO.md](TODO.md): Task lists and progress tracking.
 
 ---
 
@@ -21,15 +21,17 @@ For feature specifications and roadmap details, see:
 
 The project maintains different branches to target different major Minecraft and loader versions:
 
-| Branch Name | Built Against | Supported Minecraft | Mod Version | NeoForge | Java |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **`main`** | **`26.2`** | `26.2` | `1.1.2` | `26.2.0.45-beta` | 25 |
-| **`legacy-26.1`** | **`26.1.2`** | `26.1` – `26.1.2` | `1.1.2` | `26.1.2.94` | 25 |
-| **`legacy-1.21`** | **`1.21.11`** | `1.21` – `1.21.11` | `1.1.2` | `21.11.45` | 21 |
+| Branch Name | Built Against | Supported Minecraft | NeoForge | Java |
+| :--- | :--- | :--- | :--- | :--- |
+| **`main`** | **`26.2`** | `26.2` | `26.2.0.45-beta` | 25 |
+| **`legacy-26.1`** | **`26.1.2`** | `26.1` – `26.1.2` | `26.1.2.94` | 25 |
+| **`legacy-1.21`** | **`1.21.11`** | `1.21` – `1.21.11` | `21.11.45` | 21 |
 
 "Supported Minecraft" is the range declared in `minecraft_dependency`, and is what
 `modrinth_game_versions` publishes. Only the "Built Against" version is compiled and
-launched during verification.
+launched during verification. The mod version is deliberately not listed per branch: it
+lives in `gradle/mod.properties` and is identical everywhere — see
+[Branch Layout](#branch-layout).
 
 ### Fabric mapping namespaces
 
@@ -100,20 +102,23 @@ By default, running the standard client tasks loads Minecraft using loose class 
   ./gradlew :neoforge:runClient -PtestJar
   ```
 
-#### Why `-PtestJar` is sufficient on this branch
+> **On `legacy-1.21`, Fabric is verified with `./gradlew :fabric:runProdClient` instead.**
+> `-PtestJar` is wired to refuse to run there.
 
-Fabric does not publish intermediary mappings for Minecraft 26.x, so this branch uses the
-`fabric-loom` plugin, there is no `remapJar` step, and the `jar` output is the publishable
-artifact. The dev client runs in the **same** Mojang namespace as production, so a mixin
-that resolves here resolves for a user.
+#### Why the Fabric step differs per branch
 
-That is **not** true on `legacy-1.21`, where the published jar is remapped to the
-`intermediary` namespace while `runClient` stays named. There, a production jar loaded into
-a dev client cannot match its own mixin targets — Mixin logs `@Mixin target
-net.minecraft.class_703 was not found`, skips every mixin, and the client still reaches the
-main menu looking healthy. That false pass is how 1.1.1 and 1.1.2 were published broken.
-That branch has a dedicated `:fabric:runProdClient` task, and its `-PtestJar` refuses to
-run. Do not assume a verification step is portable between branches.
+On `main` and `legacy-26.1`, Fabric publishes no intermediary mappings for Minecraft 26.x.
+Those branches use the `fabric-loom` plugin, there is no `remapJar` step, and the `jar`
+output *is* the publishable artifact. The dev client runs in the **same** Mojang namespace
+as production, so a mixin that resolves under `-PtestJar` resolves for a user.
+
+On `legacy-1.21` the published jar is remapped to the `intermediary` namespace while
+`runClient` stays named. A production jar loaded into a dev client there cannot match its
+own mixin targets — Mixin logs `@Mixin target net.minecraft.class_703 was not found`, skips
+every mixin, and the client still reaches the main menu looking healthy. That false pass is
+how 1.1.1 and 1.1.2 were published broken. `runProdClient` launches a real
+intermediary-namespace client instead. Do not assume a verification step is portable
+between branches.
 
 #### NeoForge `-PtestJar`
 
@@ -130,42 +135,85 @@ former by staging the jar as the only mod in an isolated `neoforge/run-testjar/`
 
 ---
 
-## Development Workflow & Cross-Branch Porting
+## Branch Layout
 
-To maintain consistency across all Minecraft targets and avoid duplicating manual work:
+Four branches. Three target a Minecraft version; one holds everything that does not.
 
-1. **Implement on `main` branch first**:
-   Apply and test new features or bug fixes directly on the `main` branch.
-2. **Commit and push** to `main`.
-3. **Port to legacy branches using Cherry-Picking**:
-   Switch to the target branch and cherry-pick the relevant commit hashes:
-   ```bash
-   git checkout legacy-1.21
-   git cherry-pick <commit-hash-from-main>
-   ```
-4. **Resolve conflicts**:
-   Resolve any differences in build files or package configurations. Note that build
-   configuration is **not** uniformly portable between branches — `main` and `legacy-26.1`
-   use the `fabric-loom` plugin with no remap step, while `legacy-1.21` uses
-   `fabric-loom-remap` and publishes `remapJar`'s output. Anything touching mappings,
-   mixins, or which task produces the published jar has to be re-derived per branch rather
-   than cherry-picked blindly.
-5. **Verify package build locally** — always, before pushing:
-   ```bash
-   ./gradlew clean build
-   ```
-   Then run the Fabric verification for the branch you are on, plus NeoForge:
-   ```bash
-   # this branch (main / legacy-26.1)
-   ./gradlew :fabric:runClient -PtestJar
+| Branch | Role |
+| :--- | :--- |
+| **`shared`** | Version-agnostic content only. Never built or published directly. |
+| **`main`** | Minecraft 26.2 |
+| **`legacy-26.1`** | Minecraft 26.1.x |
+| **`legacy-1.21`** | Minecraft 1.21.x |
 
-   # legacy-1.21 only
-   ./gradlew :fabric:runProdClient
+`shared` is an ancestor of all three version branches, so its changes reach them by
+`git merge` rather than by three separate cherry-picks. Anything edited there lands
+everywhere in one step: docs, release notes, the mod version, assets, and the Java files
+that carry no version-specific API.
 
-   # every branch
-   ./gradlew :neoforge:runClient -PtestJar
-   ```
-   See [Pre-Publish Verification](#2-pre-publish-verification) for what each one proves and
-   what to check in the log. A dev client reaching the main menu is **not** sufficient
-   evidence that a Fabric jar works on `legacy-1.21`.
-6. **Push changes** to the remote branch once verification succeeds.
+### What lives where
+
+**Edit on `shared`** — merged into every version branch:
+
+- `README.md`, `SPEC.md`, `TODO.md`, `LICENSE`
+- `gradle/mod.properties` — `mod_version`, `maven_group`, the store project ids
+- `release/release-note-*.md`
+- `common/src/main/resources/**` (assets, mixin configs)
+- `common/.../RedfxMod.java`, `RedfxConfig.java`, `ParticleMixin.java`, `BloodSmokeAccessor.java`
+- the Fabric and NeoForge platform entry points
+- `settings.gradle`, `gradlew`, `gradle/wrapper/**`
+
+**Edit on the version branch** — never merged from `shared`:
+
+| File | Why it is per-branch |
+| :--- | :--- |
+| `gradle.properties` | Every Minecraft, Loom, NeoForge and Java version value |
+| `build.gradle`, `common/build.gradle` | The Loom plugin id — `plugins {}` needs a literal, so it cannot be a property |
+| `fabric/build.gradle`, `neoforge/build.gradle` | Shared between `main` and `legacy-26.1`; `legacy-1.21` differs (`modImplementation`, explicit Mojang mappings, `remapJar`) |
+| `RedfxConfigScreen.java`, `LivingEntityMixin.java`, `BloodParticle.java` | Real Minecraft API differences |
+| `release/release-note-1.1.2.md` | Frozen per-branch history |
+
+Build scripts avoid drifting by pushing every varying value into `gradle.properties` and
+templating the metadata files through `processResources`, so `fabric.mod.json`,
+`neoforge.mods.toml` and the mixin configs are byte-identical across branches.
+
+### Making a change
+
+**Version-agnostic change** (docs, release notes, version bump, shared Java):
+
+```bash
+git checkout shared
+# ...edit, commit...
+for b in main legacy-26.1 legacy-1.21; do
+  git checkout $b && git merge shared
+done
+```
+
+**Version-specific change** (anything touching Minecraft API):
+
+1. Implement and test on `main`.
+2. Cherry-pick to `legacy-26.1`, then `legacy-1.21`.
+3. Re-derive rather than force anything touching mappings, mixins, or which task produces
+   the published jar — that is genuinely not portable between branches.
+
+If a `git merge shared` conflicts, the file is in the wrong tier: either it should not be
+on `shared`, or the varying part belongs in `gradle.properties`. A conflict is the design
+working, not a failure — the old cherry-pick flow let the same divergence pass silently.
+
+### Before pushing
+
+```bash
+./gradlew clean build
+
+# Fabric, on main / legacy-26.1
+./gradlew :fabric:runClient -PtestJar
+# Fabric, on legacy-1.21
+./gradlew :fabric:runProdClient
+
+# NeoForge, every branch
+./gradlew :neoforge:runClient -PtestJar
+```
+
+See [Pre-Publish Verification](#2-pre-publish-verification) for what each one proves and
+what to check in the log. A dev client reaching the main menu is **not** sufficient
+evidence that a Fabric jar works on `legacy-1.21`.

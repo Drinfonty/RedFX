@@ -6,6 +6,14 @@ plugins {
 	id 'com.github.breadmoirai.github-release' version '2.5.2'
 }
 
+// gradle/mod.properties carries the version-agnostic mod identity (mod_version,
+// maven_group, the store project ids). It is merged in from the `shared` branch, so a
+// release bump is a single edit there instead of one per version branch. Loaded into
+// rootProject.ext, which is where subprojects' dynamic property lookup falls back to.
+def modProperties = new Properties()
+rootProject.file('gradle/mod.properties').withInputStream { modProperties.load(it) }
+modProperties.each { k, v -> rootProject.ext.set(k as String, v as String) }
+
 allprojects {
 	// Without this project.version is "unspecified", which is what fabric.mod.json's
 	// ${version} placeholder was being expanded to.

@@ -14,14 +14,14 @@ authors="Drinfonty"
 [[dependencies.redfx]]
 modId="neoforge"
 type="required"
-versionRange="[26.1.0,)"
+versionRange="${neoforgeDependency}"
 ordering="NONE"
 side="BOTH"
 
 [[dependencies.redfx]]
 modId="minecraft"
 type="required"
-versionRange="${minecraftDependency}"
+versionRange="${minecraftDependencyMaven}"
 ordering="NONE"
 side="BOTH"
 

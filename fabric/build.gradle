@@ -20,7 +20,7 @@ dependencies {
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
 	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
 	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
-	compileOnly "com.terraformersmc:modmenu:18.0.0"
+	compileOnly "com.terraformersmc:modmenu:${project.modmenu_version}"
 
 	implementation project(":common")
 }
@@ -28,23 +28,30 @@ dependencies {
 processResources {
 	def version = project.version
 	def minecraftDependency = project.minecraft_dependency
+	def fabricLoaderDependency = project.fabric_loader_dependency
+	def javaVersion = project.java_version
 	inputs.property "version", version
 	inputs.property "minecraftDependency", minecraftDependency
+	inputs.property "fabricLoaderDependency", fabricLoaderDependency
+	inputs.property "javaVersion", javaVersion
 
 	filesMatching("fabric.mod.json") {
-		expand "version": version, "minecraftDependency": minecraftDependency
+		expand "version": version,
+				"minecraftDependency": minecraftDependency,
+				"fabricLoaderDependency": fabricLoaderDependency,
+				"javaVersion": javaVersion
 	}
 }
 
 tasks.withType(JavaCompile).configureEach {
-	it.options.release = 25
+	it.options.release = Integer.parseInt(project.java_version)
 }
 
 java {
 	withSourcesJar()
 
 	toolchain {
-		languageVersion = JavaLanguageVersion.of(25)
+		languageVersion = JavaLanguageVersion.of(Integer.parseInt(project.java_version))
 	}
 }
 
@@ -87,13 +94,18 @@ tasks.register('copyJarToRelease', Copy) {
 }
 
 tasks.named('build') {
-	finalizedBy('copyJarToRelease')
+	finalizedBy('copyJarToMods', 'copyJarToRelease')
 }
 
 afterEvaluate {
 	tasks.named('runClient') {
 		if (project.hasProperty('testJar')) {
 			dependsOn(tasks.named('jar'))
+			// Filter Loom's own run classpath rather than rebuilding it from
+			// runtimeClasspath - setClasspath(files()) dropped the entries Loom adds for
+			// the run (natives, log config, the game jar) that runtimeClasspath does not
+			// carry. Removing the loose output directories leaves the jar as the only
+			// source of the mod.
 			setClasspath(classpath.filter { File file ->
 				!file.path.contains("common/build/classes") &&
 				!file.path.contains("common/build/resources") &&
