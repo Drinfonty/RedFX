@@ -26,10 +26,18 @@ The project maintains different branches to target different major Minecraft and
 | **`main`** | **`26.2`** | `26.2` | `26.2.0.45-beta` | 25 |
 | **`legacy-26.1`** | **`26.1.2`** | `26.1` – `26.1.2` | `26.1.2.94` | 25 |
 | **`legacy-1.21`** | **`1.21.11`** | `1.21.11` only | `21.11.45` | 21 |
+| **`legacy-1.21.10`** | **`1.21.10`** | `1.21.9` – `1.21.10` | `21.9`–`21.10` | 21 |
+| **`legacy-1.21.8`** | **`1.21.8`** | `1.21` – `1.21.8` | `21.0`–`21.8` | 21 |
 
 "Supported Minecraft" is the range declared in `minecraft_dependency`, and is what
 `modrinth_game_versions` publishes. Only the "Built Against" version is compiled and
 launched during verification.
+
+The 1.21 line needs three branches because Mojang renamed APIs mid-line: 1.21.9 replaced
+`ParticleRenderType` with `SingleQuadParticle.Layer`, and 1.21.11 renamed
+`ResourceLocation` to `Identifier` and moved `AbstractSkeleton` into `monster.skeleton`.
+NeoForge also swapped `FMLEnvironment.dist` for `getDist()` after 21.8. Each branch differs
+from its neighbour by only those few edits.
 
 **Declare only what compiles.** `legacy-1.21` previously advertised `1.21`–`1.21.11` while
 the source compiled against 1.21.11 alone, because 1.21.11 renamed `ResourceLocation` to
@@ -145,14 +153,16 @@ former by staging the jar as the only mod in an isolated `neoforge/run-testjar/`
 
 ## Branch Layout
 
-Four branches. Three target a Minecraft version; one holds everything that does not.
+Six branches. Five target a Minecraft version; one holds everything that does not.
 
 | Branch | Role |
 | :--- | :--- |
 | **`shared`** | Version-agnostic content only. Never built or published directly. |
 | **`main`** | Minecraft 26.2 |
 | **`legacy-26.1`** | Minecraft 26.1.x |
-| **`legacy-1.21`** | Minecraft 1.21.x |
+| **`legacy-1.21`** | Minecraft 1.21.11 |
+| **`legacy-1.21.10`** | Minecraft 1.21.9 – 1.21.10 |
+| **`legacy-1.21.8`** | Minecraft 1.21 – 1.21.8 |
 
 `shared` is an ancestor of all three version branches, so its changes reach them by
 `git merge` rather than by three separate cherry-picks. Anything edited there lands
@@ -198,7 +208,7 @@ templating the metadata files through `processResources`, so `fabric.mod.json`,
 ```bash
 git checkout shared
 # ...edit, commit...
-for b in main legacy-26.1 legacy-1.21; do
+for b in main legacy-26.1 legacy-1.21 legacy-1.21.10 legacy-1.21.8; do
   git checkout $b && git merge shared
 done
 ```
