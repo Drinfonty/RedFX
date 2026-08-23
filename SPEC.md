@@ -9,8 +9,10 @@ RedFX is a client-only Fabric Minecraft mod designed to enhance combat feedback 
 *   **Legacy 26.1 Branch (`legacy-26.1`)**:
     *   **Minecraft Version**: 26.1.2 (Java 25)
     *   **Modding Toolchain**: Fabric Loader (>=0.19.3), Fabric Loom (1.17-SNAPSHOT)
-*   **Legacy 1.21 Branch (`legacy-1.21`)**:
-    *   **Minecraft Version**: 1.21.11 only (Java 21)
+*   **Legacy 1.21 Branches**:
+    *   `legacy-1.21`: Minecraft 1.21.11 only (Java 21)
+    *   `legacy-1.21.10`: Minecraft 1.21.9 - 1.21.10 (Java 21)
+    *   `legacy-1.21.8`: Minecraft 1.21 - 1.21.8 (Java 21)
     *   **Modding Toolchain**: Fabric Loader, Fabric Loom (1.14.10, `fabric-loom-remap`)
 *   **Side**: Client-Side Only (Must run on vanilla/unmodded servers without registry mismatch or server-side dependencies).
 
