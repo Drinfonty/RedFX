@@ -173,6 +173,12 @@ that carry no version-specific API.
 | `RedfxConfigScreen.java`, `LivingEntityMixin.java`, `BloodParticle.java` | Real Minecraft API differences |
 | `release/release-note-1.1.2.md` | Frozen per-branch history |
 
+> **`shared` still contains a copy of every per-branch file**, frozen at the commit the
+> branch was cut from. They are deliberately never touched there: if `shared` modified
+> `gradle.properties`, every merge would conflict, and if it deleted it, every merge would
+> hit a modify/delete conflict instead. Treat those copies as inert. If you find yourself
+> editing one on `shared`, you are on the wrong branch.
+
 Build scripts avoid drifting by pushing every varying value into `gradle.properties` and
 templating the metadata files through `processResources`, so `fabric.mod.json`,
 `neoforge.mods.toml` and the mixin configs are byte-identical across branches.
