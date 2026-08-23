@@ -21,7 +21,7 @@ dependencies {
 	mappings loom.officialMojangMappings()
 	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
-	modCompileOnly "com.terraformersmc:modmenu:11.0.1"
+	modCompileOnly "com.terraformersmc:modmenu:${project.modmenu_version}"
 
 	implementation project(":common")
 }
@@ -29,23 +29,30 @@ dependencies {
 processResources {
 	def version = project.version
 	def minecraftDependency = project.minecraft_dependency
+	def fabricLoaderDependency = project.fabric_loader_dependency
+	def javaVersion = project.java_version
 	inputs.property "version", version
 	inputs.property "minecraftDependency", minecraftDependency
+	inputs.property "fabricLoaderDependency", fabricLoaderDependency
+	inputs.property "javaVersion", javaVersion
 
 	filesMatching("fabric.mod.json") {
-		expand "version": version, "minecraftDependency": minecraftDependency
+		expand "version": version,
+				"minecraftDependency": minecraftDependency,
+				"fabricLoaderDependency": fabricLoaderDependency,
+				"javaVersion": javaVersion
 	}
 }
 
 tasks.withType(JavaCompile).configureEach {
-	it.options.release = 21
+	it.options.release = Integer.parseInt(project.java_version)
 }
 
 java {
 	withSourcesJar()
 
 	toolchain {
-		languageVersion = JavaLanguageVersion.of(21)
+		languageVersion = JavaLanguageVersion.of(Integer.parseInt(project.java_version))
 	}
 }
 

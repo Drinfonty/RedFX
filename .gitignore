@@ -27,7 +27,7 @@ bin/
 # Fabric
 run/
 
-# -PtestJar / production test run directories
+# -PtestJar / production-client isolated run directories
 run-testjar/
 run-prod/
 

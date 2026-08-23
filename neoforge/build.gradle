@@ -58,24 +58,30 @@ dependencies {
 
 processResources {
 	def modVersion = project.mod_version
-	def minecraftDependency = project.minecraft_dependency
+	// NeoForge parses Maven ranges; minecraft_dependency is SemVer for fabric.mod.json
+	// and is not interchangeable, so the toml gets its own property.
+	def minecraftDependencyMaven = project.minecraft_dependency_maven
+	def neoforgeDependency = project.neoforge_dependency
 	inputs.property "modVersion", modVersion
-	inputs.property "minecraftDependency", minecraftDependency
+	inputs.property "minecraftDependencyMaven", minecraftDependencyMaven
+	inputs.property "neoforgeDependency", neoforgeDependency
 
 	filesMatching("META-INF/neoforge.mods.toml") {
-		expand "modVersion": modVersion, "minecraftDependency": minecraftDependency
+		expand "modVersion": modVersion,
+				"minecraftDependencyMaven": minecraftDependencyMaven,
+				"neoforgeDependency": neoforgeDependency
 	}
 }
 
 tasks.withType(JavaCompile).configureEach {
-	it.options.release = 21
+	it.options.release = Integer.parseInt(project.java_version)
 }
 
 java {
 	withSourcesJar()
 
 	toolchain {
-		languageVersion = JavaLanguageVersion.of(21)
+		languageVersion = JavaLanguageVersion.of(Integer.parseInt(project.java_version))
 	}
 }
 
