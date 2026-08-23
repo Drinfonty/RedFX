@@ -10,6 +10,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.client.particle.Particle;
+import net.minecraft.client.particle.ParticleRenderType;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.world.level.block.Blocks;
@@ -283,12 +284,14 @@ public class BloodParticle extends TerrainParticle {
     }
 
     // Override the rendering layer to enable alpha blending/translucency when landed (otherwise opaque terrain is used)
+    // 1.21.9 replaced ParticleRenderType with SingleQuadParticle.Layer; this branch targets
+    // <=1.21.8, which still uses the enum.
     @Override
-    public SingleQuadParticle.Layer getLayer() {
+    public ParticleRenderType getRenderType() {
         if (this.landed && RedfxConfig.get().useSplatTexture) {
-            return SingleQuadParticle.Layer.TERRAIN;
+            return ParticleRenderType.TERRAIN_SHEET;
         }
-        return super.getLayer();
+        return super.getRenderType();
     }
 
     // Override UV mappings when landed to output the full custom splat texture instead of block crack snippets
