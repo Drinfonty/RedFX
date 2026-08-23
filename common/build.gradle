@@ -1,4 +1,8 @@
 plugins {
+	// The Loom plugin id is the one thing that genuinely differs between the modern
+	// branches and legacy-1.21 (fabric-loom-remap), and `plugins {}` requires a literal
+	// string, so it cannot come from a property. Everything else in this file is driven
+	// by gradle.properties and is identical across branches.
 	id 'net.fabricmc.fabric-loom' version "${loom_version}"
 }
 
@@ -15,13 +19,41 @@ dependencies {
 	compileOnly "net.fabricmc:fabric-loader:${project.loader_version}"
 }
 
+processResources {
+	// Mixin rejects a compatibilityLevel above the running JRE, so it has to track the
+	// branch's Java level rather than being hardcoded in the JSON.
+	def mixinCompatLevel = project.mixin_compat_level
+	inputs.property "mixinCompatLevel", mixinCompatLevel
+
+	filesMatching(["redfx.mixins.json", "redfx.client.mixins.json"]) {
+		expand "mixinCompatLevel": mixinCompatLevel
+	}
+}
+
 tasks.withType(JavaCompile).configureEach {
-	it.options.release = 25
+	it.options.release = Integer.parseInt(project.java_version)
 }
 
 java {
 	withSourcesJar()
 	toolchain {
-		languageVersion = JavaLanguageVersion.of(25)
+		languageVersion = JavaLanguageVersion.of(Integer.parseInt(project.java_version))
+	}
+}
+
+loom {
+	mixin {
+		// Pinned rather than left to the Loom default. The mixins live in :common but are
+		// packaged and remapped by the platform subprojects; Loom's legacy
+		// annotation-processor path writes its shadow/accessor mappings into *this*
+		// project's build cache while :fabric:remapJar looks under its own, so they were
+		// silently dropped and @Shadow members shipped in Mojang names - the 1.1.2
+		// production crash. Hard remapping reads the @Mixin annotations straight from the
+		// bytecode, so it works no matter which project compiled the class.
+		//
+		// Loom 1.17 already defaults this to false and the modern branches do no remapping
+		// at all, so this is a no-op there. It is set on every branch anyway so that a
+		// future change to Loom's default cannot quietly reintroduce the bug.
+		useLegacyMixinAp = false
 	}
 }
