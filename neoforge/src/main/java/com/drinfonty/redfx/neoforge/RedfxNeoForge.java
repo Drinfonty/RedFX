@@ -12,7 +12,8 @@ import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 public class RedfxNeoForge {
     public RedfxNeoForge(ModContainer container) {
         RedfxMod.init();
-        if (FMLEnvironment.getDist() == Dist.CLIENT) {
+        // NeoForge <=21.8 exposes the dist as a public field; getDist() arrived later.
+        if (FMLEnvironment.dist == Dist.CLIENT) {
             container.registerExtensionPoint(IConfigScreenFactory.class, (mc, parent) -> new RedfxConfigScreen(parent));
         }
     }
