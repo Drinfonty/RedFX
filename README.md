@@ -25,11 +25,19 @@ The project maintains different branches to target different major Minecraft and
 | :--- | :--- | :--- | :--- | :--- |
 | **`main`** | **`26.2`** | `26.2` | `26.2.0.45-beta` | 25 |
 | **`legacy-26.1`** | **`26.1.2`** | `26.1` – `26.1.2` | `26.1.2.94` | 25 |
-| **`legacy-1.21`** | **`1.21.11`** | `1.21` – `1.21.11` | `21.11.45` | 21 |
+| **`legacy-1.21`** | **`1.21.11`** | `1.21.11` only | `21.11.45` | 21 |
 
 "Supported Minecraft" is the range declared in `minecraft_dependency`, and is what
 `modrinth_game_versions` publishes. Only the "Built Against" version is compiled and
-launched during verification. The mod version is deliberately not listed per branch: it
+launched during verification.
+
+**Declare only what compiles.** `legacy-1.21` previously advertised `1.21`–`1.21.11` while
+the source compiled against 1.21.11 alone, because 1.21.11 renamed `ResourceLocation` to
+`Identifier`, moved `AbstractSkeleton` into `monster.skeleton`, and 1.21.9 replaced
+`ParticleRenderType` with `SingleQuadParticle.Layer`. NeoForge caught it — its
+`[21.11.0,)` range only resolves on 1.21.11 — but Fabric would have *installed* on 1.21.5
+and crashed at runtime, which is worse. Before widening a range, compile against the
+oldest version in it. The mod version is deliberately not listed per branch: it
 lives in `gradle/mod.properties` and is identical everywhere — see
 [Branch Layout](#branch-layout).
 
