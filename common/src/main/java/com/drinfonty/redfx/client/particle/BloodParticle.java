@@ -8,7 +8,7 @@ import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.client.particle.Particle;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
@@ -205,7 +205,7 @@ public class BloodParticle extends TerrainParticle {
                     TextureAtlas blocksAtlas = (TextureAtlas) Minecraft.getInstance().getTextureManager().getTexture(TextureAtlas.LOCATION_BLOCKS);
                     if (blocksAtlas != null) {
                         TextureAtlasSprite splatSprite = blocksAtlas.getSprite(
-                            Identifier.fromNamespaceAndPath("redfx", "block/blood_splat_" + this.splatIndex)
+                            ResourceLocation.fromNamespaceAndPath("redfx", "block/blood_splat_" + this.splatIndex)
                         );
                         if (splatSprite != null) {
                             this.setSprite(splatSprite);
