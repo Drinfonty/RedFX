@@ -16,7 +16,7 @@ public final class PaintSprites {
 		if (sprite == null) {
 			sprite = Minecraft.getInstance().getModelManager()
 				.getAtlas(TextureAtlas.LOCATION_BLOCKS)
-				.getSprite(RedfxMod.id("splat/white"));
+				.getSprite(RedfxMod.id("block/splat/white"));
 			cached = sprite;
 		}
 		return sprite;
