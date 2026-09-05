@@ -30,17 +30,19 @@ When a living entity (mob, player, animal) is damaged:
 ### 2.2 Entity-Specific Blood Colors
 Blood particles automatically inherit unique colors based on the entity type:
 *   **Red**: Typical animals/monsters (Cows, Pigs, Zombies, Players, Villagers, Spiders).
-*   **Slime Green**: Slimes.
-*   **Enderman Purple**: Endermen.
+*   **Slime Green**: Slimes and Creepers.
+*   **Enderman Purple**: Endermen, Ender Dragons, and Endermites.
 *   **Teal/Sculk Blue**: Wardens.
-*   **Bone Gray/White**: Skeletons and Wither Skeletons.
+*   **Bone-Marrow Brown**: All skeleton variants (Skeletons, Strays, Wither Skeletons, Bogged, Parched, Skeleton Horses).
+*   **White**: Sulfur Cubes.
 *   **Fire/Orange-Yellow**: Blazes and Magma Cubes.
 
-### 2.3 Surface Splattering & Alignment (Decals)
-*   **Collision Detection**: Hooks into Minecraft's internal `Particle.move()` physics signals (`xd == 0.0` or `zd == 0.0`) to detect collision with solid surfaces.
-*   **Surface Alignment**: Supports 6 surface normals (`UP`, `DOWN`, `NORTH`, `SOUTH`, `EAST`, `WEST`). Flat quads align parallel to the block face they land on.
-*   **Flat Texturing**: Switches to custom splatter textures (`blood_splat_1` through `5`) on landing.
-*   **Depth Staggering**: Uses a **64-tier discrete depth ring buffer** (`0.005` to `0.043` blocks offset) to ensure overlapping splats never share identical depth values, mathematically eliminating Z-fighting lines.
+### 2.3 Surface Splattering & Chunk-Meshed Decals
+*   **Collision Detection**: Hooks into blood droplet physics (`onGround` and velocity stops) to detect collision with solid surfaces.
+*   **Surface Alignment**: Supports all 6 surface directions (`UP`, `DOWN`, `NORTH`, `SOUTH`, `EAST`, `WEST`) and special surfaces (snow, slabs, carpets via `PaintSurface`).
+*   **Chunk Model Meshing**: Instead of keeping landed `Particle` entities alive in the world, landing stamps the blood splatter directly into a 16×16 texel canvas for that block face.
+*   **Loader-Neutral Greedy Meshing**: Meshes the canvas into maximal rectangles (`CanvasMesher`) and emits them directly into chunk geometry (`WrapperBlockStateModel` / FRAPI on Fabric, `DynamicBlockStateModel` on NeoForge) in the `CUTOUT` layer with zero per-frame rendering cost.
+*   **Decal Expiration & Cleanup**: Decals track expiration on the client (`ClientCanvasStore`) according to the configured lifetime (1s to 30s). When expired or when the underlying block changes (`ClientLevelChunkMixin`), the chunk section is marked dirty and cleanly remeshed.
 
 ### 2.4 Splatter Impact Dust Effect
 *   Spawns 1 `minecraft:falling_dust` particle upon surface collision to simulate a droplet splatter burst.
@@ -62,10 +64,12 @@ Blood particles automatically inherit unique colors based on the entity type:
     *   **Blood Effects**: Toggle all blood rendering ON/OFF.
     *   **Particle Amount**: Low (0.4x), Medium (1.0x), High (2.0x), Ultra (4.0x) multiplier.
     *   **Particle Style**: Default (Wool textures), Spray (Poof textures), Shred (TNT textures).
-    *   **Splat Texture**: Toggle flat landing decals ON/OFF.
     *   **Splat Dust**: Toggle falling dust impact particles ON/OFF.
     *   **Underwater Blood Style**: Toggle underwater dispersion particle size: **Small** (Smoke, default) or **Big** (Campfire Smoke).
     *   **Landed Lifetime**: Slider to adjust landed splat lifetime (1s to 30s).
+    *   **Drop Size**: Slider to adjust droplet particle size (0.5x to 2.0x).
+    *   **Splat Size**: Slider to adjust block surface splatter size (0.5x to 2.0x), independent from drop size.
+    *   **Color Saturation**: Slider to adjust color saturation (0.0x to 2.0x).
 *   **Storage**: Saves to `config/redfx.json`.
 
 ---
