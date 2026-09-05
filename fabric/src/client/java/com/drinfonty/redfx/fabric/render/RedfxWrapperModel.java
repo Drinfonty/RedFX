@@ -1,7 +1,6 @@
 package com.drinfonty.redfx.fabric.render;
 
-import java.util.List;
-import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 import com.drinfonty.redfx.canvas.Canvas;
 import com.drinfonty.redfx.canvas.FaceAxes;
@@ -13,11 +12,14 @@ import com.drinfonty.redfx.client.render.PaintSprites;
 import com.drinfonty.redfx.client.render.PaintSurface;
 import com.drinfonty.redfx.config.RedfxConfig;
 
-import net.fabricmc.fabric.api.client.model.loading.v1.wrapper.WrapperBlockStateModel;
+import net.fabricmc.fabric.api.renderer.v1.RendererAccess;
+import net.fabricmc.fabric.api.renderer.v1.material.BlendMode;
+import net.fabricmc.fabric.api.renderer.v1.material.RenderMaterial;
 import net.fabricmc.fabric.api.renderer.v1.mesh.QuadEmitter;
-import net.minecraft.client.renderer.block.model.BlockStateModel;
-import net.minecraft.client.renderer.chunk.ChunkSectionLayer;
+import net.fabricmc.fabric.api.renderer.v1.model.ForwardingBakedModel;
+import net.fabricmc.fabric.api.renderer.v1.render.RenderContext;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.util.RandomSource;
@@ -27,15 +29,22 @@ import net.minecraft.world.level.block.state.BlockState;
 /**
  * Emits blood decals as part of the block's own model on Fabric using FRAPI.
  */
-public class RedfxWrapperModel extends WrapperBlockStateModel {
-	public RedfxWrapperModel(BlockStateModel wrapped) {
-		super(wrapped);
+public class RedfxWrapperModel extends ForwardingBakedModel {
+	private static RenderMaterial cutoutMaterial;
+
+	public RedfxWrapperModel(BakedModel wrapped) {
+		this.wrapped = wrapped;
 	}
 
 	@Override
-	public void emitQuads(QuadEmitter emitter, BlockAndTintGetter level, BlockPos pos, BlockState state,
-		RandomSource random, Predicate<Direction> cullTest) {
-		super.emitQuads(emitter, level, pos, state, random, cullTest);
+	public boolean isVanillaAdapter() {
+		return false;
+	}
+
+	@Override
+	public void emitBlockQuads(BlockAndTintGetter level, BlockState state, BlockPos pos,
+			Supplier<RandomSource> randomSupplier, RenderContext context) {
+		super.emitBlockQuads(level, state, pos, randomSupplier, context);
 
 		if (!RedfxConfig.get().bloodEnabled) {
 			return;
@@ -51,6 +60,8 @@ public class RedfxWrapperModel extends WrapperBlockStateModel {
 
 		float surfaceY = PaintSurface.planeFor(level, pos, state, Direction.UP);
 		boolean seeThrough = PaintSurface.isSeeThrough(state);
+
+		QuadEmitter emitter = context.getEmitter();
 
 		for (int face = 0; face < FaceAxes.FACE_COUNT; face++) {
 			Canvas canvas = store.get(pos, face);
@@ -72,7 +83,7 @@ public class RedfxWrapperModel extends WrapperBlockStateModel {
 	}
 
 	private static void emit(QuadEmitter emitter, TextureAtlasSprite sprite, Direction direction,
-		float[] corners, int argb, boolean back) {
+			float[] corners, int argb, boolean back) {
 		for (int vertex = 0; vertex < 4; vertex++) {
 			int source = back ? 3 - vertex : vertex;
 
@@ -83,8 +94,21 @@ public class RedfxWrapperModel extends WrapperBlockStateModel {
 
 		emitter.nominalFace(back ? direction.getOpposite() : direction);
 		emitter.cullFace(null);
-		emitter.renderLayer(ChunkSectionLayer.CUTOUT);
+		RenderMaterial mat = getCutoutMaterial();
+		if (mat != null) {
+			emitter.material(mat);
+		}
 		emitter.emit();
+	}
+
+	private static RenderMaterial getCutoutMaterial() {
+		if (cutoutMaterial == null) {
+			var renderer = RendererAccess.INSTANCE.getRenderer();
+			if (renderer != null) {
+				cutoutMaterial = renderer.materialFinder().blendMode(BlendMode.CUTOUT).find();
+			}
+		}
+		return cutoutMaterial;
 	}
 
 	private static float uOf(int vertex) {
@@ -93,26 +117,5 @@ public class RedfxWrapperModel extends WrapperBlockStateModel {
 
 	private static float vOf(int vertex) {
 		return vertex < 2 ? 1.0F : 0.0F;
-	}
-
-	@Override
-	public Object createGeometryKey(BlockAndTintGetter level, BlockPos pos, BlockState state, RandomSource random) {
-		if (!RedfxConfig.get().bloodEnabled) {
-			return super.createGeometryKey(level, pos, state, random);
-		}
-
-		ClientCanvasStore store = ClientCanvasStore.get();
-		Object[] key = new Object[FaceAxes.FACE_COUNT + 2];
-		key[0] = super.createGeometryKey(level, pos, state, random);
-		key[FaceAxes.FACE_COUNT + 1] = PaintSurface.isSeeThrough(state);
-		boolean painted = false;
-
-		for (int face = 0; face < FaceAxes.FACE_COUNT; face++) {
-			Canvas canvas = store.get(pos, face);
-			key[face + 1] = canvas;
-			painted |= canvas != null;
-		}
-
-		return painted ? List.of(key) : key[0];
 	}
 }

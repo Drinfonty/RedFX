@@ -18,7 +18,7 @@ public class RedfxFabricClient implements ClientModInitializer {
 
 		ModelLoadingPlugin.register(context -> {
 			PaintSprites.invalidate();
-			context.modifyBlockModelAfterBake().register(ModelModifier.WRAP_LAST_PHASE,
+			context.modifyModelAfterBake().register(ModelModifier.WRAP_LAST_PHASE,
 				(model, modifierContext) -> new RedfxWrapperModel(model));
 		});
 

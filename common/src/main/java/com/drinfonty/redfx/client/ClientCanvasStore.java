@@ -223,8 +223,8 @@ public final class ClientCanvasStore {
 	private void dirtyChunk(int chunkX, int chunkZ) {
 		ClientLevel level = Minecraft.getInstance().level;
 		if (level != null) {
-			int minSection = level.getMinSectionY();
-			int maxSection = level.getMaxSectionY();
+			int minSection = level.getMinBuildHeight() >> 4;
+			int maxSection = level.getMaxBuildHeight() >> 4;
 			for (int sy = minSection; sy < maxSection; sy++) {
 				level.setSectionDirtyWithNeighbors(chunkX, sy, chunkZ);
 			}
