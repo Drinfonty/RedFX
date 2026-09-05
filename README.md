@@ -155,7 +155,7 @@ former by staging the jar as the only mod in an isolated `neoforge/run-testjar/`
 
 ## Branch Layout
 
-Six branches. Five target a Minecraft version; one holds everything that does not.
+Seven branches. Six target a Minecraft version; one holds everything that does not.
 
 | Branch | Role |
 | :--- | :--- |
@@ -164,7 +164,8 @@ Six branches. Five target a Minecraft version; one holds everything that does no
 | **`legacy-26.1`** | Minecraft 26.1.x |
 | **`legacy-1.21`** | Minecraft 1.21.11 |
 | **`legacy-1.21.10`** | Minecraft 1.21.9 – 1.21.10 |
-| **`legacy-1.21.8`** | Minecraft 1.21 – 1.21.8 |
+| **`legacy-1.21.8`** | Minecraft 1.21.5 – 1.21.8 |
+| **`legacy-1.21.4`** | Minecraft 1.21 – 1.21.4 |
 
 `shared` is an ancestor of all three version branches, so its changes reach them by
 `git merge` rather than by three separate cherry-picks. Anything edited there lands
@@ -210,7 +211,7 @@ templating the metadata files through `processResources`, so `fabric.mod.json`,
 ```bash
 git checkout shared
 # ...edit, commit...
-for b in main legacy-26.1 legacy-1.21 legacy-1.21.10 legacy-1.21.8; do
+for b in main legacy-26.1 legacy-1.21 legacy-1.21.10 legacy-1.21.8 legacy-1.21.4; do
   git checkout $b && git merge shared
 done
 ```
