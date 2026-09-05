@@ -19,10 +19,13 @@ import net.minecraft.world.entity.monster.MagmaCube;
 import net.minecraft.world.entity.monster.skeleton.AbstractSkeleton;
 import net.minecraft.world.entity.monster.warden.Warden;
 
+import net.minecraft.world.entity.monster.Endermite;
+
 // Import item types & tags for weapon scaling
 import net.minecraft.world.item.ProjectileWeaponItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.tags.ItemTags;
+import net.minecraft.tags.EntityTypeTags;
 
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -188,14 +191,14 @@ public class LivingEntityMixin {
             r = 0.2F;
             g = 0.9F;
             b = 0.2F;
-        } else if (entity instanceof EnderMan || entity instanceof EnderDragon) {
+        } else if (entity instanceof EnderMan || entity instanceof EnderDragon || entity instanceof Endermite) {
             r = 0.6F;
             g = 0.1F;
             b = 0.8F;
-        } else if (entity instanceof AbstractSkeleton) {
-            r = 0.9F;
-            g = 0.9F;
-            b = 0.9F;
+        } else if (entity instanceof AbstractSkeleton || entity.getType().builtInRegistryHolder().is(EntityTypeTags.SKELETONS)) {
+            r = 0.52F;
+            g = 0.32F;
+            b = 0.18F;
         } else if (entity instanceof Warden) {
             r = 0.05F;
             g = 0.3F;
