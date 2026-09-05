@@ -1,7 +1,6 @@
 package com.drinfonty.redfx.client.render;
 
 import com.drinfonty.redfx.RedfxMod;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.Sheets;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 
@@ -14,8 +13,7 @@ public final class PaintSprites {
 	public static TextureAtlasSprite paint() {
 		TextureAtlasSprite sprite = cached;
 		if (sprite == null) {
-			sprite = Minecraft.getInstance().getAtlasManager()
-				.get(Sheets.BLOCKS_MAPPER.apply(RedfxMod.id("splat/white")));
+			sprite = Sheets.BLOCKS_MAPPER.apply(RedfxMod.id("splat/white")).sprite();
 			cached = sprite;
 		}
 		return sprite;
