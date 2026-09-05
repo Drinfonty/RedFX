@@ -5,15 +5,12 @@ import com.drinfonty.redfx.client.ClientCanvasStore;
 import com.drinfonty.redfx.client.render.PaintSprites;
 import com.drinfonty.redfx.neoforge.client.render.RedfxDynamicModel;
 
-import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.ModelEvent;
 import net.neoforged.neoforge.common.NeoForge;
 
-@EventBusSubscriber(modid = RedfxMod.MOD_ID, value = Dist.CLIENT)
 public final class RedfxNeoForgeClient {
 	private RedfxNeoForgeClient() {
 	}
