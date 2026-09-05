@@ -17,6 +17,18 @@ dependencies {
 	// runtime classpath and out of the published jars, so :neoforge is unaffected - this
 	// only gives javac the annotation classes it is already being asked to read.
 	compileOnly "net.fabricmc:fabric-loader:${project.loader_version}"
+
+	testImplementation platform("org.junit:junit-bom:5.13.4")
+	testImplementation "org.junit.jupiter:junit-jupiter"
+	testRuntimeOnly "org.junit.platform:junit-platform-launcher"
+}
+
+tasks.named('test') {
+	useJUnitPlatform()
+	testLogging {
+		events "failed"
+		exceptionFormat "full"
+	}
 }
 
 processResources {
