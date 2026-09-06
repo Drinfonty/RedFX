@@ -3,7 +3,7 @@
 	"package": "com.drinfonty.redfx.client.mixin",
 	"compatibilityLevel": "${mixinCompatLevel}",
 	"client": [
-		"LevelRendererMixin",
+		"ClientLevelChunkMixin",
 		"LivingEntityMixin",
 		"ParticleMixin"
 	],
