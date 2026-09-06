@@ -47,7 +47,18 @@ public class BloodParticle extends TerrainParticle {
 
     private BlockPos getAttachedBlockPos(Direction dir) {
         return switch (dir) {
-            case UP -> BlockPos.containing(this.x, this.y - 0.2, this.z);
+            case UP -> {
+                BlockPos below = BlockPos.containing(this.x, this.y - 0.2, this.z);
+                BlockPos above = below.above();
+                BlockState aboveState = this.level.getBlockState(above);
+                if (!aboveState.isAir() && aboveState.getFluidState().isEmpty()) {
+                    double top = PaintSurface.topOf(this.level, above, aboveState);
+                    if (top != PaintSurface.NONE && top < 1.0) {
+                        yield above;
+                    }
+                }
+                yield below;
+            }
             case DOWN -> BlockPos.containing(this.x, this.y + 0.2, this.z);
             case WEST -> BlockPos.containing(this.x + 0.2, this.y, this.z);
             case EAST -> BlockPos.containing(this.x - 0.2, this.y, this.z);
@@ -212,6 +223,25 @@ public class BloodParticle extends TerrainParticle {
             int wy = FaceStroke.worldY(face, bu, bv, normal);
             int wz = FaceStroke.worldZ(face, bu, bv, normal);
             BlockPos bPos = new BlockPos(wx, wy, wz);
+
+            if (face == Direction.UP.get3DDataValue()) {
+                BlockState bs = this.level.getBlockState(bPos);
+                BlockPos abovePos = bPos.above();
+                BlockState aboveState = this.level.getBlockState(abovePos);
+                if (!aboveState.isAir() && aboveState.getFluidState().isEmpty()) {
+                    double top = PaintSurface.topOf(this.level, abovePos, aboveState);
+                    if (top != PaintSurface.NONE && top < 1.0) {
+                        bPos = abovePos;
+                    }
+                } else if (bs.isAir()) {
+                    BlockPos belowPos = bPos.below();
+                    BlockState belowState = this.level.getBlockState(belowPos);
+                    if (!belowState.isAir() && belowState.getFluidState().isEmpty()
+                        && PaintSurface.topOf(this.level, belowPos, belowState) != PaintSurface.NONE) {
+                        bPos = belowPos;
+                    }
+                }
+            }
 
             int[] texels = modifiedBlocks.get(bPos);
             if (texels == null) {
