@@ -7,7 +7,7 @@ A major visual and performance overhaul introducing seamless block splatters, gr
 - **Seamless Block Splatters**:
   Landed blood splatters are now rendered directly onto blocks rather than lingering as floating particles in the world:
   - Splatters now naturally flow across block boundaries without getting cut off at block edges.
-  - Full support for snow layers, carpets, and thin surfaces—blood splatters now render cleanly directly on top of snow layer surfaces.
+  - Full support for slabs, chests, stairs, snow layers, carpets, and thin surfaces—blood splatters accurately adapt to multi-height steps and non-full blocks while falling cleanly through foliage and tall grass.
   - Fixes flickering, z-fighting, and camera clipping through blood on the ground and walls.
   - Blood decals persist reliably when punching or interacting with blocks, only disappearing when the underlying block is broken or replaced.
   - Much better performance during chaotic fights—blood splatters no longer count toward particle limits or cause FPS drops.
