@@ -48,7 +48,6 @@ public class RedfxWrapperModel extends WrapperBlockStateModel {
 		TextureAtlasSprite sprite = PaintSprites.paint();
 		float[] corners = new float[12];
 
-		float surfaceY = PaintSurface.planeFor(level, pos, state, Direction.UP);
 		boolean seeThrough = PaintSurface.isSeeThrough(state);
 
 		for (int face = 0; face < FaceAxes.FACE_COUNT; face++) {
@@ -59,12 +58,14 @@ public class RedfxWrapperModel extends WrapperBlockStateModel {
 
 			Direction direction = Direction.from3DDataValue(face);
 
-			for (PaintQuad quad : CanvasMesher.mesh(canvas.texels(), face)) {
-				PaintGeometry.corners(quad, corners, surfaceY);
-				emit(emitter, sprite, direction, corners, quad.argb(), false);
+			for (PaintSurface.SurfaceCanvas sc : PaintSurface.splitCanvas(level, pos, state, face, canvas)) {
+				for (PaintQuad quad : CanvasMesher.mesh(sc.canvas().texels(), face)) {
+					PaintGeometry.corners(quad, corners, sc.surfaceY());
+					emit(emitter, sprite, direction, corners, quad.argb(), false);
 
-				if (seeThrough) {
-					emit(emitter, sprite, direction, corners, quad.argb(), true);
+					if (seeThrough) {
+						emit(emitter, sprite, direction, corners, quad.argb(), true);
+					}
 				}
 			}
 		}

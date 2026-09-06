@@ -69,18 +69,19 @@ public class RedfxDynamicModel extends DelegateBlockStateModel implements Dynami
 			}
 
 			int currentFace = face;
-			float surfaceY = PaintSurface.planeFor(level, pos, state, Direction.UP);
 			boolean seeThrough = PaintSurface.isSeeThrough(state);
 
-			List<BakedQuad> faceQuads = CACHE.computeIfAbsent(
-				new CacheKey(canvas, currentFace, surfaceY, seeThrough),
-				key -> build(key.canvas(), key.face(), key.surfaceY(), key.seeThrough()));
+			for (PaintSurface.SurfaceCanvas sc : PaintSurface.splitCanvas(level, pos, state, face, canvas)) {
+				List<BakedQuad> faceQuads = CACHE.computeIfAbsent(
+					new CacheKey(sc.canvas(), currentFace, sc.surfaceY(), seeThrough),
+					key -> build(key.canvas(), key.face(), key.surfaceY(), key.seeThrough()));
 
-			if (quads == null) {
-				quads = new ArrayList<>(faceQuads.size() * 2);
+				if (quads == null) {
+					quads = new ArrayList<>(faceQuads.size() * 2);
+				}
+
+				quads.addAll(faceQuads);
 			}
-
-			quads.addAll(faceQuads);
 		}
 
 		if (quads != null && !quads.isEmpty()) {
