@@ -16,7 +16,6 @@ import com.drinfonty.redfx.config.RedfxConfig;
 import net.fabricmc.fabric.api.client.model.loading.v1.wrapper.WrapperBlockStateModel;
 import net.fabricmc.fabric.api.renderer.v1.mesh.QuadEmitter;
 import net.minecraft.client.renderer.block.model.BlockStateModel;
-import net.minecraft.client.renderer.chunk.ChunkSectionLayer;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -83,7 +82,7 @@ public class RedfxWrapperModel extends WrapperBlockStateModel {
 
 		emitter.nominalFace(back ? direction.getOpposite() : direction);
 		emitter.cullFace(null);
-		emitter.renderLayer(ChunkSectionLayer.CUTOUT);
+		RedfxLayerShim.applyCutout(emitter);
 		emitter.emit();
 	}
 
