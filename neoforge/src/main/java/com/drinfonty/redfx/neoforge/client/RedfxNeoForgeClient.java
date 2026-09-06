@@ -17,8 +17,7 @@ public final class RedfxNeoForgeClient {
 
 	public static void init(IEventBus modBus) {
 		modBus.addListener(ModelEvent.ModifyBakingResult.class, event -> {
-			event.getBakingResult().blockStateModels()
-				.replaceAll((state, model) -> new RedfxDynamicModel(model));
+			event.getBakingResult().blockStateModels().replaceAll((loc, model) -> new RedfxDynamicModel(model));
 			RedfxDynamicModel.clearCache();
 			PaintSprites.invalidate();
 		});
