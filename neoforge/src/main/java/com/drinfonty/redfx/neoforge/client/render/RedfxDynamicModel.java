@@ -36,7 +36,7 @@ import org.jetbrains.annotations.Nullable;
 public class RedfxDynamicModel extends BakedModelWrapper<BakedModel> {
 	private static final ModelProperty<BloodData> BLOOD_PROPERTY = new ModelProperty<>();
 
-	private record BloodData(BlockPos pos, float surfaceY, boolean seeThrough) {
+	private record BloodData(BlockPos pos, boolean seeThrough) {
 	}
 
 	private static final Map<CacheKey, List<BakedQuad>> CACHE = new ConcurrentHashMap<>();
@@ -65,10 +65,9 @@ public class RedfxDynamicModel extends BakedModelWrapper<BakedModel> {
 			return base;
 		}
 
-		float surfaceY = PaintSurface.planeFor(level, pos, state, Direction.UP);
 		boolean seeThrough = PaintSurface.isSeeThrough(state);
 
-		return base.derive().with(BLOOD_PROPERTY, new BloodData(pos.immutable(), surfaceY, seeThrough)).build();
+		return base.derive().with(BLOOD_PROPERTY, new BloodData(pos.immutable(), seeThrough)).build();
 	}
 
 	@Override
@@ -112,16 +111,19 @@ public class RedfxDynamicModel extends BakedModelWrapper<BakedModel> {
 			}
 
 			int currentFace = face;
-			List<BakedQuad> faceQuads = CACHE.computeIfAbsent(
-				new CacheKey(canvas, currentFace, data.surfaceY, data.seeThrough),
-				key -> build(key.canvas(), key.face(), key.surfaceY(), key.seeThrough()));
 
-			if (quads == null) {
-				quads = new ArrayList<>(base.size() + faceQuads.size() * 2);
-				quads.addAll(base);
+			for (PaintSurface.SurfaceCanvas sc : PaintSurface.splitCanvas(null, data.pos, state, face, canvas)) {
+				List<BakedQuad> faceQuads = CACHE.computeIfAbsent(
+					new CacheKey(sc.canvas(), currentFace, sc.surfaceY(), data.seeThrough),
+					key -> build(key.canvas(), key.face(), key.surfaceY(), key.seeThrough()));
+
+				if (quads == null) {
+					quads = new ArrayList<>(base.size() + faceQuads.size() * 2);
+					quads.addAll(base);
+				}
+
+				quads.addAll(faceQuads);
 			}
-
-			quads.addAll(faceQuads);
 		}
 
 		if (CACHE.size() > MAX_CACHED_CANVASES) {
