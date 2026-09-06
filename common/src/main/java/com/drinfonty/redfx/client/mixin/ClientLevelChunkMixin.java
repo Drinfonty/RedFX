@@ -14,12 +14,18 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  */
 @Mixin(LevelChunk.class)
 public abstract class ClientLevelChunkMixin {
-	@Inject(method = "setBlockState", at = @At("HEAD"))
+	@Inject(method = "setBlockState", at = @At("RETURN"))
 	private void redfx$clearBloodOnChange(BlockPos pos, BlockState after, int flags,
 		CallbackInfoReturnable<BlockState> callback) {
-		ClientCanvasStore store = ClientCanvasStore.get();
-		if (store.isPainted(pos)) {
-			store.clearBlock(pos);
+		BlockState oldState = callback.getReturnValue();
+		if (oldState == null) {
+			return;
+		}
+		if (after.isAir() || !after.is(oldState.getBlock())) {
+			ClientCanvasStore store = ClientCanvasStore.get();
+			if (store.isPainted(pos)) {
+				store.clearBlock(pos);
+			}
 		}
 	}
 }
