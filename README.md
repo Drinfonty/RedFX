@@ -24,12 +24,12 @@ The project maintains different branches to target different major Minecraft and
 | Branch Name | Built Against | Supported Minecraft | NeoForge | Java |
 | :--- | :--- | :--- | :--- | :--- |
 | **`main`** | **`26.2`** | `26.2` | `26.2.0.45-beta` | 25 |
-| **`legacy-26.1`** | **`26.1.2`** | `26.1` – `26.1.2` | `26.1.2.94` | 25 |
-| **`legacy-1.21.11`** | **`1.21.11`** | `1.21.11` only | `21.11.45` | 21 |
-| **`legacy-1.21.10`** | **`1.21.10`** | `1.21.9` – `1.21.10` | `21.9`–`21.10` | 21 |
-| **`legacy-1.21.8`** | **`1.21.8`** | `1.21.5` – `1.21.8` | `21.5`–`21.8` | 21 |
-| **`legacy-1.21.4`** | **`1.21.4`** | `1.21.2` – `1.21.4` | `21.2`–`21.4` | 21 |
-| **`legacy-1.21.1`** | **`1.21.1`** | `1.21` – `1.21.1` | `21.0`–`21.1` | 21 |
+| **`mc-26.1`** | **`26.1.2`** | `26.1` – `26.1.2` | `26.1.2.94` | 25 |
+| **`mc-1.21.11`** | **`1.21.11`** | `1.21.11` only | `21.11.45` | 21 |
+| **`mc-1.21.10`** | **`1.21.10`** | `1.21.9` – `1.21.10` | `21.9`–`21.10` | 21 |
+| **`mc-1.21.8`** | **`1.21.8`** | `1.21.5` – `1.21.8` | `21.5`–`21.8` | 21 |
+| **`mc-1.21.4`** | **`1.21.4`** | `1.21.2` – `1.21.4` | `21.2`–`21.4` | 21 |
+| **`mc-1.21.1`** | **`1.21.1`** | `1.21` – `1.21.1` | `21.0`–`21.1` | 21 |
 
 "Supported Minecraft" is the range declared in `minecraft_dependency`, and is what
 `modrinth_game_versions` publishes. Only the "Built Against" version is compiled and
@@ -44,7 +44,7 @@ The 1.21 line needs five branches because Mojang overhauled rendering and APIs a
 - NeoForge also swapped `FMLEnvironment.dist` for `getDist()` after 21.8. Each branch differs
 from its neighbour by only those few edits.
 
-**Declare only what compiles.** `legacy-1.21.11` previously advertised `1.21`–`1.21.11` while
+**Declare only what compiles.** `mc-1.21.11` previously advertised `1.21`–`1.21.11` while
 the source compiled against 1.21.11 alone, because 1.21.11 renamed `ResourceLocation` to
 `Identifier`, moved `AbstractSkeleton` into `monster.skeleton`, and 1.21.9 replaced
 `ParticleRenderType` with `SingleQuadParticle.Layer`. NeoForge caught it — its
@@ -61,16 +61,16 @@ This differs per branch and decides how a Fabric jar must be verified before pub
 | Branch Name | Loom | Loom Plugin | Fabric Production Namespace | Verify Fabric With |
 | :--- | :--- | :--- | :--- | :--- |
 | **`main`** | 1.17 | `fabric-loom` | Mojang (`official`) — no remap step | `:fabric:runClient -PtestJar` |
-| **`legacy-26.1`** | 1.17 | `fabric-loom` | Mojang (`official`) — no remap step | `:fabric:runClient -PtestJar` |
-| **`legacy-1.21.11`** | 1.14.10 | `fabric-loom-remap` | **`intermediary`** — `remapJar` rewrites the mod | `:fabric:runProdClient` |
-| **`legacy-1.21.10`** | 1.14.10 | `fabric-loom-remap` | **`intermediary`** — `remapJar` rewrites the mod | `:fabric:runProdClient` |
-| **`legacy-1.21.8`** | 1.14.10 | `fabric-loom-remap` | **`intermediary`** — `remapJar` rewrites the mod | `:fabric:runProdClient` |
-| **`legacy-1.21.4`** | 1.14.10 | `fabric-loom-remap` | **`intermediary`** — `remapJar` rewrites the mod | `:fabric:runProdClient` |
-| **`legacy-1.21.1`** | 1.14.10 | `fabric-loom-remap` | **`intermediary`** — `remapJar` rewrites the mod | `:fabric:runProdClient` |
+| **`mc-26.1`** | 1.17 | `fabric-loom` | Mojang (`official`) — no remap step | `:fabric:runClient -PtestJar` |
+| **`mc-1.21.11`** | 1.14.10 | `fabric-loom-remap` | **`intermediary`** — `remapJar` rewrites the mod | `:fabric:runProdClient` |
+| **`mc-1.21.10`** | 1.14.10 | `fabric-loom-remap` | **`intermediary`** — `remapJar` rewrites the mod | `:fabric:runProdClient` |
+| **`mc-1.21.8`** | 1.14.10 | `fabric-loom-remap` | **`intermediary`** — `remapJar` rewrites the mod | `:fabric:runProdClient` |
+| **`mc-1.21.4`** | 1.14.10 | `fabric-loom-remap` | **`intermediary`** — `remapJar` rewrites the mod | `:fabric:runProdClient` |
+| **`mc-1.21.1`** | 1.14.10 | `fabric-loom-remap` | **`intermediary`** — `remapJar` rewrites the mod | `:fabric:runProdClient` |
 
 Fabric does not publish intermediary mappings for Minecraft 26.x, so on `main` and
-`legacy-26.1` the `jar` output *is* the publishable artifact and the dev client runs in the
-same namespace as production. On the `legacy-1.21.x` branches the published artifact is `remapJar`'s
+`mc-26.1` the `jar` output *is* the publishable artifact and the dev client runs in the
+same namespace as production. On the `mc-1.21.x` branches the published artifact is `remapJar`'s
 output, and the dev client namespace does **not** match production — see
 [Pre-Publish Verification](#2-pre-publish-verification).
 
@@ -127,17 +127,17 @@ By default, running the standard client tasks loads Minecraft using loose class 
   ./gradlew :neoforge:runClient -PtestJar
   ```
 
-> **On the `legacy-1.21.x` branches, Fabric is verified with `./gradlew :fabric:runProdClient` instead.**
+> **On the `mc-1.21.x` branches, Fabric is verified with `./gradlew :fabric:runProdClient` instead.**
 > `-PtestJar` is wired to refuse to run there.
 
 #### Why the Fabric step differs per branch
 
-On `main` and `legacy-26.1`, Fabric publishes no intermediary mappings for Minecraft 26.x.
+On `main` and `mc-26.1`, Fabric publishes no intermediary mappings for Minecraft 26.x.
 Those branches use the `fabric-loom` plugin, there is no `remapJar` step, and the `jar`
 output *is* the publishable artifact. The dev client runs in the **same** Mojang namespace
 as production, so a mixin that resolves under `-PtestJar` resolves for a user.
 
-On the `legacy-1.21.x` branches the published jar is remapped to the `intermediary` namespace while
+On the `mc-1.21.x` branches the published jar is remapped to the `intermediary` namespace while
 `runClient` stays named. A production jar loaded into a dev client there cannot match its
 own mixin targets — Mixin logs `@Mixin target net.minecraft.class_703 was not found`, skips
 every mixin, and the client still reaches the main menu looking healthy. That false pass is
@@ -168,12 +168,12 @@ Eight branches. Seven target a Minecraft version; one holds everything that does
 | :--- | :--- |
 | **`shared`** | Version-agnostic content only. Never built or published directly. |
 | **`main`** | Minecraft 26.2 |
-| **`legacy-26.1`** | Minecraft 26.1.x |
-| **`legacy-1.21.11`** | Minecraft 1.21.11 |
-| **`legacy-1.21.10`** | Minecraft 1.21.9 – 1.21.10 |
-| **`legacy-1.21.8`** | Minecraft 1.21.5 – 1.21.8 |
-| **`legacy-1.21.4`** | Minecraft 1.21.2 – 1.21.4 |
-| **`legacy-1.21.1`** | Minecraft 1.21 – 1.21.1 |
+| **`mc-26.1`** | Minecraft 26.1.x |
+| **`mc-1.21.11`** | Minecraft 1.21.11 |
+| **`mc-1.21.10`** | Minecraft 1.21.9 – 1.21.10 |
+| **`mc-1.21.8`** | Minecraft 1.21.5 – 1.21.8 |
+| **`mc-1.21.4`** | Minecraft 1.21.2 – 1.21.4 |
+| **`mc-1.21.1`** | Minecraft 1.21 – 1.21.1 |
 
 `shared` is an ancestor of all three version branches, so its changes reach them by
 `git merge` rather than by three separate cherry-picks. Anything edited there lands
@@ -198,7 +198,7 @@ that carry no version-specific API.
 | :--- | :--- |
 | `gradle.properties` | Every Minecraft, Loom, NeoForge and Java version value |
 | `build.gradle`, `common/build.gradle` | The Loom plugin id — `plugins {}` needs a literal, so it cannot be a property |
-| `fabric/build.gradle`, `neoforge/build.gradle` | Shared between `main` and `legacy-26.1`; `legacy-1.21.x` branches differ (`modImplementation`, explicit Mojang mappings, `remapJar`) |
+| `fabric/build.gradle`, `neoforge/build.gradle` | Shared between `main` and `mc-26.1`; `mc-1.21.x` branches differ (`modImplementation`, explicit Mojang mappings, `remapJar`) |
 | `RedfxConfigScreen.java`, `LivingEntityMixin.java`, `BloodParticle.java` | Real Minecraft API differences |
 | `release/release-note-1.1.2.md` | Frozen per-branch history |
 
@@ -219,7 +219,7 @@ templating the metadata files through `processResources`, so `fabric.mod.json`,
 ```bash
 git checkout shared
 # ...edit, commit...
-for b in main legacy-26.1 legacy-1.21.11 legacy-1.21.10 legacy-1.21.8 legacy-1.21.4 legacy-1.21.1; do
+for b in main mc-26.1 mc-1.21.11 mc-1.21.10 mc-1.21.8 mc-1.21.4 mc-1.21.1; do
   git checkout $b && git merge shared
 done
 ```
@@ -227,7 +227,7 @@ done
 **Version-specific change** (anything touching Minecraft API):
 
 1. Implement and test on `main`.
-2. Cherry-pick to `legacy-26.1`, then the `legacy-1.21.x` branches (`legacy-1.21.11`, `legacy-1.21.10`, etc.).
+2. Cherry-pick to `mc-26.1`, then the `mc-1.21.x` branches (`mc-1.21.11`, `mc-1.21.10`, etc.).
 3. Re-derive rather than force anything touching mappings, mixins, or which task produces
    the published jar — that is genuinely not portable between branches.
 
@@ -240,9 +240,9 @@ working, not a failure — the old cherry-pick flow let the same divergence pass
 ```bash
 ./gradlew clean build
 
-# Fabric, on main / legacy-26.1
+# Fabric, on main / mc-26.1
 ./gradlew :fabric:runClient -PtestJar
-# Fabric, on legacy-1.21.x branches
+# Fabric, on mc-1.21.x branches
 ./gradlew :fabric:runProdClient
 
 # NeoForge, every branch
@@ -251,4 +251,4 @@ working, not a failure — the old cherry-pick flow let the same divergence pass
 
 See [Pre-Publish Verification](#2-pre-publish-verification) for what each one proves and
 what to check in the log. A dev client reaching the main menu is **not** sufficient
-evidence that a Fabric jar works on `legacy-1.21.x`.
+evidence that a Fabric jar works on `mc-1.21.x`.
