@@ -97,14 +97,11 @@ githubRelease {
 	repo = "RedFX"
 	tagName = "v${project.mod_version}"
 	releaseName = "RedFX ${project.mod_version}"
-	targetCommitish = getBranchName()
+	targetCommitish = "main"
 	overwrite = true
 	dryRun = project.hasProperty('publishDebug')
 
-	releaseAssets = files(
-		project(":fabric").layout.buildDirectory.file("libs/redfx-${project.mod_version}-${project.mc_version_suffix}-fabric.jar"),
-		project(":neoforge").layout.buildDirectory.file("libs/redfx-${project.mod_version}-${project.mc_version_suffix}-neoforge.jar")
-	)
+	releaseAssets = fileTree(dir: rootProject.file("release"), include: "redfx-${project.mod_version}-*.jar")
 
 	def notesFile = rootProject.file("release/release-note-${project.mod_version}.md")
 	if (notesFile.exists()) {
@@ -113,11 +110,16 @@ githubRelease {
 }
 
 tasks.named("githubRelease") {
-	dependsOn(":fabric:jar", ":neoforge:jar")
+	dependsOn(":fabric:assemble", ":neoforge:assemble")
 	onlyIf {
 		def ghToken = rootProject.getGithubToken()
 		if (ghToken == null || ghToken.isEmpty()) {
 			logger.warn("Skipping githubRelease task because GITHUB_TOKEN/github.token is not set.")
+			return false
+		}
+		def branch = rootProject.getBranchName()
+		if (branch != "main") {
+			logger.warn("Skipping githubRelease task on branch '${branch}'. GitHub releases should be published from 'main' once all version jars have been assembled into release/.")
 			return false
 		}
 		return true
