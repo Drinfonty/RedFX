@@ -23,7 +23,7 @@ The project maintains different branches to target different major Minecraft and
 
 | Branch Name | Built Against | Supported Minecraft | NeoForge | Java |
 | :--- | :--- | :--- | :--- | :--- |
-| **`main`** | **`26.2`** | `26.2` | `26.2.0.45-beta` | 25 |
+| **`main`** | **`26.2`** | `26.2` | `26.2.0.81` | 25 |
 | **`mc-26.1`** | **`26.1.2`** | `26.1` – `26.1.2` | `26.1.2.94` | 25 |
 | **`mc-1.21.11`** | **`1.21.11`** | `1.21.11` only | `21.11.45` | 21 |
 | **`mc-1.21.10`** | **`1.21.10`** | `1.21.9` – `1.21.10` | `21.9`–`21.10` | 21 |
