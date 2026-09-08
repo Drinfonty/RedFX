@@ -188,7 +188,9 @@ that carry no version-specific API.
 - `gradle/mod.properties` — `mod_version`, `maven_group`, the store project ids
 - `release/release-note-*.md`
 - `common/src/main/resources/**` (assets, mixin configs)
-- `common/.../RedfxMod.java`, `RedfxConfig.java`, `ParticleMixin.java`, `BloodSmokeAccessor.java`
+- `common/.../RedfxMod.java`, `RedfxConfig.java`, `ParticleMixin.java`, `BloodSmokeAccessor.java`, `BloodParticle.java`
+- `common/src/main/java/com/drinfonty/redfx/canvas/**`, `.../render/**`, `.../ClientCanvasStore.java`
+- `common/src/test/**` (regression and unit test suites)
 - the Fabric and NeoForge platform entry points
 - `settings.gradle`, `gradlew`, `gradle/wrapper/**`
 
@@ -199,7 +201,7 @@ that carry no version-specific API.
 | `gradle.properties` | Every Minecraft, Loom, NeoForge and Java version value |
 | `build.gradle`, `common/build.gradle` | The Loom plugin id — `plugins {}` needs a literal, so it cannot be a property |
 | `fabric/build.gradle`, `neoforge/build.gradle` | Shared between `main` and `mc-26.1`; `mc-1.21.x` branches differ (`modImplementation`, explicit Mojang mappings, `remapJar`) |
-| `RedfxConfigScreen.java`, `LivingEntityMixin.java`, `BloodParticle.java` | Real Minecraft API differences |
+| `RedfxConfigScreen.java`, `LivingEntityMixin.java`, `ClientLevelChunkMixin.java` | Real Minecraft API / mixin signature differences |
 | `release/release-note-1.1.2.md` | Frozen per-branch history |
 
 > **`shared` still contains a copy of every per-branch file**, frozen at the commit the
