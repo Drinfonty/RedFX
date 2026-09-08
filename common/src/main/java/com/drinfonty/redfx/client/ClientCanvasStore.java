@@ -202,37 +202,66 @@ public final class ClientCanvasStore {
 		}
 	}
 
+	public interface RenderDispatcher {
+		boolean isRenderThread();
+		void executeOnRenderThread(Runnable action);
+		void markSectionDirty(int secX, int secY, int secZ);
+		void markChunkDirty(int chunkX, int chunkZ);
+	}
+
+	private static final RenderDispatcher DEFAULT_DISPATCHER = new RenderDispatcher() {
+		@Override
+		public boolean isRenderThread() {
+			Minecraft mc = Minecraft.getInstance();
+			return mc == null || mc.isSameThread();
+		}
+
+		@Override
+		public void executeOnRenderThread(Runnable action) {
+			Minecraft mc = Minecraft.getInstance();
+			if (mc != null) {
+				mc.execute(action);
+			}
+		}
+
+		@Override
+		public void markSectionDirty(int secX, int secY, int secZ) {
+			Minecraft mc = Minecraft.getInstance();
+			if (mc != null && mc.level != null) {
+				mc.level.setSectionDirtyWithNeighbors(secX, secY, secZ);
+			}
+		}
+
+		@Override
+		public void markChunkDirty(int chunkX, int chunkZ) {
+			Minecraft mc = Minecraft.getInstance();
+			if (mc != null && mc.level != null) {
+				int minSection = mc.level.getMinSectionY();
+				int maxSection = mc.level.getMaxSectionY();
+				for (int sy = minSection; sy < maxSection; sy++) {
+					mc.level.setSectionDirtyWithNeighbors(chunkX, sy, chunkZ);
+				}
+			}
+		}
+	};
+
+	static volatile RenderDispatcher renderDispatcher = DEFAULT_DISPATCHER;
+
 	private void dirtySection(BlockPos pos) {
-		Minecraft mc = Minecraft.getInstance();
-		if (mc == null) {
+		RenderDispatcher dispatcher = renderDispatcher;
+		if (!dispatcher.isRenderThread()) {
+			dispatcher.executeOnRenderThread(() -> dirtySection(pos));
 			return;
 		}
-		if (!mc.isSameThread()) {
-			mc.execute(() -> dirtySection(pos));
-			return;
-		}
-		ClientLevel level = mc.level;
-		if (level != null) {
-			level.setSectionDirtyWithNeighbors(pos.getX() >> 4, pos.getY() >> 4, pos.getZ() >> 4);
-		}
+		dispatcher.markSectionDirty(pos.getX() >> 4, pos.getY() >> 4, pos.getZ() >> 4);
 	}
 
 	private void dirtyChunk(int chunkX, int chunkZ) {
-		Minecraft mc = Minecraft.getInstance();
-		if (mc == null) {
+		RenderDispatcher dispatcher = renderDispatcher;
+		if (!dispatcher.isRenderThread()) {
+			dispatcher.executeOnRenderThread(() -> dirtyChunk(chunkX, chunkZ));
 			return;
 		}
-		if (!mc.isSameThread()) {
-			mc.execute(() -> dirtyChunk(chunkX, chunkZ));
-			return;
-		}
-		ClientLevel level = mc.level;
-		if (level != null) {
-			int minSection = level.getMinSectionY();
-			int maxSection = level.getMaxSectionY();
-			for (int sy = minSection; sy < maxSection; sy++) {
-				level.setSectionDirtyWithNeighbors(chunkX, sy, chunkZ);
-			}
-		}
+		dispatcher.markChunkDirty(chunkX, chunkZ);
 	}
 }
