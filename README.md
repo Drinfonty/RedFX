@@ -23,7 +23,7 @@ The project maintains different branches to target different major Minecraft and
 
 | Branch Name | Built Against | Supported Minecraft | NeoForge | Java |
 | :--- | :--- | :--- | :--- | :--- |
-| **`main`** | **`26.2`** | `26.2` | `26.2.0.81` | 25 |
+| **`mc-26.2`** | **`26.2`** | `26.2` | `26.2.0.81` | 25 |
 | **`mc-26.1`** | **`26.1.2`** | `26.1` – `26.1.2` | `26.1.2.94` | 25 |
 | **`mc-1.21.11`** | **`1.21.11`** | `1.21.11` only | `21.11.45` | 21 |
 | **`mc-1.21.10`** | **`1.21.10`** | `1.21.9` – `1.21.10` | `21.9`–`21.10` | 21 |
@@ -60,7 +60,7 @@ This differs per branch and decides how a Fabric jar must be verified before pub
 
 | Branch Name | Loom | Loom Plugin | Fabric Production Namespace | Verify Fabric With |
 | :--- | :--- | :--- | :--- | :--- |
-| **`main`** | 1.17 | `fabric-loom` | Mojang (`official`) — no remap step | `:fabric:runClient -PtestJar` |
+| **`mc-26.2`** | 1.17 | `fabric-loom` | Mojang (`official`) — no remap step | `:fabric:runClient -PtestJar` |
 | **`mc-26.1`** | 1.17 | `fabric-loom` | Mojang (`official`) — no remap step | `:fabric:runClient -PtestJar` |
 | **`mc-1.21.11`** | 1.14.10 | `fabric-loom-remap` | **`intermediary`** — `remapJar` rewrites the mod | `:fabric:runProdClient` |
 | **`mc-1.21.10`** | 1.14.10 | `fabric-loom-remap` | **`intermediary`** — `remapJar` rewrites the mod | `:fabric:runProdClient` |
@@ -68,7 +68,7 @@ This differs per branch and decides how a Fabric jar must be verified before pub
 | **`mc-1.21.4`** | 1.14.10 | `fabric-loom-remap` | **`intermediary`** — `remapJar` rewrites the mod | `:fabric:runProdClient` |
 | **`mc-1.21.1`** | 1.14.10 | `fabric-loom-remap` | **`intermediary`** — `remapJar` rewrites the mod | `:fabric:runProdClient` |
 
-Fabric does not publish intermediary mappings for Minecraft 26.x, so on `main` and
+Fabric does not publish intermediary mappings for Minecraft 26.x, so on `mc-26.2` and
 `mc-26.1` the `jar` output *is* the publishable artifact and the dev client runs in the
 same namespace as production. On the `mc-1.21.x` branches the published artifact is `remapJar`'s
 output, and the dev client namespace does **not** match production — see
@@ -132,7 +132,7 @@ By default, running the standard client tasks loads Minecraft using loose class 
 
 #### Why the Fabric step differs per branch
 
-On `main` and `mc-26.1`, Fabric publishes no intermediary mappings for Minecraft 26.x.
+On `mc-26.2` and `mc-26.1`, Fabric publishes no intermediary mappings for Minecraft 26.x.
 Those branches use the `fabric-loom` plugin, there is no `remapJar` step, and the `jar`
 output *is* the publishable artifact. The dev client runs in the **same** Mojang namespace
 as production, so a mixin that resolves under `-PtestJar` resolves for a user.
@@ -166,8 +166,8 @@ Eight branches. Seven target a Minecraft version; one holds everything that does
 
 | Branch | Role |
 | :--- | :--- |
-| **`shared`** | Version-agnostic content only. Never built or published directly. |
-| **`main`** | Minecraft 26.2 |
+| **`main`** | Version-agnostic content only. Never built or published directly. |
+| **`mc-26.2`** | Minecraft 26.2 |
 | **`mc-26.1`** | Minecraft 26.1.x |
 | **`mc-1.21.11`** | Minecraft 1.21.11 |
 | **`mc-1.21.10`** | Minecraft 1.21.9 – 1.21.10 |
@@ -175,14 +175,14 @@ Eight branches. Seven target a Minecraft version; one holds everything that does
 | **`mc-1.21.4`** | Minecraft 1.21.2 – 1.21.4 |
 | **`mc-1.21.1`** | Minecraft 1.21 – 1.21.1 |
 
-`shared` is an ancestor of all three version branches, so its changes reach them by
-`git merge` rather than by three separate cherry-picks. Anything edited there lands
+`main` is an ancestor of all seven version branches, so its changes reach them by
+`git merge` rather than by separate cherry-picks. Anything edited there lands
 everywhere in one step: docs, release notes, the mod version, assets, and the Java files
 that carry no version-specific API.
 
 ### What lives where
 
-**Edit on `shared`** — merged into every version branch:
+**Edit on `main`** — merged into every version branch:
 
 - `README.md`, `SPEC.md`, `TODO.md`, `LICENSE`
 - `gradle/mod.properties` — `mod_version`, `maven_group`, the store project ids
@@ -194,21 +194,21 @@ that carry no version-specific API.
 - the Fabric and NeoForge platform entry points
 - `settings.gradle`, `gradlew`, `gradle/wrapper/**`
 
-**Edit on the version branch** — never merged from `shared`:
+**Edit on the version branch** — never merged from `main`:
 
 | File | Why it is per-branch |
 | :--- | :--- |
 | `gradle.properties` | Every Minecraft, Loom, NeoForge and Java version value |
 | `build.gradle`, `common/build.gradle` | The Loom plugin id — `plugins {}` needs a literal, so it cannot be a property |
-| `fabric/build.gradle`, `neoforge/build.gradle` | Shared between `main` and `mc-26.1`; `mc-1.21.x` branches differ (`modImplementation`, explicit Mojang mappings, `remapJar`) |
+| `fabric/build.gradle`, `neoforge/build.gradle` | Shared between `mc-26.2` and `mc-26.1`; `mc-1.21.x` branches differ (`modImplementation`, explicit Mojang mappings, `remapJar`) |
 | `RedfxConfigScreen.java`, `LivingEntityMixin.java`, `ClientLevelChunkMixin.java` | Real Minecraft API / mixin signature differences |
 | `release/release-note-1.1.2.md` | Frozen per-branch history |
 
-> **`shared` still contains a copy of every per-branch file**, frozen at the commit the
-> branch was cut from. They are deliberately never touched there: if `shared` modified
+> **`main` still contains a copy of every per-branch file**, frozen at the commit the
+> branch was cut from. They are deliberately never touched there: if `main` modified
 > `gradle.properties`, every merge would conflict, and if it deleted it, every merge would
 > hit a modify/delete conflict instead. Treat those copies as inert. If you find yourself
-> editing one on `shared`, you are on the wrong branch.
+> editing one on `main`, you are on the wrong branch.
 
 Build scripts avoid drifting by pushing every varying value into `gradle.properties` and
 templating the metadata files through `processResources`, so `fabric.mod.json`,
@@ -219,22 +219,22 @@ templating the metadata files through `processResources`, so `fabric.mod.json`,
 **Version-agnostic change** (docs, release notes, version bump, shared Java):
 
 ```bash
-git checkout shared
+git checkout main
 # ...edit, commit...
-for b in main mc-26.1 mc-1.21.11 mc-1.21.10 mc-1.21.8 mc-1.21.4 mc-1.21.1; do
-  git checkout $b && git merge shared
+for b in mc-26.2 mc-26.1 mc-1.21.11 mc-1.21.10 mc-1.21.8 mc-1.21.4 mc-1.21.1; do
+  git checkout $b && git merge main
 done
 ```
 
 **Version-specific change** (anything touching Minecraft API):
 
-1. Implement and test on `main`.
-2. Cherry-pick to `mc-26.1`, then the `mc-1.21.x` branches (`mc-1.21.11`, `mc-1.21.10`, etc.).
+1. Implement and test on the relevant version branch (e.g. `mc-26.2`).
+2. Adapt or cherry-pick to other branches if applicable.
 3. Re-derive rather than force anything touching mappings, mixins, or which task produces
    the published jar — that is genuinely not portable between branches.
 
-If a `git merge shared` conflicts, the file is in the wrong tier: either it should not be
-on `shared`, or the varying part belongs in `gradle.properties`. A conflict is the design
+If a `git merge main` conflicts, the file is in the wrong tier: either it should not be
+on `main`, or the varying part belongs in `gradle.properties`. A conflict is the design
 working, not a failure — the old cherry-pick flow let the same divergence pass silently.
 
 ### Before pushing
@@ -242,7 +242,7 @@ working, not a failure — the old cherry-pick flow let the same divergence pass
 ```bash
 ./gradlew clean build
 
-# Fabric, on main / mc-26.1
+# Fabric, on mc-26.2 / mc-26.1
 ./gradlew :fabric:runClient -PtestJar
 # Fabric, on mc-1.21.x branches
 ./gradlew :fabric:runProdClient
