@@ -32,6 +32,8 @@ run-testjar/
 run-prod/
 
 # Java / Crash logs
+logs/
+**/logs/
 hs_err_*.log
 replay_*.log
 *.hprof
