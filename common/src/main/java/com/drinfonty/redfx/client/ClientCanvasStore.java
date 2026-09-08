@@ -17,7 +17,6 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
-import net.minecraft.world.level.ChunkPos;
 
 /**
  * Client-side canvas store read concurrently by chunk-mesher worker threads.
@@ -25,6 +24,18 @@ import net.minecraft.world.level.ChunkPos;
  */
 public final class ClientCanvasStore {
 	private static final ClientCanvasStore INSTANCE = new ClientCanvasStore();
+
+	private static long chunkKey(BlockPos pos) {
+		return (((long) (pos.getX() >> 4)) & 0xFFFFFFFFL) | ((((long) (pos.getZ() >> 4)) & 0xFFFFFFFFL) << 32);
+	}
+
+	private static int chunkX(long chunkKey) {
+		return (int) (chunkKey & 0xFFFFFFFFL);
+	}
+
+	private static int chunkZ(long chunkKey) {
+		return (int) (chunkKey >>> 32);
+	}
 
 	/** Interval between erosion steps (200ms = 5 times per second). */
 	private static final long ERODE_INTERVAL_MS = 200L;
@@ -41,7 +52,7 @@ public final class ClientCanvasStore {
 	}
 
 	public Canvas get(BlockPos pos, int face) {
-		Long2ObjectMap<Canvas> canvases = chunks.get(ChunkPos.pack(pos));
+		Long2ObjectMap<Canvas> canvases = chunks.get(chunkKey(pos));
 		if (canvases == null) {
 			return null;
 		}
@@ -49,7 +60,7 @@ public final class ClientCanvasStore {
 	}
 
 	public boolean isPainted(BlockPos pos) {
-		Long2ObjectMap<Canvas> canvases = chunks.get(ChunkPos.pack(pos));
+		Long2ObjectMap<Canvas> canvases = chunks.get(chunkKey(pos));
 		if (canvases == null || canvases.isEmpty()) {
 			return false;
 		}
@@ -66,7 +77,7 @@ public final class ClientCanvasStore {
 	}
 
 	public synchronized void put(BlockPos pos, int face, Canvas canvas) {
-		long chunkKey = ChunkPos.pack(pos);
+		long chunkKey = chunkKey(pos);
 		long key = CanvasKey.pack(pos.getX() & 0xF, pos.getY(), pos.getZ() & 0xF, face);
 
 		Long2ObjectMap<Canvas> current = chunks.get(chunkKey);
@@ -90,7 +101,7 @@ public final class ClientCanvasStore {
 	}
 
 	public synchronized void clearBlock(BlockPos pos) {
-		long chunkKey = ChunkPos.pack(pos);
+		long chunkKey = chunkKey(pos);
 		Long2ObjectMap<Canvas> current = chunks.get(chunkKey);
 		if (current == null || current.isEmpty()) {
 			return;
@@ -122,8 +133,8 @@ public final class ClientCanvasStore {
 	public synchronized void clearChunk(long chunkPosPacked) {
 		Long2ObjectMap<Canvas> removed = chunks.remove(chunkPosPacked);
 		if (removed != null && !removed.isEmpty()) {
-			int chunkX = ChunkPos.getX(chunkPosPacked);
-			int chunkZ = ChunkPos.getZ(chunkPosPacked);
+			int chunkX = chunkX(chunkPosPacked);
+			int chunkZ = chunkZ(chunkPosPacked);
 			dirtyChunk(chunkX, chunkZ);
 		}
 	}
@@ -179,8 +190,8 @@ public final class ClientCanvasStore {
 					}
 
 					long chunkKey = entry.getKey();
-					int chunkX = ChunkPos.getX(chunkKey);
-					int chunkZ = ChunkPos.getZ(chunkKey);
+					int chunkX = chunkX(chunkKey);
+					int chunkZ = chunkZ(chunkKey);
 					int lx = CanvasKey.localX(key);
 					int lz = CanvasKey.localZ(key);
 					int y = CanvasKey.y(key);
@@ -202,21 +213,66 @@ public final class ClientCanvasStore {
 		}
 	}
 
-	private void dirtySection(BlockPos pos) {
-		ClientLevel level = Minecraft.getInstance().level;
-		if (level != null) {
-			level.setSectionDirtyWithNeighbors(pos.getX() >> 4, pos.getY() >> 4, pos.getZ() >> 4);
+	public interface RenderDispatcher {
+		boolean isRenderThread();
+		void executeOnRenderThread(Runnable action);
+		void markSectionDirty(int secX, int secY, int secZ);
+		void markChunkDirty(int chunkX, int chunkZ);
+	}
+
+	private static final RenderDispatcher DEFAULT_DISPATCHER = new RenderDispatcher() {
+		@Override
+		public boolean isRenderThread() {
+			Minecraft mc = Minecraft.getInstance();
+			return mc == null || mc.isSameThread();
 		}
+
+		@Override
+		public void executeOnRenderThread(Runnable action) {
+			Minecraft mc = Minecraft.getInstance();
+			if (mc != null) {
+				mc.execute(action);
+			}
+		}
+
+		@Override
+		public void markSectionDirty(int secX, int secY, int secZ) {
+			Minecraft mc = Minecraft.getInstance();
+			if (mc != null && mc.level != null) {
+				mc.level.setSectionDirtyWithNeighbors(secX, secY, secZ);
+			}
+		}
+
+		@Override
+		public void markChunkDirty(int chunkX, int chunkZ) {
+			Minecraft mc = Minecraft.getInstance();
+			if (mc != null && mc.level != null) {
+				int minSection = mc.level.getMinBuildHeight() >> 4;
+				int maxSection = mc.level.getMaxBuildHeight() >> 4;
+				for (int sy = minSection; sy < maxSection; sy++) {
+					mc.level.setSectionDirtyWithNeighbors(chunkX, sy, chunkZ);
+				}
+			}
+		}
+	};
+
+	static volatile RenderDispatcher renderDispatcher = DEFAULT_DISPATCHER;
+
+	private void dirtySection(BlockPos pos) {
+		RenderDispatcher dispatcher = renderDispatcher;
+		if (!dispatcher.isRenderThread()) {
+			dispatcher.executeOnRenderThread(() -> dirtySection(pos));
+			return;
+		}
+		dispatcher.markSectionDirty(pos.getX() >> 4, pos.getY() >> 4, pos.getZ() >> 4);
 	}
 
 	private void dirtyChunk(int chunkX, int chunkZ) {
-		ClientLevel level = Minecraft.getInstance().level;
-		if (level != null) {
-			int minSection = level.getMinSectionY();
-			int maxSection = level.getMaxSectionY();
-			for (int sy = minSection; sy < maxSection; sy++) {
-				level.setSectionDirtyWithNeighbors(chunkX, sy, chunkZ);
-			}
+		RenderDispatcher dispatcher = renderDispatcher;
+		if (!dispatcher.isRenderThread()) {
+			dispatcher.executeOnRenderThread(() -> dirtyChunk(chunkX, chunkZ));
+			return;
 		}
+		dispatcher.markChunkDirty(chunkX, chunkZ);
 	}
 }
