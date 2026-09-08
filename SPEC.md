@@ -3,7 +3,7 @@
 RedFX is a client-only Fabric Minecraft mod designed to enhance combat feedback with dynamic blood splatters and surface impact particles.
 
 ## 1. Environment & Support
-*   **Modern Branch (`main`)**:
+*   **Modern Branch (`mc-26.2`)**:
     *   **Minecraft Version**: 26.2 (Java 25)
     *   **Modding Toolchain**: Fabric Loader (>=0.19.3), Fabric Loom (1.17-SNAPSHOT)
 *   **Legacy 26.1 Branch (`mc-26.1`)**:
