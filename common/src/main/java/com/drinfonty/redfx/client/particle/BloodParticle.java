@@ -145,7 +145,7 @@ public class BloodParticle extends TerrainParticle {
 
                 if (RedfxConfig.get().enableSplatDust) {
                     try {
-                        BlockState dustState = Blocks.WHITE_WOOL.defaultBlockState();
+                        BlockState dustState = Blocks.SNOW_BLOCK.defaultBlockState();
                         double dustVx = (this.random.nextDouble() - 0.5) * 0.04;
                         double dustVy = 0.02 + this.random.nextDouble() * 0.03;
                         double dustVz = (this.random.nextDouble() - 0.5) * 0.04;
