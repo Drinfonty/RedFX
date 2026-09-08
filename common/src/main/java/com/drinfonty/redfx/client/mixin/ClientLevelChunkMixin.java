@@ -2,6 +2,7 @@ package com.drinfonty.redfx.client.mixin;
 
 import com.drinfonty.redfx.client.ClientCanvasStore;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
 import org.spongepowered.asm.mixin.Mixin;
@@ -17,6 +18,11 @@ public abstract class ClientLevelChunkMixin {
 	@Inject(method = "setBlockState", at = @At("RETURN"))
 	private void redfx$clearBloodOnChange(BlockPos pos, BlockState after, boolean isMoving,
 		CallbackInfoReturnable<BlockState> callback) {
+		LevelChunk chunk = (LevelChunk) (Object) this;
+		Level level = chunk.getLevel();
+		if (level == null || !level.isClientSide()) {
+			return;
+		}
 		BlockState oldState = callback.getReturnValue();
 		if (oldState == null) {
 			return;

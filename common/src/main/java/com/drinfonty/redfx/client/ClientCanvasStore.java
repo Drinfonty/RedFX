@@ -214,14 +214,30 @@ public final class ClientCanvasStore {
 	}
 
 	private void dirtySection(BlockPos pos) {
-		ClientLevel level = Minecraft.getInstance().level;
+		Minecraft mc = Minecraft.getInstance();
+		if (mc == null) {
+			return;
+		}
+		if (!mc.isSameThread()) {
+			mc.execute(() -> dirtySection(pos));
+			return;
+		}
+		ClientLevel level = mc.level;
 		if (level != null) {
 			level.setSectionDirtyWithNeighbors(pos.getX() >> 4, pos.getY() >> 4, pos.getZ() >> 4);
 		}
 	}
 
 	private void dirtyChunk(int chunkX, int chunkZ) {
-		ClientLevel level = Minecraft.getInstance().level;
+		Minecraft mc = Minecraft.getInstance();
+		if (mc == null) {
+			return;
+		}
+		if (!mc.isSameThread()) {
+			mc.execute(() -> dirtyChunk(chunkX, chunkZ));
+			return;
+		}
+		ClientLevel level = mc.level;
 		if (level != null) {
 			int minSection = level.getMinBuildHeight() >> 4;
 			int maxSection = level.getMaxBuildHeight() >> 4;
