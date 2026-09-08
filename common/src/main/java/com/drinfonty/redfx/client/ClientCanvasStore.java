@@ -247,8 +247,22 @@ public final class ClientCanvasStore {
 		public void markChunkDirty(int chunkX, int chunkZ) {
 			Minecraft mc = Minecraft.getInstance();
 			if (mc != null && mc.level != null) {
-				int minSection = mc.level.getMinSectionY();
-				int maxSection = mc.level.getMaxSectionY();
+				int minSection = -4;
+				int maxSection = 20;
+				try {
+					var minMethod = mc.level.getClass().getMethod("getMinSectionY");
+					var maxMethod = mc.level.getClass().getMethod("getMaxSectionY");
+					minSection = (int) minMethod.invoke(mc.level);
+					maxSection = (int) maxMethod.invoke(mc.level);
+				} catch (Throwable t) {
+					try {
+						var minMethod = mc.level.getClass().getMethod("getMinBuildHeight");
+						var maxMethod = mc.level.getClass().getMethod("getMaxBuildHeight");
+						minSection = ((int) minMethod.invoke(mc.level)) >> 4;
+						maxSection = ((int) maxMethod.invoke(mc.level)) >> 4;
+					} catch (Throwable ignored) {
+					}
+				}
 				for (int sy = minSection; sy < maxSection; sy++) {
 					mc.level.setSectionDirtyWithNeighbors(chunkX, sy, chunkZ);
 				}
