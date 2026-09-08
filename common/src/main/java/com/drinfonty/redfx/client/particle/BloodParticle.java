@@ -9,11 +9,10 @@ import net.minecraft.client.particle.TerrainParticle;
 import net.minecraft.client.particle.SingleQuadParticle;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.resources.Identifier;
 import net.minecraft.client.particle.Particle;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.tags.FluidTags;
 
@@ -146,7 +145,7 @@ public class BloodParticle extends TerrainParticle {
 
                 if (RedfxConfig.get().enableSplatDust) {
                     try {
-                        BlockState dustState = BuiltInRegistries.BLOCK.getValue(Identifier.parse("white_wool")).defaultBlockState();
+                        BlockState dustState = Blocks.SNOW_BLOCK.defaultBlockState();
                         double dustVx = (this.random.nextDouble() - 0.5) * 0.04;
                         double dustVy = 0.02 + this.random.nextDouble() * 0.03;
                         double dustVz = (this.random.nextDouble() - 0.5) * 0.04;
