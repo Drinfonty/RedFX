@@ -12,8 +12,6 @@ import java.util.Set;
  * Supports multi-block bleeding across the face plane, organic edge noise, and edge erosion.
  */
 public final class BloodSplatter {
-	private static final Random RANDOM = new Random();
-
 	// 16x16 binary masks for splat patterns 1..5 (packed as 16 short bitmasks, one per row)
 	private static final short[][] MASKS = {
 		// Splat 1
@@ -58,7 +56,8 @@ public final class BloodSplatter {
 	 * so edges don't appear blocky or straight.
 	 */
 	public static void stampGlobal(int globalCenterU, int globalCenterV, int argb, int splatIndex, float scale, CanvasWriter writer) {
-		int pattern = (splatIndex >= 1 && splatIndex <= 5) ? (splatIndex - 1) : RANDOM.nextInt(5);
+		var random = java.util.concurrent.ThreadLocalRandom.current();
+		int pattern = (splatIndex >= 1 && splatIndex <= 5) ? (splatIndex - 1) : random.nextInt(5);
 		short[] mask = MASKS[pattern];
 		int maskCenter = 7;
 
@@ -98,7 +97,7 @@ public final class BloodSplatter {
 
 		// Roughen up perimeter edges by randomly not placing ~25-35% of perimeter points
 		if (points.size() > 6 && !edgePoints.isEmpty()) {
-			Collections.shuffle(edgePoints, RANDOM);
+			Collections.shuffle(edgePoints, random);
 			int numToRemove = Math.max(1, (int) (edgePoints.size() * 0.28f));
 			numToRemove = Math.min(numToRemove, points.size() - 3); // ensure core remains
 			for (int i = 0; i < numToRemove; i++) {
@@ -133,8 +132,10 @@ public final class BloodSplatter {
 	 * @return number of texels erased (0 if canvas was already empty)
 	 */
 	public static int erode(int[] texels, int count) {
-		List<Integer> edgeIndices = new ArrayList<>();
-		List<Integer> allPainted = new ArrayList<>();
+		int[] edgeIndices = new int[Canvas.TEXELS];
+		int edgeCount = 0;
+		int[] allPainted = new int[Canvas.TEXELS];
+		int allCount = 0;
 
 		for (int v = 0; v < Canvas.SIZE; v++) {
 			for (int u = 0; u < Canvas.SIZE; u++) {
@@ -142,7 +143,7 @@ public final class BloodSplatter {
 				if (!PaintColor.isPainted(texels[idx])) {
 					continue;
 				}
-				allPainted.add(idx);
+				allPainted[allCount++] = idx;
 
 				// Check 4-neighborhood
 				boolean isEdge = false;
@@ -152,21 +153,25 @@ public final class BloodSplatter {
 				else if (v == Canvas.SIZE - 1 || !PaintColor.isPainted(texels[idx + Canvas.SIZE])) isEdge = true;
 
 				if (isEdge) {
-					edgeIndices.add(idx);
+					edgeIndices[edgeCount++] = idx;
 				}
 			}
 		}
 
-		if (allPainted.isEmpty()) {
+		if (allCount == 0) {
 			return 0;
 		}
 
-		List<Integer> targetPool = edgeIndices.isEmpty() ? allPainted : edgeIndices;
-		Collections.shuffle(targetPool, RANDOM);
+		int[] pool = edgeCount > 0 ? edgeIndices : allPainted;
+		int poolSize = edgeCount > 0 ? edgeCount : allCount;
+		var random = java.util.concurrent.ThreadLocalRandom.current();
 
-		int toErase = Math.min(count, targetPool.size());
+		int toErase = Math.min(count, poolSize);
 		for (int i = 0; i < toErase; i++) {
-			texels[targetPool.get(i)] = PaintColor.EMPTY;
+			int pick = i + random.nextInt(poolSize - i);
+			int chosenIdx = pool[pick];
+			pool[pick] = pool[i];
+			texels[chosenIdx] = PaintColor.EMPTY;
 		}
 		return toErase;
 	}
