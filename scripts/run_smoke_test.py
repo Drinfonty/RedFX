@@ -25,10 +25,13 @@ def main():
         task = f":{loader}:runClient"
         cmd = [
             "xvfb-run", "-a", "-s", "-screen 0 1024x768x24",
-            "./gradlew", task,
-            f"--args=--quickPlaySingleplayer \"{args.world}\"",
-            "-Dredfx.smokeTest=true"
+            "./gradlew", task
         ]
+        if loader == "neoforge":
+            cmd.append(f"-PquickPlaySingleplayer={args.world}")
+        else:
+            cmd.append(f"--args=--quickPlaySingleplayer \"{args.world}\"")
+        cmd.append("-Dredfx.smokeTest=true")
 
         env = os.environ.copy()
         env["REDFX_SMOKE_TEST"] = "true"
