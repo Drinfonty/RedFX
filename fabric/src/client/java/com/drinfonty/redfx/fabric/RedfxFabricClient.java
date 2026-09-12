@@ -32,5 +32,10 @@ public class RedfxFabricClient implements ClientModInitializer {
 			ClientCanvasStore.get().clearAll();
 			PaintSprites.invalidate();
 		});
+
+		net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientChunkEvents.CHUNK_UNLOAD.register((level, chunk) -> {
+			var pos = chunk.getPos();
+			ClientCanvasStore.get().clearChunk(pos.x, pos.z, false);
+		});
 	}
 }
