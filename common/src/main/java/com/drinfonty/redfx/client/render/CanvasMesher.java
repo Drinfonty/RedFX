@@ -26,12 +26,17 @@ public final class CanvasMesher {
 		int[] runTop = new int[Canvas.SIZE];
 		int openRuns = 0;
 
-		for (int pv = 0; pv < Canvas.SIZE; pv++) {
-			int[] rowStart = new int[Canvas.SIZE];
-			int[] rowEnd = new int[Canvas.SIZE];
-			int[] rowColor = new int[Canvas.SIZE];
-			int rowRuns = 0;
+		int[] nextStart = new int[Canvas.SIZE];
+		int[] nextEnd = new int[Canvas.SIZE];
+		int[] nextColor = new int[Canvas.SIZE];
+		int[] nextTop = new int[Canvas.SIZE];
 
+		int[] rowStart = new int[Canvas.SIZE];
+		int[] rowEnd = new int[Canvas.SIZE];
+		int[] rowColor = new int[Canvas.SIZE];
+
+		for (int pv = 0; pv < Canvas.SIZE; pv++) {
+			int rowRuns = 0;
 			int pu = 0;
 
 			while (pu < Canvas.SIZE) {
@@ -58,19 +63,14 @@ public final class CanvasMesher {
 			}
 
 			// Try to extend runs from the previous row downwards
-			int[] nextStart = new int[Canvas.SIZE];
-			int[] nextEnd = new int[Canvas.SIZE];
-			int[] nextColor = new int[Canvas.SIZE];
-			int[] nextTop = new int[Canvas.SIZE];
 			int nextOpenRuns = 0;
-
-			boolean[] matched = new boolean[rowRuns];
+			int matchedMask = 0;
 
 			for (int i = 0; i < openRuns; i++) {
 				int match = -1;
 
 				for (int j = 0; j < rowRuns; j++) {
-					if (!matched[j]
+					if ((matchedMask & (1 << j)) == 0
 						&& rowStart[j] == runStart[i]
 						&& rowEnd[j] == runEnd[i]
 						&& rowColor[j] == runColor[i]) {
@@ -80,7 +80,7 @@ public final class CanvasMesher {
 				}
 
 				if (match >= 0) {
-					matched[match] = true;
+					matchedMask |= (1 << match);
 					nextStart[nextOpenRuns] = runStart[i];
 					nextEnd[nextOpenRuns] = runEnd[i];
 					nextColor[nextOpenRuns] = runColor[i];
@@ -94,7 +94,7 @@ public final class CanvasMesher {
 
 			// Add new unmatched runs from this row
 			for (int j = 0; j < rowRuns; j++) {
-				if (!matched[j]) {
+				if ((matchedMask & (1 << j)) == 0) {
 					nextStart[nextOpenRuns] = rowStart[j];
 					nextEnd[nextOpenRuns] = rowEnd[j];
 					nextColor[nextOpenRuns] = rowColor[j];
@@ -103,10 +103,10 @@ public final class CanvasMesher {
 				}
 			}
 
-			runStart = nextStart;
-			runEnd = nextEnd;
-			runColor = nextColor;
-			runTop = nextTop;
+			int[] swap = runStart; runStart = nextStart; nextStart = swap;
+			swap = runEnd; runEnd = nextEnd; nextEnd = swap;
+			swap = runColor; runColor = nextColor; nextColor = swap;
+			swap = runTop; runTop = nextTop; nextTop = swap;
 			openRuns = nextOpenRuns;
 		}
 

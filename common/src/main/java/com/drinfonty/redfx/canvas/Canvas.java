@@ -57,4 +57,21 @@ public final class Canvas {
 	public Canvas copy() {
 		return new Canvas(texels.clone(), fadeStartTimeMs, nextErodeTimeMs);
 	}
+
+	@Override
+	public boolean equals(Object o) {
+		if (this == o) return true;
+		if (!(o instanceof Canvas canvas)) return false;
+		return fadeStartTimeMs == canvas.fadeStartTimeMs &&
+			nextErodeTimeMs == canvas.nextErodeTimeMs &&
+			java.util.Arrays.equals(texels, canvas.texels);
+	}
+
+	@Override
+	public int hashCode() {
+		int result = java.util.Arrays.hashCode(texels);
+		result = 31 * result + Long.hashCode(fadeStartTimeMs);
+		result = 31 * result + Long.hashCode(nextErodeTimeMs);
+		return result;
+	}
 }
