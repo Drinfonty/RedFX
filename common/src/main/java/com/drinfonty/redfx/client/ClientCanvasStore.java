@@ -26,8 +26,12 @@ import net.minecraft.core.BlockPos;
 public final class ClientCanvasStore {
 	private static final ClientCanvasStore INSTANCE = new ClientCanvasStore();
 
-	private static long chunkKey(BlockPos pos) {
-		return (((long) (pos.getX() >> 4)) & 0xFFFFFFFFL) | ((((long) (pos.getZ() >> 4)) & 0xFFFFFFFFL) << 32);
+	public static long chunkKey(int chunkX, int chunkZ) {
+		return (((long) chunkX) & 0xFFFFFFFFL) | ((((long) chunkZ) & 0xFFFFFFFFL) << 32);
+	}
+
+	public static long chunkKey(BlockPos pos) {
+		return chunkKey(pos.getX() >> 4, pos.getZ() >> 4);
 	}
 
 	private static int chunkX(long chunkKey) {
@@ -147,9 +151,21 @@ public final class ClientCanvasStore {
 		}
 	}
 
+	public synchronized void clearChunk(int chunkX, int chunkZ) {
+		clearChunk(chunkKey(chunkX, chunkZ), true);
+	}
+
+	public synchronized void clearChunk(int chunkX, int chunkZ, boolean dirtyRender) {
+		clearChunk(chunkKey(chunkX, chunkZ), dirtyRender);
+	}
+
 	public synchronized void clearChunk(long chunkPosPacked) {
+		clearChunk(chunkPosPacked, true);
+	}
+
+	public synchronized void clearChunk(long chunkPosPacked, boolean dirtyRender) {
 		Long2ObjectMap<Canvas> removed = chunks.remove(chunkPosPacked);
-		if (removed != null && !removed.isEmpty()) {
+		if (removed != null && !removed.isEmpty() && dirtyRender) {
 			int chunkX = chunkX(chunkPosPacked);
 			int chunkZ = chunkZ(chunkPosPacked);
 			dirtyChunk(chunkX, chunkZ);
