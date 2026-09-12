@@ -24,15 +24,18 @@ def main():
 
         task = f":{loader}:runClient"
         cmd = [
-            "xvfb-run", "-a", "-s", "'-screen 0 1024x768x24'",
+            "xvfb-run", "-a", "-s", "-screen 0 1024x768x24",
             "./gradlew", task,
-            f"--args=--quickPlaySingleplayer '{args.world}'",
+            f"--args=--quickPlaySingleplayer \"{args.world}\"",
             "-Dredfx.smokeTest=true"
         ]
 
-        print(f"Command: {' '.join(cmd)}")
+        env = os.environ.copy()
+        env["REDFX_SMOKE_TEST"] = "true"
+
+        print("Command:", subprocess.list2cmdline(cmd))
         start_time = time.time()
-        res = subprocess.run(" ".join(cmd), shell=True)
+        res = subprocess.run(cmd, env=env)
         elapsed = time.time() - start_time
 
         if res.returncode == 0:

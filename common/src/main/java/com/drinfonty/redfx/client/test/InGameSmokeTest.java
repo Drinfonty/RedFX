@@ -28,7 +28,8 @@ import net.minecraft.world.level.block.state.properties.SlabType;
  * Tests decal placement, mesh generation, coordinate projection, and stair splitting in a live client level.
  */
 public final class InGameSmokeTest {
-	public static final boolean ENABLED = Boolean.getBoolean("redfx.smokeTest");
+	public static final boolean ENABLED = Boolean.getBoolean("redfx.smokeTest")
+			|| "true".equalsIgnoreCase(System.getenv("REDFX_SMOKE_TEST"));
 	private static boolean ran = false;
 
 	private InGameSmokeTest() {
