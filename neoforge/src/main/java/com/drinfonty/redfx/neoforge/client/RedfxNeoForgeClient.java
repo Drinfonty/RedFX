@@ -31,5 +31,12 @@ public final class RedfxNeoForgeClient {
 			RedfxDynamicModel.clearCache();
 			PaintSprites.invalidate();
 		});
+
+		NeoForge.EVENT_BUS.addListener(net.neoforged.neoforge.event.level.ChunkEvent.Unload.class, event -> {
+			if (event.getLevel() != null && event.getLevel().isClientSide() && event.getChunk() != null) {
+				var pos = event.getChunk().getPos();
+				ClientCanvasStore.get().clearChunk(pos.x, pos.z, false);
+			}
+		});
 	}
 }
