@@ -208,10 +208,18 @@ public class BloodParticle extends TerrainParticle {
 
         ClientCanvasStore store = ClientCanvasStore.get();
         Map<BlockPos, int[]> modifiedBlocks = new HashMap<>();
+        Map<Long, BlockPos> resolvedBlocks = new HashMap<>();
+        java.util.Set<Long> invalidBlocks = new java.util.HashSet<>();
 
         BloodSplatter.stampGlobal(globalCenterU, globalCenterV, argb, this.splatIndex, scale, (gu, gv, col) -> {
             int bu = FaceStroke.blockOfU(face, gu);
             int bv = FaceStroke.blockOfV(face, gv);
+            long blockKey = (((long) bu) << 32) | (((long) bv) & 0xFFFFFFFFL);
+
+            if (invalidBlocks.contains(blockKey)) {
+                return;
+            }
+
             int uTexel = gu - FaceStroke.encodeU(face, bu, 0);
             int vTexel = gv - FaceStroke.encodeV(face, bv, 0);
 
@@ -219,45 +227,52 @@ public class BloodParticle extends TerrainParticle {
                 return;
             }
 
-            int wx = FaceStroke.worldX(face, bu, bv, normal);
-            int wy = FaceStroke.worldY(face, bu, bv, normal);
-            int wz = FaceStroke.worldZ(face, bu, bv, normal);
-            BlockPos bPos = new BlockPos(wx, wy, wz);
+            BlockPos bPos = resolvedBlocks.get(blockKey);
+            if (bPos == null) {
+                int wx = FaceStroke.worldX(face, bu, bv, normal);
+                int wy = FaceStroke.worldY(face, bu, bv, normal);
+                int wz = FaceStroke.worldZ(face, bu, bv, normal);
+                bPos = new BlockPos(wx, wy, wz);
 
-            if (face == Direction.UP.get3DDataValue()) {
-                BlockState bs = this.level.getBlockState(bPos);
-                BlockPos abovePos = bPos.above();
-                BlockState aboveState = this.level.getBlockState(abovePos);
-                if (!aboveState.isAir() && aboveState.getFluidState().isEmpty()) {
-                    double top = PaintSurface.topOf(this.level, abovePos, aboveState);
-                    if (top != PaintSurface.NONE && top < 1.0) {
-                        bPos = abovePos;
-                    }
-                } else if (bs.isAir()) {
-                    BlockPos belowPos = bPos.below();
-                    BlockState belowState = this.level.getBlockState(belowPos);
-                    if (!belowState.isAir() && belowState.getFluidState().isEmpty()
-                        && PaintSurface.topOf(this.level, belowPos, belowState) != PaintSurface.NONE) {
-                        bPos = belowPos;
+                if (face == Direction.UP.get3DDataValue()) {
+                    BlockState bs = this.level.getBlockState(bPos);
+                    BlockPos abovePos = bPos.above();
+                    BlockState aboveState = this.level.getBlockState(abovePos);
+                    if (!aboveState.isAir() && aboveState.getFluidState().isEmpty()) {
+                        double top = PaintSurface.topOf(this.level, abovePos, aboveState);
+                        if (top != PaintSurface.NONE && top < 1.0) {
+                            bPos = abovePos;
+                        }
+                    } else if (bs.isAir()) {
+                        BlockPos belowPos = bPos.below();
+                        BlockState belowState = this.level.getBlockState(belowPos);
+                        if (!belowState.isAir() && belowState.getFluidState().isEmpty()
+                            && PaintSurface.topOf(this.level, belowPos, belowState) != PaintSurface.NONE) {
+                            bPos = belowPos;
+                        }
                     }
                 }
-            }
 
-            int[] texels = modifiedBlocks.get(bPos);
-            if (texels == null) {
-                // Verify the block on this plane is a valid solid surface
                 BlockState bs = this.level.getBlockState(bPos);
                 if (bs.isAir() || !bs.getFluidState().isEmpty()) {
+                    invalidBlocks.add(blockKey);
                     return;
                 }
                 if (face == Direction.UP.get3DDataValue()) {
                     if (PaintSurface.topOf(this.level, bPos, bs) == PaintSurface.NONE) {
+                        invalidBlocks.add(blockKey);
                         return;
                     }
                 } else if (!bs.isFaceSturdy(this.level, bPos, hitDirection) || !bs.isCollisionShapeFullBlock(this.level, bPos)) {
+                    invalidBlocks.add(blockKey);
                     return;
                 }
 
+                resolvedBlocks.put(blockKey, bPos);
+            }
+
+            int[] texels = modifiedBlocks.get(bPos);
+            if (texels == null) {
                 Canvas existing = store.get(bPos, face);
                 texels = existing != null ? existing.texels().clone() : new int[Canvas.TEXELS];
                 modifiedBlocks.put(bPos, texels);
