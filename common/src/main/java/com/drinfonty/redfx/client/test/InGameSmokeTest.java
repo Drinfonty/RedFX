@@ -77,16 +77,23 @@ public final class InGameSmokeTest {
 	private static void runSuite(Minecraft client) {
 		ClientCanvasStore store = ClientCanvasStore.get();
 		store.clearAll();
-
-		BlockPos origin = client.player.blockPosition().relative(client.player.getDirection(), 2);
 		int red = 0xFFFF0000;
 
-		// 1. Test Solid Block (Stone)
-		RedfxMod.LOGGER.info("Testing paint on solid block...");
+		// Align player camera to look at the demonstration blocks
+		client.player.setXRot(30.0f);
+
+		// Find a solid ground block directly in front of the player
+		BlockPos playerPos = client.player.blockPosition();
+		Direction forward = client.player.getDirection();
+		BlockPos origin = playerPos.relative(forward, 2);
+
+		// 1. Solid Block (Stone)
+		RedfxMod.LOGGER.info("Setting up painted stone block...");
 		BlockPos stonePos = origin.offset(0, 0, 0);
 		BlockState stoneState = Blocks.STONE.defaultBlockState();
+		client.level.setBlock(stonePos, stoneState, 3);
 		int[] stoneTexels = new int[Canvas.TEXELS];
-		BloodSplatter.stamp(stoneTexels, 8, 8, red, 1, 1.0f);
+		BloodSplatter.stamp(stoneTexels, 8, 8, red, 2, 1.0f);
 		Canvas stoneCanvas = new Canvas(stoneTexels, System.currentTimeMillis() + 60000L);
 		store.put(stonePos, FaceAxes.UP, stoneCanvas);
 
@@ -98,16 +105,19 @@ public final class InGameSmokeTest {
 			throw new AssertionError("Meshing stone canvas produced 0 quads!");
 		}
 
-		// 2. Test Stair Splitting
-		RedfxMod.LOGGER.info("Testing paint and split on oak stairs...");
+		// 2. Oak Stairs
+		RedfxMod.LOGGER.info("Setting up painted oak stairs...");
 		BlockPos stairPos = origin.offset(1, 0, 0);
 		BlockState stairState = Blocks.OAK_STAIRS.defaultBlockState()
-			.setValue(StairBlock.FACING, Direction.NORTH)
+			.setValue(StairBlock.FACING, forward.getOpposite())
 			.setValue(StairBlock.HALF, Half.BOTTOM);
+		client.level.setBlock(stairPos, stairState, 3);
 
 		int[] stairTexels = new int[Canvas.TEXELS];
 		stairTexels[2 * 16 + 4] = red;  // pv=2 (upper step)
 		stairTexels[12 * 16 + 4] = red; // pv=12 (lower step)
+		stairTexels[2 * 16 + 8] = red;
+		stairTexels[12 * 16 + 8] = red;
 		Canvas stairCanvas = new Canvas(stairTexels, System.currentTimeMillis() + 60000L);
 		store.put(stairPos, FaceAxes.UP, stairCanvas);
 
