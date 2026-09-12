@@ -5,6 +5,7 @@
 	"client": [
 		"ClientLevelChunkMixin",
 		"LivingEntityMixin",
+		"MinecraftClientSmokeTestMixin",
 		"ParticleMixin"
 	],
 	"injectors": {
