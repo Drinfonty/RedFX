@@ -40,6 +40,10 @@ public final class PaintSurface {
 		BlockGetter bg = level != null ? level : EmptyBlockGetter.INSTANCE;
 		BlockPos bp = pos != null ? pos : BlockPos.ZERO;
 
+		if (state.isCollisionShapeFullBlock(bg, bp)) {
+			return 1.0;
+		}
+
 		VoxelShape shape = state.getShape(bg, bp);
 		if (shape.isEmpty()) {
 			return NONE;

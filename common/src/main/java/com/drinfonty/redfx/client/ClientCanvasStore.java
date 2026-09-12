@@ -14,6 +14,7 @@ import com.drinfonty.redfx.canvas.FaceAxes;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMaps;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
@@ -35,6 +36,22 @@ public final class ClientCanvasStore {
 
 	private static int chunkZ(long chunkKey) {
 		return (int) (chunkKey >>> 32);
+	}
+
+	private static long packSection(int secX, int secY, int secZ) {
+		return (((long) secX & 0x3FFFFFFL) << 38) | ((((long) secY) & 0xFFFL) << 26) | (((long) secZ) & 0x3FFFFFFL);
+	}
+
+	private static int unpackSectionX(long packed) {
+		return (int) (packed >> 38);
+	}
+
+	private static int unpackSectionY(long packed) {
+		return (int) ((packed << 26) >> 52);
+	}
+
+	private static int unpackSectionZ(long packed) {
+		return (int) ((packed << 38) >> 38);
 	}
 
 	/** Interval between erosion steps (200ms = 5 times per second). */
@@ -151,7 +168,7 @@ public final class ClientCanvasStore {
 			return;
 		}
 
-		List<BlockPos> toDirty = new ArrayList<>();
+		LongOpenHashSet toDirtySections = new LongOpenHashSet();
 		Iterator<Map.Entry<Long, Long2ObjectMap<Canvas>>> it = chunks.entrySet().iterator();
 
 		while (it.hasNext()) {
@@ -192,10 +209,8 @@ public final class ClientCanvasStore {
 					long chunkKey = entry.getKey();
 					int chunkX = chunkX(chunkKey);
 					int chunkZ = chunkZ(chunkKey);
-					int lx = CanvasKey.localX(key);
-					int lz = CanvasKey.localZ(key);
-					int y = CanvasKey.y(key);
-					toDirty.add(new BlockPos((chunkX << 4) + lx, y, (chunkZ << 4) + lz));
+					int secY = CanvasKey.y(key) >> 4;
+					toDirtySections.add(packSection(chunkX, secY, chunkZ));
 				}
 			}
 
@@ -208,8 +223,8 @@ public final class ClientCanvasStore {
 			}
 		}
 
-		for (BlockPos pos : toDirty) {
-			dirtySection(pos);
+		for (long secKey : toDirtySections) {
+			dirtySectionCoord(unpackSectionX(secKey), unpackSectionY(secKey), unpackSectionZ(secKey));
 		}
 	}
 
@@ -221,6 +236,49 @@ public final class ClientCanvasStore {
 	}
 
 	private static final RenderDispatcher DEFAULT_DISPATCHER = new RenderDispatcher() {
+		private java.lang.reflect.Method minSectionMethod;
+		private java.lang.reflect.Method maxSectionMethod;
+		private boolean useBuildHeightFallback = false;
+		private boolean initialized = false;
+
+		private synchronized void initHeightMethods(Class<?> levelClass) {
+			if (initialized) return;
+			try {
+				minSectionMethod = levelClass.getMethod("getMinSectionY");
+				maxSectionMethod = levelClass.getMethod("getMaxSectionY");
+			} catch (Throwable t) {
+				try {
+					minSectionMethod = levelClass.getMethod("getMinBuildHeight");
+					maxSectionMethod = levelClass.getMethod("getMaxBuildHeight");
+					useBuildHeightFallback = true;
+				} catch (Throwable ignored) {
+				}
+			}
+			initialized = true;
+		}
+
+		private int getMinSection(Object level) {
+			if (!initialized) initHeightMethods(level.getClass());
+			if (minSectionMethod != null) {
+				try {
+					int val = (int) minSectionMethod.invoke(level);
+					return useBuildHeightFallback ? (val >> 4) : val;
+				} catch (Throwable ignored) {}
+			}
+			return -4;
+		}
+
+		private int getMaxSection(Object level) {
+			if (!initialized) initHeightMethods(level.getClass());
+			if (maxSectionMethod != null) {
+				try {
+					int val = (int) maxSectionMethod.invoke(level);
+					return useBuildHeightFallback ? (val >> 4) : val;
+				} catch (Throwable ignored) {}
+			}
+			return 20;
+		}
+
 		@Override
 		public boolean isRenderThread() {
 			Minecraft mc = Minecraft.getInstance();
@@ -247,22 +305,8 @@ public final class ClientCanvasStore {
 		public void markChunkDirty(int chunkX, int chunkZ) {
 			Minecraft mc = Minecraft.getInstance();
 			if (mc != null && mc.level != null) {
-				int minSection = -4;
-				int maxSection = 20;
-				try {
-					var minMethod = mc.level.getClass().getMethod("getMinSectionY");
-					var maxMethod = mc.level.getClass().getMethod("getMaxSectionY");
-					minSection = (int) minMethod.invoke(mc.level);
-					maxSection = (int) maxMethod.invoke(mc.level);
-				} catch (Throwable t) {
-					try {
-						var minMethod = mc.level.getClass().getMethod("getMinBuildHeight");
-						var maxMethod = mc.level.getClass().getMethod("getMaxBuildHeight");
-						minSection = ((int) minMethod.invoke(mc.level)) >> 4;
-						maxSection = ((int) maxMethod.invoke(mc.level)) >> 4;
-					} catch (Throwable ignored) {
-					}
-				}
+				int minSection = getMinSection(mc.level);
+				int maxSection = getMaxSection(mc.level);
 				for (int sy = minSection; sy < maxSection; sy++) {
 					mc.level.setSectionDirtyWithNeighbors(chunkX, sy, chunkZ);
 				}
@@ -273,12 +317,16 @@ public final class ClientCanvasStore {
 	static volatile RenderDispatcher renderDispatcher = DEFAULT_DISPATCHER;
 
 	private void dirtySection(BlockPos pos) {
+		dirtySectionCoord(pos.getX() >> 4, pos.getY() >> 4, pos.getZ() >> 4);
+	}
+
+	private void dirtySectionCoord(int secX, int secY, int secZ) {
 		RenderDispatcher dispatcher = renderDispatcher;
 		if (!dispatcher.isRenderThread()) {
-			dispatcher.executeOnRenderThread(() -> dirtySection(pos));
+			dispatcher.executeOnRenderThread(() -> dirtySectionCoord(secX, secY, secZ));
 			return;
 		}
-		dispatcher.markSectionDirty(pos.getX() >> 4, pos.getY() >> 4, pos.getZ() >> 4);
+		dispatcher.markSectionDirty(secX, secY, secZ);
 	}
 
 	private void dirtyChunk(int chunkX, int chunkZ) {
