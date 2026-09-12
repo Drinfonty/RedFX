@@ -72,4 +72,59 @@ class CanvasMesherTest {
 		texels[6 * 16 + 6] = 0xFFFF0000;
 		assertCoversExactly(texels);
 	}
+
+	@Test
+	void checkerboardPatternProducesMaximalQuadsWithoutOverlap() {
+		int[] texels = new int[Canvas.TEXELS];
+		int count = 0;
+		for (int v = 0; v < Canvas.SIZE; v++) {
+			for (int u = 0; u < Canvas.SIZE; u++) {
+				if ((u + v) % 2 == 0) {
+					texels[v * Canvas.SIZE + u] = 0xFFFF0000;
+					count++;
+				}
+			}
+		}
+		List<PaintQuad> quads = CanvasMesher.mesh(texels, FaceAxes.NORTH);
+		assertEquals(count, quads.size(), "Isolated checkerboard squares should each be 1 quad");
+		assertCoversExactly(texels);
+	}
+
+	@Test
+	void hollowRectMeshesCorrectly() {
+		int[] texels = new int[Canvas.TEXELS];
+		// 10x10 outer box at (3,3) to (12,12), hollow 6x6 inside at (5,5) to (10,10)
+		for (int v = 3; v <= 12; v++) {
+			for (int u = 3; u <= 12; u++) {
+				if (v < 5 || v > 10 || u < 5 || u > 10) {
+					texels[v * Canvas.SIZE + u] = 0xFF880000;
+				}
+			}
+		}
+		assertCoversExactly(texels);
+	}
+
+	@Test
+	void multipleColorsMergeSeparately() {
+		int[] texels = new int[Canvas.TEXELS];
+		int red = 0xFFFF0000;
+		int darkRed = 0xFF880000;
+		// Left half red, right half dark red
+		for (int v = 0; v < Canvas.SIZE; v++) {
+			for (int u = 0; u < Canvas.SIZE; u++) {
+				texels[v * Canvas.SIZE + u] = (u < 8) ? red : darkRed;
+			}
+		}
+		List<PaintQuad> quads = CanvasMesher.mesh(texels, FaceAxes.UP);
+		assertEquals(2, quads.size(), "Left and right halves of different colors should merge into 2 quads");
+		assertCoversExactly(texels);
+	}
+
+	@Test
+	void rejectsInvalidTexelArraySize() {
+		org.junit.jupiter.api.Assertions.assertThrows(
+			IllegalArgumentException.class,
+			() -> CanvasMesher.mesh(new int[10], FaceAxes.UP)
+		);
+	}
 }
