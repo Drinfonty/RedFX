@@ -40,8 +40,8 @@ public final class InGameSmokeTest {
 			return;
 		}
 
-		// Wait until player is loaded and client tick is ready
-		if (client.player.tickCount < 10) {
+		// Wait until any loading or gui screen is closed and player has entered actual world gameplay
+		if (client.screen != null || client.player.tickCount < 60) {
 			return;
 		}
 
@@ -56,10 +56,10 @@ public final class InGameSmokeTest {
 			RedfxMod.LOGGER.info("ALL REDFX IN-GAME SMOKE TESTS PASSED CLEANLY!");
 			RedfxMod.LOGGER.info("=================================================");
 			
-			// Schedule client shutdown after successful test
+			// Schedule client shutdown after giving enough time for rendering and screenshot capture
 			new Thread(() -> {
 				try {
-					Thread.sleep(1500);
+					Thread.sleep(5000);
 					client.execute(() -> {
 						client.stop();
 					});
