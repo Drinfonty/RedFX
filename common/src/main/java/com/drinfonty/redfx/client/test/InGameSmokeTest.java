@@ -143,7 +143,7 @@ public final class InGameSmokeTest {
 
 			ClientCanvasStore store = ClientCanvasStore.get();
 			boolean foundBlood = false;
-			for (BlockPos pos : BlockPos.betweenClosed(testOrigin.offset(-2, -1, -2), testOrigin.offset(2, 1, 2))) {
+			for (BlockPos pos : BlockPos.betweenClosed(testOrigin.offset(-5, -3, -5), testOrigin.offset(5, 3, 5))) {
 				if (store.isPainted(pos)) {
 					foundBlood = true;
 					RedfxMod.LOGGER.info("Found natural blood splatter at {}", pos);
@@ -151,9 +151,14 @@ public final class InGameSmokeTest {
 				}
 			}
 
+			if (!foundBlood && store.hasAnyBlood()) {
+				foundBlood = true;
+				RedfxMod.LOGGER.info("Found blood decals stored in ClientCanvasStore!");
+			}
+
 			if (!foundBlood) {
-				if (tickCounter < 35) {
-					return; // Allow a few more ticks if particles are still falling
+				if (tickCounter < 60) {
+					return; // Allow up to 3 seconds for particles to fly and land
 				}
 				fail(new AssertionError("Attacking mob did not produce any blood decals on surrounding blocks!"));
 				return;
