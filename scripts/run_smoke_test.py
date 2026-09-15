@@ -16,6 +16,18 @@ ALL_BRANCHES = [
     "mc-1.21.1",
 ]
 
+DEFAULT_WORLDS = {
+    "26.2": "New World",
+    "26.1.2": "New World (1)",
+    "26.1.1": "New World (1)",
+    "26.1": "New World (1)",
+    "1.21.11": "New World (2)",
+    "1.21.10": "New World (3)",
+    "1.21.8": "New World (5)",
+    "1.21.4": "New World (4)",
+    "1.21.1": "New World (4)",
+}
+
 def get_mc_version(project_root):
     props = os.path.join(project_root, "gradle.properties")
     if os.path.exists(props):
@@ -29,6 +41,8 @@ def get_mc_version(project_root):
 def run_single_test(project_root, loader, world):
     mc_version = get_mc_version(project_root)
     mc_slug = mc_version.replace(".", "_")
+    if world == "auto":
+        world = DEFAULT_WORLDS.get(mc_version, "New World")
 
     screenshot_dir = os.path.join(project_root, loader, "run", "screenshots")
     os.makedirs(screenshot_dir, exist_ok=True)
@@ -94,7 +108,7 @@ def main():
     parser.add_argument("--branch", default="current", help="Git branch to test: 'current', 'all', or branch name like 'mc-26.2'")
     parser.add_argument("--all-branches", action="store_true", help="Test all 7 Minecraft version branches")
     parser.add_argument("--loader", choices=["fabric", "neoforge", "both"], default="fabric", help="Mod loader to test")
-    parser.add_argument("--world", default="New World", help="Singleplayer world name")
+    parser.add_argument("--world", default="auto", help="Singleplayer world name, or 'auto' to select per Minecraft version")
     args = parser.parse_args()
 
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
