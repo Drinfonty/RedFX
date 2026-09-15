@@ -23,6 +23,11 @@ neoForge {
 				// -PtestJar, so that run stays a faithful rehearsal of what a player sees.
 				systemProperty 'redfx.debug', 'true'
 			}
+
+			if (project.hasProperty('quickPlaySingleplayer')) {
+				programArgument '--quickPlaySingleplayer'
+				programArgument project.property('quickPlaySingleplayer').toString()
+			}
 		}
 	}
 
