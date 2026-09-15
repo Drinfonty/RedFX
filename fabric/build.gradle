@@ -20,7 +20,7 @@ dependencies {
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
 	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
 	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
-	compileOnly "com.terraformersmc:modmenu:18.0.0"
+	compileOnly "com.terraformersmc:modmenu:${project.modmenu_version}"
 
 	implementation project(":common")
 }
@@ -28,23 +28,30 @@ dependencies {
 processResources {
 	def version = project.version
 	def minecraftDependency = project.minecraft_dependency
+	def fabricLoaderDependency = project.fabric_loader_dependency
+	def javaVersion = project.java_version
 	inputs.property "version", version
 	inputs.property "minecraftDependency", minecraftDependency
+	inputs.property "fabricLoaderDependency", fabricLoaderDependency
+	inputs.property "javaVersion", javaVersion
 
 	filesMatching("fabric.mod.json") {
-		expand "version": version, "minecraftDependency": minecraftDependency
+		expand "version": version,
+				"minecraftDependency": minecraftDependency,
+				"fabricLoaderDependency": fabricLoaderDependency,
+				"javaVersion": javaVersion
 	}
 }
 
 tasks.withType(JavaCompile).configureEach {
-	it.options.release = 25
+	it.options.release = Integer.parseInt(project.java_version)
 }
 
 java {
 	withSourcesJar()
 
 	toolchain {
-		languageVersion = JavaLanguageVersion.of(25)
+		languageVersion = JavaLanguageVersion.of(Integer.parseInt(project.java_version))
 	}
 }
 
@@ -62,22 +69,6 @@ jar {
 	}
 }
 
-// Automatically deploy built jar to Minecraft mods directory
-tasks.register('copyJarToMods', Copy) {
-	from tasks.named('jar')
-	into "/home/ptphong/.minecraft/mods"
-
-	doFirst {
-		fileTree("/home/ptphong/.minecraft/mods").matching {
-			include "redfx-*.jar"
-		}.each { file ->
-			delete file
-		}
-	}
-
-	mustRunAfter tasks.named('jar')
-}
-
 // Automatically copy built jar to release directory in the project root
 tasks.register('copyJarToRelease', Copy) {
 	from tasks.named('jar')
@@ -87,7 +78,7 @@ tasks.register('copyJarToRelease', Copy) {
 }
 
 tasks.named('build') {
-	finalizedBy('copyJarToMods', 'copyJarToRelease')
+	finalizedBy('copyJarToRelease')
 }
 
 afterEvaluate {
