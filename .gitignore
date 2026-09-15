@@ -41,3 +41,4 @@ replay_*.log
 
 # Output Releases
 /release/*.jar
+/release/screenshots/
