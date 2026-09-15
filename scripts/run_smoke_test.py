@@ -42,6 +42,7 @@ def run_single_test(project_root, loader, world):
     if loader == "neoforge":
         cmd.append(f"-PquickPlaySingleplayer={world}")
     else:
+        cmd.extend(["-x", "downloadAssets"])
         cmd.append(f"--args=--quickPlaySingleplayer \"{world}\"")
     cmd.append("-Dredfx.smokeTest=true")
 
