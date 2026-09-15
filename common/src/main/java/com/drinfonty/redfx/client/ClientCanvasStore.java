@@ -97,6 +97,10 @@ public final class ClientCanvasStore {
 		return false;
 	}
 
+	public boolean hasAnyBlood() {
+		return !chunks.isEmpty();
+	}
+
 	public synchronized void put(BlockPos pos, int face, Canvas canvas) {
 		long chunkKey = chunkKey(pos);
 		long key = CanvasKey.pack(pos.getX() & 0xF, pos.getY(), pos.getZ() & 0xF, face);
