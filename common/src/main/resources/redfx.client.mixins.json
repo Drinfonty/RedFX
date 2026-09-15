@@ -6,7 +6,8 @@
 		"ClientLevelChunkMixin",
 		"LivingEntityMixin",
 		"MinecraftClientSmokeTestMixin",
-		"ParticleMixin"
+		"ParticleMixin",
+		"PlayerSpawnSmokeTestMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

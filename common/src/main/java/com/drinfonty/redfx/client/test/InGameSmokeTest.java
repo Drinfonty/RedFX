@@ -25,67 +25,128 @@ import net.minecraft.world.level.block.state.properties.SlabType;
 
 /**
  * Headless in-game automated test runner active only when -Dredfx.smokeTest=true is passed.
- * Tests decal placement, mesh generation, coordinate projection, and stair splitting in a live client level.
+ * Intercepts player spawn lifecycle and tests decal placement, meshing, geometry, and stairs/slabs.
  */
 public final class InGameSmokeTest {
 	public static final boolean ENABLED = Boolean.getBoolean("redfx.smokeTest")
 			|| "true".equalsIgnoreCase(System.getenv("REDFX_SMOKE_TEST"));
-	private static boolean ran = false;
+	private static volatile boolean playerSpawned = false;
+	private static int state = 0;
+	private static int renderWaitTicks = 0;
 
 	private InGameSmokeTest() {
 	}
 
+	public static void onPlayerSpawned() {
+		if (!playerSpawned) {
+			playerSpawned = true;
+			RedfxMod.LOGGER.info("[SmokeTest] Intercepted player spawn event: player joined client level!");
+		}
+	}
+
 	public static void tick(Minecraft client) {
-		if (!ENABLED || ran || client.level == null || client.player == null) {
+		if (!ENABLED || state == 99) {
 			return;
 		}
 
-		// Wait until any loading or gui screen is closed and player has entered actual world gameplay
-		if (client.screen != null || client.player.tickCount < 60) {
+		if (state == 0) {
+			// Wait until the player spawn event has fired, player & level exist, and loading screen is closed
+			if (!playerSpawned || hasActiveScreen(client) || client.player == null || client.level == null) {
+				return;
+			}
+
+			state = 1;
+			RedfxMod.LOGGER.info("=================================================");
+			RedfxMod.LOGGER.info("Player spawned & in gameplay. Starting RedFX Smoke Test Suite");
+			RedfxMod.LOGGER.info("=================================================");
+
+			try {
+				BlockPos origin = client.player.blockPosition().relative(client.player.getDirection(), 2);
+				runSuite(client, origin);
+				RedfxMod.LOGGER.info("=================================================");
+				RedfxMod.LOGGER.info("ALL REDFX IN-GAME SMOKE TESTS PASSED CLEANLY!");
+				RedfxMod.LOGGER.info("=================================================");
+				state = 2;
+				renderWaitTicks = 0;
+			} catch (Throwable t) {
+				RedfxMod.LOGGER.error("REDFX IN-GAME SMOKE TEST FAILED!", t);
+				System.err.println("FATAL: REDFX IN-GAME SMOKE TEST FAILED!");
+				t.printStackTrace(System.err);
+				System.exit(1);
+			}
 			return;
 		}
 
-		ran = true;
-		RedfxMod.LOGGER.info("=================================================");
-		RedfxMod.LOGGER.info("Starting RedFX In-Game Automated Smoke Test Suite");
-		RedfxMod.LOGGER.info("=================================================");
+		if (state == 2) {
+			// Wait for 10 render ticks so the newly placed blocks and painted decals are rendered to the screen
+			renderWaitTicks++;
+			if (renderWaitTicks < 10) {
+				return;
+			}
 
-		try {
-			runSuite(client);
-			RedfxMod.LOGGER.info("=================================================");
-			RedfxMod.LOGGER.info("ALL REDFX IN-GAME SMOKE TESTS PASSED CLEANLY!");
-			RedfxMod.LOGGER.info("=================================================");
-			
-			// Schedule client shutdown after giving enough time for rendering and screenshot capture
+			captureScreenshot(client);
+			state = 99;
+
+			// Schedule client shutdown after screenshot is captured
 			new Thread(() -> {
 				try {
-					Thread.sleep(5000);
+					Thread.sleep(1500);
 					client.execute(() -> {
 						client.stop();
 					});
 				} catch (Exception ignored) {
 				}
 			}, "RedFX-SmokeTest-Shutdown").start();
-		} catch (Throwable t) {
-			RedfxMod.LOGGER.error("REDFX IN-GAME SMOKE TEST FAILED!", t);
-			System.err.println("FATAL: REDFX IN-GAME SMOKE TEST FAILED!");
-			t.printStackTrace(System.err);
-			System.exit(1);
 		}
 	}
 
-	private static void runSuite(Minecraft client) {
+	private static boolean hasActiveScreen(Minecraft client) {
+		try {
+			// Modern 26.x: client.gui.screen()
+			if (client.gui != null) {
+				try {
+					java.lang.reflect.Method screenMethod = client.gui.getClass().getMethod("screen");
+					return screenMethod.invoke(client.gui) != null;
+				} catch (NoSuchMethodException ignored) {
+				}
+			}
+
+			// Legacy 1.21.x: client.screen
+			java.lang.reflect.Field screenField = Minecraft.class.getField("screen");
+			return screenField.get(client) != null;
+		} catch (Throwable ignored) {
+			return false;
+		}
+	}
+
+	private static void captureScreenshot(Minecraft client) {
+		try {
+			try {
+				java.lang.reflect.Method modernGrab = net.minecraft.client.Screenshot.class.getMethod("grab", Minecraft.class, boolean.class);
+				modernGrab.invoke(null, client, false);
+				RedfxMod.LOGGER.info("Called Minecraft Screenshot.grab(client, false) successfully!");
+				return;
+			} catch (NoSuchMethodException ignored) {
+			}
+
+			java.lang.reflect.Method getTarget = client.getClass().getMethod("getMainRenderTarget");
+			Object target = getTarget.invoke(client);
+			java.lang.reflect.Method legacyGrab = net.minecraft.client.Screenshot.class.getMethod("grab", File.class, target.getClass(), java.util.function.Consumer.class);
+			legacyGrab.invoke(null, client.gameDirectory, target, (java.util.function.Consumer<net.minecraft.network.chat.Component>) msg -> {});
+			RedfxMod.LOGGER.info("Called legacy Screenshot.grab() successfully!");
+		} catch (Throwable t) {
+			RedfxMod.LOGGER.warn("Failed to capture in-game screenshot: ", t);
+		}
+	}
+
+	private static void runSuite(Minecraft client, BlockPos origin) {
 		ClientCanvasStore store = ClientCanvasStore.get();
 		store.clearAll();
 		int red = 0xFFFF0000;
 
 		// Align player camera to look at the demonstration blocks
 		client.player.setXRot(30.0f);
-
-		// Find a solid ground block directly in front of the player
-		BlockPos playerPos = client.player.blockPosition();
 		Direction forward = client.player.getDirection();
-		BlockPos origin = playerPos.relative(forward, 2);
 
 		// 1. Solid Block (Stone)
 		RedfxMod.LOGGER.info("Setting up painted stone block...");
@@ -132,7 +193,17 @@ public final class InGameSmokeTest {
 			throw new AssertionError("Expected lower stair step Y=0.5, got " + split.get(1).surfaceY());
 		}
 
-		// 3. Test Geometry Projection
+		// 3. Smooth Stone Slab
+		RedfxMod.LOGGER.info("Setting up painted smooth stone slab...");
+		BlockPos slabPos = origin.offset(-1, 0, 0);
+		BlockState slabState = Blocks.SMOOTH_STONE_SLAB.defaultBlockState().setValue(SlabBlock.TYPE, SlabType.BOTTOM);
+		client.level.setBlock(slabPos, slabState, 3);
+		int[] slabTexels = new int[Canvas.TEXELS];
+		BloodSplatter.stamp(slabTexels, 8, 8, red, 1, 1.0f);
+		Canvas slabCanvas = new Canvas(slabTexels, System.currentTimeMillis() + 60000L);
+		store.put(slabPos, FaceAxes.UP, slabCanvas);
+
+		// 4. Test Geometry Projection
 		float[] corners = new float[12];
 		PaintGeometry.corners(stoneQuads.get(0), corners, 1.0F);
 		for (float c : corners) {
@@ -141,7 +212,7 @@ public final class InGameSmokeTest {
 			}
 		}
 
-		// 4. Test Slabs & Carpets Surface Heights
+		// 5. Test Slabs & Carpets Surface Heights
 		RedfxMod.LOGGER.info("Testing surface height detection...");
 		BlockState bottomSlab = Blocks.SMOOTH_STONE_SLAB.defaultBlockState().setValue(SlabBlock.TYPE, SlabType.BOTTOM);
 		if (Math.abs(PaintSurface.topOf(client.level, origin, bottomSlab) - 0.5) > 0.001) {
@@ -153,7 +224,7 @@ public final class InGameSmokeTest {
 			throw new AssertionError("Carpet height mismatch!");
 		}
 
-		// 5. Test See-Through Glass Property
+		// 6. Test See-Through Glass Property
 		RedfxMod.LOGGER.info("Testing see-through block detection...");
 		if (!PaintSurface.isSeeThrough(Blocks.GLASS.defaultBlockState())) {
 			throw new AssertionError("Glass was expected to be see-through!");
@@ -162,7 +233,7 @@ public final class InGameSmokeTest {
 			throw new AssertionError("Stone was not expected to be see-through!");
 		}
 
-		// 6. Test Non-Paintable Foliage
+		// 7. Test Non-Paintable Foliage
 		if (PaintSurface.topOf(client.level, origin, Blocks.SHORT_GRASS.defaultBlockState()) != PaintSurface.NONE) {
 			throw new AssertionError("Short grass should not have a top paint surface!");
 		}
