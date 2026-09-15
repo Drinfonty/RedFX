@@ -59,8 +59,15 @@ public final class InGameSmokeTest {
 		}
 
 		if (state == 0) {
+			tickCounter++;
+			Object activeScreen = getActiveScreen(client);
+			if (activeScreen != null && tickCounter % 20 == 0) {
+				RedfxMod.LOGGER.info("[SmokeTest] Waiting for player spawn... Active screen: " + activeScreen.getClass().getName());
+				tryAutoConfirmScreen(client, activeScreen);
+			}
+
 			// Wait until the player spawn event has fired, player & level exist, and loading screen is closed
-			if (!playerSpawned || hasActiveScreen(client) || client.player == null || client.level == null) {
+			if (!playerSpawned || activeScreen != null || client.player == null || client.level == null) {
 				return;
 			}
 
@@ -246,40 +253,126 @@ public final class InGameSmokeTest {
 		}
 	}
 
-	private static boolean hasActiveScreen(Minecraft client) {
+	private static Object getActiveScreen(Minecraft client) {
 		try {
 			// Modern 26.x: client.gui.screen()
 			if (client.gui != null) {
 				try {
 					java.lang.reflect.Method screenMethod = client.gui.getClass().getMethod("screen");
-					return screenMethod.invoke(client.gui) != null;
+					Object screen = screenMethod.invoke(client.gui);
+					if (screen != null) {
+						return screen;
+					}
 				} catch (NoSuchMethodException ignored) {
 				}
 			}
 
 			// Legacy 1.21.x: client.screen
 			java.lang.reflect.Field screenField = Minecraft.class.getField("screen");
-			return screenField.get(client) != null;
+			return screenField.get(client);
 		} catch (Throwable ignored) {
-			return false;
+			return null;
+		}
+	}
+
+	private static void tryAutoConfirmScreen(Minecraft client, Object screen) {
+		try {
+			// Check if screen has children/widgets (e.g. Button)
+			java.lang.reflect.Method childrenMethod = null;
+			for (java.lang.reflect.Method m : screen.getClass().getMethods()) {
+				if (m.getName().equals("children") && m.getParameterCount() == 0) {
+					childrenMethod = m;
+					break;
+				}
+			}
+			if (childrenMethod != null) {
+				Object childrenObj = childrenMethod.invoke(screen);
+				if (childrenObj instanceof Iterable<?> iterable) {
+					for (Object child : iterable) {
+						if (child == null) continue;
+						String childName = child.getClass().getName().toLowerCase(java.util.Locale.ROOT);
+						if (!childName.contains("button")) continue;
+
+						// Check button text
+						String label = "";
+						try {
+							java.lang.reflect.Method getMessage = child.getClass().getMethod("getMessage");
+							Object comp = getMessage.invoke(child);
+							if (comp != null) {
+								java.lang.reflect.Method getString = comp.getClass().getMethod("getString");
+								label = (String) getString.invoke(comp);
+							}
+						} catch (Throwable ignored) {}
+
+						String lowerLabel = label.toLowerCase(java.util.Locale.ROOT);
+						if (lowerLabel.contains("load") || lowerLabel.contains("proceed")
+								|| lowerLabel.contains("continue") || lowerLabel.contains("yes")
+								|| lowerLabel.contains("backup") || lowerLabel.contains("know what i'm doing")
+								|| lowerLabel.contains("safe mode") || lowerLabel.contains("i know")) {
+							RedfxMod.LOGGER.info("[SmokeTest] Auto-pressing button: '" + label + "' (" + child.getClass().getSimpleName() + ")");
+							java.lang.reflect.Method onPress = child.getClass().getMethod("onPress");
+							onPress.invoke(child);
+							return;
+						}
+					}
+				}
+			}
+
+			// Fallback: Check if screen has callback field (like BooleanConsumer in ConfirmScreen)
+			for (java.lang.reflect.Field f : screen.getClass().getDeclaredFields()) {
+				f.setAccessible(true);
+				Object val = f.get(screen);
+				if (val != null) {
+					for (java.lang.reflect.Method cbMethod : val.getClass().getMethods()) {
+						if ((cbMethod.getName().equals("accept") && cbMethod.getParameterCount() == 1
+								&& cbMethod.getParameterTypes()[0] == boolean.class)) {
+							RedfxMod.LOGGER.info("[SmokeTest] Invoking confirm callback on screen: " + screen.getClass().getSimpleName());
+							cbMethod.invoke(val, true);
+							return;
+						}
+						if (cbMethod.getName().equals("proceed") && cbMethod.getParameterCount() == 2) {
+							RedfxMod.LOGGER.info("[SmokeTest] Invoking proceed callback on screen: " + screen.getClass().getSimpleName());
+							cbMethod.invoke(val, false, false);
+							return;
+						}
+					}
+				}
+			}
+		} catch (Throwable t) {
+			RedfxMod.LOGGER.debug("[SmokeTest] tryAutoConfirmScreen error: " + t);
 		}
 	}
 
 	private static void captureScreenshot(Minecraft client) {
 		try {
-			try {
-				java.lang.reflect.Method modernGrab = net.minecraft.client.Screenshot.class.getMethod("grab", Minecraft.class, boolean.class);
-				modernGrab.invoke(null, client, false);
-				RedfxMod.LOGGER.info("Called Minecraft Screenshot.grab(client, false) successfully!");
-				return;
-			} catch (NoSuchMethodException ignored) {
+			for (java.lang.reflect.Method m : net.minecraft.client.Screenshot.class.getMethods()) {
+				if (!m.getName().equals("grab") || !java.lang.reflect.Modifier.isStatic(m.getModifiers())) {
+					continue;
+				}
+				Class<?>[] params = m.getParameterTypes();
+				// Modern 26.2+: grab(Minecraft, boolean)
+				if (params.length == 2 && params[0].isAssignableFrom(client.getClass()) && params[1] == boolean.class) {
+					m.invoke(null, client, false);
+					RedfxMod.LOGGER.info("Called Screenshot.grab(Minecraft, boolean) successfully!");
+					return;
+				}
+				// Standard: grab(File, RenderTarget, Consumer)
+				if (params.length == 3 && params[0] == File.class && params[2] == java.util.function.Consumer.class) {
+					java.lang.reflect.Method getTarget = client.getClass().getMethod("getMainRenderTarget");
+					Object target = getTarget.invoke(client);
+					m.invoke(null, client.gameDirectory, target, (java.util.function.Consumer<net.minecraft.network.chat.Component>) msg -> {});
+					RedfxMod.LOGGER.info("Called Screenshot.grab(File, RenderTarget, Consumer) successfully!");
+					return;
+				}
+				// 4-arg variant: grab(File, String, RenderTarget, Consumer)
+				if (params.length == 4 && params[0] == File.class && params[1] == String.class && params[3] == java.util.function.Consumer.class) {
+					java.lang.reflect.Method getTarget = client.getClass().getMethod("getMainRenderTarget");
+					Object target = getTarget.invoke(client);
+					m.invoke(null, client.gameDirectory, null, target, (java.util.function.Consumer<net.minecraft.network.chat.Component>) msg -> {});
+					RedfxMod.LOGGER.info("Called Screenshot.grab(File, String, RenderTarget, Consumer) successfully!");
+					return;
+				}
 			}
-
-			java.lang.reflect.Method getTarget = client.getClass().getMethod("getMainRenderTarget");
-			Object target = getTarget.invoke(client);
-			java.lang.reflect.Method legacyGrab = net.minecraft.client.Screenshot.class.getMethod("grab", File.class, target.getClass(), java.util.function.Consumer.class);
-			legacyGrab.invoke(null, client.gameDirectory, target, (java.util.function.Consumer<net.minecraft.network.chat.Component>) msg -> {});
-			RedfxMod.LOGGER.info("Called legacy Screenshot.grab() successfully!");
 		} catch (Throwable t) {
 			RedfxMod.LOGGER.warn("Failed to capture in-game screenshot: ", t);
 		}
