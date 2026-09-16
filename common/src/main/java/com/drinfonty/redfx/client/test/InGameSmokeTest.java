@@ -42,6 +42,8 @@ public final class InGameSmokeTest {
 	private static int tickCounter = 0;
 	private static BlockPos testOrigin = null;
 	private static LivingEntity targetMob = null;
+	private static float targetYaw = 0.0f;
+	private static float targetPitch = 25.0f;
 
 	private InGameSmokeTest() {
 	}
@@ -118,19 +120,22 @@ public final class InGameSmokeTest {
 				RedfxMod.LOGGER.info("Found test mob {}. Aiming and executing attack...",
 					targetMob.getType().getDescriptionId());
 
-				// Equip diamond sword and calculate look angles towards mob chest
+				// Equip diamond sword and calculate look angles towards mob lower torso/feet
 				client.player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.DIAMOND_SWORD));
 
 				double dx = targetMob.getX() - client.player.getX();
-				double dy = (targetMob.getY() + targetMob.getEyeHeight() * 0.5) - client.player.getEyeY();
+				double dy = (targetMob.getY() + 0.3) - client.player.getEyeY();
 				double dz = targetMob.getZ() - client.player.getZ();
 				double dist = Math.sqrt(dx * dx + dz * dz);
-				float yaw = (float) (Math.atan2(dz, dx) * 180.0 / Math.PI) - 90.0f;
-				float pitch = (float) (-Math.atan2(dy, dist) * 180.0 / Math.PI);
-				client.player.setYRot(yaw);
-				client.player.setXRot(pitch);
-				client.player.yRotO = yaw;
-				client.player.xRotO = pitch;
+				targetYaw = (float) (Math.atan2(dz, dx) * 180.0 / Math.PI) - 90.0f;
+				targetPitch = (float) (-Math.atan2(dy, dist) * 180.0 / Math.PI);
+				if (targetPitch < 22.0f) {
+					targetPitch = 22.0f;
+				}
+				client.player.setYRot(targetYaw);
+				client.player.setXRot(targetPitch);
+				client.player.yRotO = targetYaw;
+				client.player.xRotO = targetPitch;
 
 				// Perform client attack
 				client.gameMode.attack(client.player, targetMob);
@@ -192,6 +197,31 @@ public final class InGameSmokeTest {
 				return;
 			}
 
+			// Ensure camera angles remain focused on mob and splatters
+			client.player.setYRot(targetYaw);
+			client.player.setXRot(targetPitch);
+			client.player.yRotO = targetYaw;
+			client.player.xRotO = targetPitch;
+
+			// Clear chat overlay so splatters are unobstructed
+			try {
+				Object chat = client.gui.getClass().getMethod("getChat").invoke(client.gui);
+				if (chat != null) {
+					for (java.lang.reflect.Method m : chat.getClass().getMethods()) {
+						if (m.getName().equals("clearMessages")) {
+							if (m.getParameterCount() == 1 && m.getParameterTypes()[0] == boolean.class) {
+								m.invoke(chat, true);
+								break;
+							} else if (m.getParameterCount() == 0) {
+								m.invoke(chat);
+								break;
+							}
+						}
+					}
+				}
+			} catch (Throwable ignored) {
+			}
+
 			captureScreenshot(client);
 			state = 99;
 
@@ -220,14 +250,17 @@ public final class InGameSmokeTest {
 		Direction forward = client.player.getDirection();
 		Direction left = forward.getClockWise();
 
+		int floorY = client.player.getBlockY() - 1;
 		int ox = origin.getX();
-		int oy = origin.getY();
 		int oz = origin.getZ();
 
+		BlockPos floorOrigin = new BlockPos(ox, floorY, oz);
+		testOrigin = floorOrigin;
+
 		// Set up blocks on client
-		BlockPos stonePos = origin;
-		BlockPos stairPos = origin.relative(forward, 1);
-		BlockPos slabPos = origin.relative(left, 1);
+		BlockPos stonePos = floorOrigin;
+		BlockPos stairPos = floorOrigin.relative(forward, 1);
+		BlockPos slabPos = floorOrigin.relative(left, 1);
 
 		client.level.setBlock(stonePos, Blocks.STONE.defaultBlockState(), 3);
 		client.level.setBlock(stairPos, Blocks.OAK_STAIRS.defaultBlockState()
@@ -242,20 +275,23 @@ public final class InGameSmokeTest {
 			var commands = server.getCommands();
 			var source = server.createCommandSourceStack();
 
-			// 0. Clear vegetation and obstructions above arena
+			// 0. Disable command feedback so chat is completely clean
+			commands.performPrefixedCommand(source, "gamerule sendCommandFeedback false");
+
+			// 0a. Clear vegetation and obstructions above arena
 			commands.performPrefixedCommand(source, String.format(java.util.Locale.ROOT,
-				"fill %d %d %d %d %d %d air", ox - 3, oy, oz - 3, ox + 3, oy + 4, oz + 3));
+				"fill %d %d %d %d %d %d air", ox - 3, floorY + 1, oz - 3, ox + 3, floorY + 5, oz + 3));
 
 			// 0b. Remove ambient entities nearby so targeting is guaranteed
 			commands.performPrefixedCommand(source, "kill @e[type=!player,distance=..20]");
 
-			// 1. Foundation under arena
+			// 1. Foundation: 5x5 stone platform under arena at player floor level
 			commands.performPrefixedCommand(source, String.format(java.util.Locale.ROOT,
-				"fill %d %d %d %d %d %d stone", ox - 2, oy - 1, oz - 2, ox + 2, oy - 1, oz + 2));
+				"fill %d %d %d %d %d %d stone", ox - 2, floorY, oz - 2, ox + 2, floorY, oz + 2));
 
 			// 2. Center stone block
 			commands.performPrefixedCommand(source, String.format(java.util.Locale.ROOT,
-				"setblock %d %d %d stone", ox, oy, oz));
+				"setblock %d %d %d stone", ox, floorY, oz));
 
 			// 3. Oak stairs behind
 			commands.performPrefixedCommand(source, String.format(java.util.Locale.ROOT,
@@ -270,9 +306,9 @@ public final class InGameSmokeTest {
 			// 5. Ensure player has diamond sword
 			commands.performPrefixedCommand(source, "item replace entity @p weapon.mainhand with diamond_sword");
 
-			// 6. Summon Husk standing on top of center block (never burns in sunlight)
+			// 6. Summon Husk standing on top of center block (same elevation as player)
 			commands.performPrefixedCommand(source, String.format(java.util.Locale.ROOT,
-				"summon husk %d %d %d {NoAI:1b,Silent:1b,Tags:[\"redfx_test_target\"]}", ox, oy + 1, oz));
+				"summon husk %d %d %d {NoAI:1b,Silent:1b,Tags:[\"redfx_test_target\"]}", ox, floorY + 1, oz));
 		}
 	}
 
