@@ -205,10 +205,30 @@ public final class InGameSmokeTest {
 
 			// Clear chat overlay so splatters are unobstructed
 			try {
-				Object chat = client.gui.getClass().getMethod("getChat").invoke(client.gui);
+				Object chat = null;
+				try {
+					chat = client.gui.getClass().getMethod("getChat").invoke(client.gui);
+				} catch (Throwable ignored) {
+				}
+				if (chat == null) {
+					for (java.lang.reflect.Method m : client.gui.getClass().getMethods()) {
+						if (m.getName().toLowerCase().contains("chat") && m.getParameterCount() == 0) {
+							chat = m.invoke(client.gui);
+							if (chat != null) break;
+						}
+					}
+				}
+				if (chat == null) {
+					for (java.lang.reflect.Field f : client.gui.getClass().getFields()) {
+						if (f.getName().toLowerCase().contains("chat")) {
+							chat = f.get(client.gui);
+							if (chat != null) break;
+						}
+					}
+				}
 				if (chat != null) {
 					for (java.lang.reflect.Method m : chat.getClass().getMethods()) {
-						if (m.getName().equals("clearMessages")) {
+						if (m.getName().toLowerCase().contains("clear")) {
 							if (m.getParameterCount() == 1 && m.getParameterTypes()[0] == boolean.class) {
 								m.invoke(chat, true);
 								break;
@@ -274,11 +294,16 @@ public final class InGameSmokeTest {
 		if (server != null) {
 			var commands = server.getCommands();
 			var source = server.createCommandSourceStack();
+			try {
+				source = (net.minecraft.commands.CommandSourceStack) source.getClass().getMethod("withSuppressedOutput").invoke(source);
+			} catch (Throwable ignored) {
+			}
+			try {
+				source = (net.minecraft.commands.CommandSourceStack) source.getClass().getMethod("withPermission", int.class).invoke(source, 4);
+			} catch (Throwable ignored) {
+			}
 
-			// 0. Disable command feedback so chat is completely clean
-			commands.performPrefixedCommand(source, "gamerule sendCommandFeedback false");
-
-			// 0a. Clear vegetation and obstructions above arena
+			// 0. Clear vegetation and obstructions above arena
 			commands.performPrefixedCommand(source, String.format(java.util.Locale.ROOT,
 				"fill %d %d %d %d %d %d air", ox - 3, floorY + 1, oz - 3, ox + 3, floorY + 5, oz + 3));
 
