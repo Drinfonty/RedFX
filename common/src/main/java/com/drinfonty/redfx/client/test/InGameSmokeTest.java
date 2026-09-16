@@ -95,10 +95,11 @@ public final class InGameSmokeTest {
 			// Wait for server to spawn the test mob and sync to client
 			tickCounter++;
 			if (targetMob == null) {
-				AABB box = new AABB(testOrigin).inflate(4.0);
+				AABB box = new AABB(testOrigin).inflate(5.0);
 				for (Entity entity : client.level.entitiesForRendering()) {
 					if (entity instanceof LivingEntity living && living.isAlive() && !(living instanceof Player)) {
-						if (box.contains(living.position())) {
+						if (living.getTags().contains("redfx_test_target")
+								|| (living.getType().getDescriptionId().contains("husk") && box.contains(living.position()))) {
 							targetMob = living;
 							break;
 						}
@@ -117,9 +118,19 @@ public final class InGameSmokeTest {
 				RedfxMod.LOGGER.info("Found test mob {}. Aiming and executing attack...",
 					targetMob.getType().getDescriptionId());
 
-				// Equip diamond sword and look towards the mob
+				// Equip diamond sword and calculate look angles towards mob chest
 				client.player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.DIAMOND_SWORD));
-				client.player.setXRot(15.0f);
+
+				double dx = targetMob.getX() - client.player.getX();
+				double dy = (targetMob.getY() + targetMob.getEyeHeight() * 0.5) - client.player.getEyeY();
+				double dz = targetMob.getZ() - client.player.getZ();
+				double dist = Math.sqrt(dx * dx + dz * dz);
+				float yaw = (float) (Math.atan2(dz, dx) * 180.0 / Math.PI) - 90.0f;
+				float pitch = (float) (-Math.atan2(dy, dist) * 180.0 / Math.PI);
+				client.player.setYRot(yaw);
+				client.player.setXRot(pitch);
+				client.player.yRotO = yaw;
+				client.player.xRotO = pitch;
 
 				// Perform client attack
 				client.gameMode.attack(client.player, targetMob);
@@ -175,9 +186,9 @@ public final class InGameSmokeTest {
 		}
 
 		if (state == 4) {
-			// Wait 5 render ticks so the graphics engine rasterizes the decals and damaged mob
+			// Wait 10 render ticks so the graphics engine rasterizes the decals and damaged mob
 			tickCounter++;
-			if (tickCounter < 5) {
+			if (tickCounter < 10) {
 				return;
 			}
 
@@ -231,6 +242,13 @@ public final class InGameSmokeTest {
 			var commands = server.getCommands();
 			var source = server.createCommandSourceStack();
 
+			// 0. Clear vegetation and obstructions above arena
+			commands.performPrefixedCommand(source, String.format(java.util.Locale.ROOT,
+				"fill %d %d %d %d %d %d air", ox - 3, oy, oz - 3, ox + 3, oy + 4, oz + 3));
+
+			// 0b. Remove ambient entities nearby so targeting is guaranteed
+			commands.performPrefixedCommand(source, "kill @e[type=!player,distance=..20]");
+
 			// 1. Foundation under arena
 			commands.performPrefixedCommand(source, String.format(java.util.Locale.ROOT,
 				"fill %d %d %d %d %d %d stone", ox - 2, oy - 1, oz - 2, ox + 2, oy - 1, oz + 2));
@@ -254,7 +272,7 @@ public final class InGameSmokeTest {
 
 			// 6. Summon Husk standing on top of center block (never burns in sunlight)
 			commands.performPrefixedCommand(source, String.format(java.util.Locale.ROOT,
-				"summon husk %d %d %d {NoAI:1b,Silent:1b}", ox, oy + 1, oz));
+				"summon husk %d %d %d {NoAI:1b,Silent:1b,Tags:[\"redfx_test_target\"]}", ox, oy + 1, oz));
 		}
 	}
 
