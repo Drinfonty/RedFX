@@ -100,8 +100,7 @@ public final class InGameSmokeTest {
 				AABB box = new AABB(testOrigin).inflate(5.0);
 				for (Entity entity : client.level.entitiesForRendering()) {
 					if (entity instanceof LivingEntity living && living.isAlive() && !(living instanceof Player)) {
-						if (living.getTags().contains("redfx_test_target")
-								|| (living.getType().getDescriptionId().contains("husk") && box.contains(living.position()))) {
+						if (isTestMob(living, box)) {
 							targetMob = living;
 							break;
 						}
@@ -256,6 +255,25 @@ public final class InGameSmokeTest {
 				}
 			}, "RedFX-SmokeTest-Shutdown").start();
 		}
+	}
+
+	private static boolean isTestMob(LivingEntity living, AABB box) {
+		if (living.getType().getDescriptionId().contains("husk") && box.contains(living.position())) {
+			return true;
+		}
+		try {
+			for (java.lang.reflect.Method m : living.getClass().getMethods()) {
+				if (m.getName().toLowerCase().contains("tag") && m.getParameterCount() == 0
+						&& java.util.Collection.class.isAssignableFrom(m.getReturnType())) {
+					java.util.Collection<?> col = (java.util.Collection<?>) m.invoke(living);
+					if (col != null && col.contains("redfx_test_target")) {
+						return true;
+					}
+				}
+			}
+		} catch (Throwable ignored) {
+		}
+		return false;
 	}
 
 	private static void fail(Throwable t) {
