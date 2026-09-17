@@ -98,6 +98,10 @@ def run_single_test(project_root, loader, world):
         dest_path = os.path.join(release_screenshots_dir, dest_filename)
         shutil.copy2(src_path, dest_path)
         print(f"--> Screenshot saved: {dest_path}")
+        if mc_slug.startswith("26_1"):
+            alias_path = os.path.join(release_screenshots_dir, f"mc_26_1_{loader}.png")
+            shutil.copy2(src_path, alias_path)
+            print(f"--> Screenshot saved alias: {alias_path}")
     else:
         print("--> WARNING: No screenshot file found in", screenshot_dir)
 
