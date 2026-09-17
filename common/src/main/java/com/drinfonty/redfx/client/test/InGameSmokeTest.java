@@ -191,9 +191,9 @@ public final class InGameSmokeTest {
 		}
 
 		if (state == 4) {
-			// Wait 10 render ticks so the graphics engine rasterizes the decals and damaged mob
+			// Wait 25 render ticks so the asynchronous chunk compiler finishes uploading decal quads and sweep smoke clears
 			tickCounter++;
-			if (tickCounter < 10) {
+			if (tickCounter < 25) {
 				return;
 			}
 
