@@ -99,15 +99,21 @@ public final class InGameSmokeTest {
 			// Wait for server to spawn the test mob and sync to client
 			tickCounter++;
 			if (targetMob == null) {
-				AABB box = new AABB(testOrigin).inflate(5.0);
+				AABB box = new AABB(testOrigin).inflate(3.5);
+				LivingEntity closest = null;
+				double closestDistSq = Double.MAX_VALUE;
 				for (Entity entity : client.level.entitiesForRendering()) {
 					if (entity instanceof LivingEntity living && living.isAlive() && !(living instanceof Player)) {
-						if (isTestMob(living, box)) {
-							targetMob = living;
-							break;
+						if (box.contains(living.position()) && isTestMob(living, box)) {
+							double d2 = living.distanceToSqr(testOrigin.getX() + 0.5, testOrigin.getY() + 1.0, testOrigin.getZ() + 0.5);
+							if (d2 < closestDistSq) {
+								closestDistSq = d2;
+								closest = living;
+							}
 						}
 					}
 				}
+				targetMob = closest;
 			}
 
 			if (targetMob == null) {
@@ -138,6 +144,9 @@ public final class InGameSmokeTest {
 				client.player.yRotO = targetYaw;
 				client.player.xRotO = targetPitch;
 
+				// Clear canvas right before attack so ambient death particles do not contaminate test
+				ClientCanvasStore.get().clearAll();
+
 				// Perform client attack
 				client.gameMode.attack(client.player, targetMob);
 				client.player.swing(InteractionHand.MAIN_HAND);
@@ -152,6 +161,12 @@ public final class InGameSmokeTest {
 		}
 
 		if (state == 3) {
+			// Lock camera angles continuously on mob and splatters
+			client.player.setYRot(targetYaw);
+			client.player.setXRot(targetPitch);
+			client.player.yRotO = targetYaw;
+			client.player.xRotO = targetPitch;
+
 			// Wait for blood particles to fly through the air, land, and stamp into ClientCanvasStore
 			tickCounter++;
 			if (tickCounter < 15) {
@@ -160,17 +175,12 @@ public final class InGameSmokeTest {
 
 			ClientCanvasStore store = ClientCanvasStore.get();
 			boolean foundBlood = false;
-			for (BlockPos pos : BlockPos.betweenClosed(testOrigin.offset(-5, -3, -5), testOrigin.offset(5, 3, 5))) {
+			for (BlockPos pos : BlockPos.betweenClosed(testOrigin.offset(-3, -2, -3), testOrigin.offset(3, 2, 3))) {
 				if (store.isPainted(pos)) {
 					foundBlood = true;
 					RedfxMod.LOGGER.info("Found natural blood splatter at {}", pos);
 					break;
 				}
-			}
-
-			if (!foundBlood && store.hasAnyBlood()) {
-				foundBlood = true;
-				RedfxMod.LOGGER.info("Found blood decals stored in ClientCanvasStore!");
 			}
 
 			if (!foundBlood) {
@@ -192,6 +202,12 @@ public final class InGameSmokeTest {
 		}
 
 		if (state == 4) {
+			// Lock camera angles continuously on mob and splatters
+			client.player.setYRot(targetYaw);
+			client.player.setXRot(targetPitch);
+			client.player.yRotO = targetYaw;
+			client.player.xRotO = targetPitch;
+
 			// Wait 25 render ticks so the asynchronous chunk compiler finishes uploading decal quads and sweep smoke clears
 			tickCounter++;
 			if (tickCounter < 25) {
@@ -260,7 +276,10 @@ public final class InGameSmokeTest {
 	}
 
 	private static boolean isTestMob(LivingEntity living, AABB box) {
-		if (living.getType().getDescriptionId().contains("husk") && box.contains(living.position())) {
+		if (!box.contains(living.position())) {
+			return false;
+		}
+		if (living.getType().getDescriptionId().contains("husk")) {
 			return true;
 		}
 		try {
@@ -372,10 +391,21 @@ public final class InGameSmokeTest {
 				"setblock %d %d %d oak_stairs[facing=%s,half=bottom]",
 				stairPos.getX(), stairPos.getY(), stairPos.getZ(), forward.getOpposite().getName()));
 
-			// 9. Ensure player has diamond sword
+			// 9. Ensure player stands firmly 2 blocks in front on solid stone
+			BlockPos playerStandPos = floorOrigin.relative(forward.getOpposite(), 2);
+			double px = playerStandPos.getX() + 0.5;
+			double py = floorY + 1.0;
+			double pz = playerStandPos.getZ() + 0.5;
+			commands.performPrefixedCommand(source, String.format(java.util.Locale.ROOT,
+				"setblock %d %d %d stone", playerStandPos.getX(), floorY, playerStandPos.getZ()));
+			commands.performPrefixedCommand(source, String.format(java.util.Locale.ROOT,
+				"tp @p %.2f %.2f %.2f", px, py, pz));
+			client.player.setPos(px, py, pz);
+
+			// 10. Ensure player has diamond sword
 			commands.performPrefixedCommand(source, "item replace entity @p weapon.mainhand with diamond_sword");
 
-			// 10. Summon Husk standing on top of center block (same elevation as player)
+			// 11. Summon Husk standing on top of center block (same elevation as player)
 			commands.performPrefixedCommand(source, String.format(java.util.Locale.ROOT,
 				"summon husk %d %d %d {NoAI:1b,Silent:1b,Tags:[\"redfx_test_target\"]}", ox, floorY + 1, oz));
 		}
