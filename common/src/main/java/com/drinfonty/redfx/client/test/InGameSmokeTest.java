@@ -23,7 +23,9 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.SlabBlock;
+import net.minecraft.world.level.block.SnowLayerBlock;
 import net.minecraft.world.level.block.StairBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.Half;
@@ -286,7 +288,8 @@ public final class InGameSmokeTest {
 	private static void setupCombatArena(Minecraft client, BlockPos origin) {
 		ClientCanvasStore.get().clearAll();
 		Direction forward = client.player.getDirection();
-		Direction left = forward.getClockWise();
+		Direction right = forward.getClockWise();
+		Direction left = forward.getCounterClockWise();
 
 		int floorY = client.player.getBlockY() - 1;
 		int ox = origin.getX();
@@ -297,15 +300,23 @@ public final class InGameSmokeTest {
 
 		// Set up blocks on client
 		BlockPos stonePos = floorOrigin;
+		BlockPos snowBlockPos = floorOrigin.relative(left, 1);
+		BlockPos slabPos = floorOrigin.relative(right, 1);
+		BlockPos snowLayerPos = floorOrigin.relative(forward, 1).relative(left, 1);
+		BlockPos chestPos = floorOrigin.relative(forward, 1).relative(right, 1);
 		BlockPos stairPos = floorOrigin.relative(forward, 1);
-		BlockPos slabPos = floorOrigin.relative(left, 1);
 
 		client.level.setBlock(stonePos, Blocks.STONE.defaultBlockState(), 3);
+		client.level.setBlock(snowBlockPos, Blocks.SNOW_BLOCK.defaultBlockState(), 3);
+		client.level.setBlock(slabPos, Blocks.SMOOTH_STONE_SLAB.defaultBlockState()
+			.setValue(SlabBlock.TYPE, SlabType.BOTTOM), 3);
+		client.level.setBlock(snowLayerPos, Blocks.SNOW.defaultBlockState()
+			.setValue(SnowLayerBlock.LAYERS, 3), 3);
+		client.level.setBlock(chestPos, Blocks.CHEST.defaultBlockState()
+			.setValue(ChestBlock.FACING, forward.getOpposite()), 3);
 		client.level.setBlock(stairPos, Blocks.OAK_STAIRS.defaultBlockState()
 			.setValue(StairBlock.FACING, forward.getOpposite())
 			.setValue(StairBlock.HALF, Half.BOTTOM), 3);
-		client.level.setBlock(slabPos, Blocks.SMOOTH_STONE_SLAB.defaultBlockState()
-			.setValue(SlabBlock.TYPE, SlabType.BOTTOM), 3);
 
 		// Synchronize arena and summon mob via server
 		var server = client.getSingleplayerServer();
@@ -323,33 +334,48 @@ public final class InGameSmokeTest {
 
 			// 0. Clear vegetation and obstructions above arena
 			commands.performPrefixedCommand(source, String.format(java.util.Locale.ROOT,
-				"fill %d %d %d %d %d %d air", ox - 3, floorY + 1, oz - 3, ox + 3, floorY + 5, oz + 3));
+				"fill %d %d %d %d %d %d air", ox - 3, floorY, oz - 3, ox + 3, floorY + 5, oz + 3));
 
 			// 0b. Remove ambient entities nearby so targeting is guaranteed
 			commands.performPrefixedCommand(source, "kill @e[type=!player,distance=..20]");
 
-			// 1. Foundation: 5x5 stone platform under arena at player floor level
+			// 1. Foundation: 5x5 stone platform under arena foundation layer
+			commands.performPrefixedCommand(source, String.format(java.util.Locale.ROOT,
+				"fill %d %d %d %d %d %d stone", ox - 2, floorY - 1, oz - 2, ox + 2, floorY - 1, oz + 2));
+
+			// 2. Base stone floor
 			commands.performPrefixedCommand(source, String.format(java.util.Locale.ROOT,
 				"fill %d %d %d %d %d %d stone", ox - 2, floorY, oz - 2, ox + 2, floorY, oz + 2));
 
-			// 2. Center stone block
+			// 3. Center stone block
 			commands.performPrefixedCommand(source, String.format(java.util.Locale.ROOT,
-				"setblock %d %d %d stone", ox, floorY, oz));
+				"setblock %d %d %d stone", stonePos.getX(), stonePos.getY(), stonePos.getZ()));
 
-			// 3. Oak stairs behind
+			// 4. Snow block (full block)
+			commands.performPrefixedCommand(source, String.format(java.util.Locale.ROOT,
+				"setblock %d %d %d snow_block", snowBlockPos.getX(), snowBlockPos.getY(), snowBlockPos.getZ()));
+
+			// 5. Smooth stone slab (half block)
+			commands.performPrefixedCommand(source, String.format(java.util.Locale.ROOT,
+				"setblock %d %d %d smooth_stone_slab[type=bottom]", slabPos.getX(), slabPos.getY(), slabPos.getZ()));
+
+			// 6. Snow layer (partial block, 3 layers)
+			commands.performPrefixedCommand(source, String.format(java.util.Locale.ROOT,
+				"setblock %d %d %d snow[layers=3]", snowLayerPos.getX(), snowLayerPos.getY(), snowLayerPos.getZ()));
+
+			// 7. Chest (facing player)
+			commands.performPrefixedCommand(source, String.format(java.util.Locale.ROOT,
+				"setblock %d %d %d chest[facing=%s]", chestPos.getX(), chestPos.getY(), chestPos.getZ(), forward.getOpposite().getName()));
+
+			// 8. Oak stairs behind
 			commands.performPrefixedCommand(source, String.format(java.util.Locale.ROOT,
 				"setblock %d %d %d oak_stairs[facing=%s,half=bottom]",
 				stairPos.getX(), stairPos.getY(), stairPos.getZ(), forward.getOpposite().getName()));
 
-			// 4. Smooth stone slab adjacent
-			commands.performPrefixedCommand(source, String.format(java.util.Locale.ROOT,
-				"setblock %d %d %d smooth_stone_slab[type=bottom]",
-				slabPos.getX(), slabPos.getY(), slabPos.getZ()));
-
-			// 5. Ensure player has diamond sword
+			// 9. Ensure player has diamond sword
 			commands.performPrefixedCommand(source, "item replace entity @p weapon.mainhand with diamond_sword");
 
-			// 6. Summon Husk standing on top of center block (same elevation as player)
+			// 10. Summon Husk standing on top of center block (same elevation as player)
 			commands.performPrefixedCommand(source, String.format(java.util.Locale.ROOT,
 				"summon husk %d %d %d {NoAI:1b,Silent:1b,Tags:[\"redfx_test_target\"]}", ox, floorY + 1, oz));
 		}
