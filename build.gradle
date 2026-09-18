@@ -110,7 +110,10 @@ githubRelease {
 }
 
 tasks.named("githubRelease") {
-	dependsOn(":fabric:assemble", ":neoforge:assemble")
+	dependsOn(":fabric:assemble")
+	if (findProject(":neoforge") != null) {
+		dependsOn(":neoforge:assemble")
+	}
 	onlyIf {
 		def ghToken = rootProject.getGithubToken()
 		if (ghToken == null || ghToken.isEmpty()) {

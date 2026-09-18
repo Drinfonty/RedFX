@@ -25,4 +25,4 @@ rootProject.name = 'redfx'
 
 include 'common'
 include 'fabric'
-include 'neoforge'
+// include 'neoforge'

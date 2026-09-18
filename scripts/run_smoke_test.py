@@ -7,6 +7,7 @@ import sys
 import time
 
 ALL_BRANCHES = [
+    "mc-26.3",
     "mc-26.2",
     "mc-26.1",
     "mc-1.21.11",
@@ -17,6 +18,7 @@ ALL_BRANCHES = [
 ]
 
 DEFAULT_WORLDS = {
+    "26.3": "New World",
     "26.2": "New World",
     "26.1.2": "New World (1)",
     "26.1.1": "New World (1)",
@@ -43,6 +45,17 @@ def run_single_test(project_root, loader, world):
     mc_slug = mc_version.replace(".", "_")
     if world == "auto":
         world = DEFAULT_WORLDS.get(mc_version, "New World")
+
+    if loader == "neoforge":
+        settings_path = os.path.join(project_root, "settings.gradle")
+        if os.path.exists(settings_path):
+            with open(settings_path, "r", encoding="utf-8") as f:
+                content = f.read()
+                if "include 'neoforge'" not in content or "// include 'neoforge'" in content:
+                    print(f"\n========================================================")
+                    print(f" Skipping in-game smoke test: MC {mc_version} (neoforge disabled)")
+                    print(f"========================================================")
+                    return True, None
 
     screenshot_dir = os.path.join(project_root, loader, "run", "screenshots")
     os.makedirs(screenshot_dir, exist_ok=True)

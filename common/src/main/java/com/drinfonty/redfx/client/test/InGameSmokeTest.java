@@ -149,7 +149,20 @@ public final class InGameSmokeTest {
 
 				// Perform client attack
 				client.gameMode.attack(client.player, targetMob);
-				client.player.swing(InteractionHand.MAIN_HAND);
+				try {
+					for (java.lang.reflect.Method m : client.player.getClass().getMethods()) {
+						if (m.getName().equals("swing")) {
+							if (m.getParameterCount() == 1) {
+								m.invoke(client.player, InteractionHand.MAIN_HAND);
+								break;
+							} else if (m.getParameterCount() == 3) {
+								m.invoke(client.player, InteractionHand.MAIN_HAND, null, true);
+								break;
+							}
+						}
+					}
+				} catch (Throwable ignored) {
+				}
 
 				RedfxMod.LOGGER.info("Executed attack on mob. Awaiting blood particle flight and splatter...");
 				state = 3;

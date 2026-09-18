@@ -14,7 +14,7 @@ import com.drinfonty.redfx.client.particle.BloodParticle;
 // Import mobs for entity-specific blood colors
 import net.minecraft.world.entity.monster.cubemob.Slime;
 import net.minecraft.world.entity.monster.Creeper;
-import net.minecraft.world.entity.monster.EnderMan;
+import net.minecraft.world.entity.monster.Enderman;
 import net.minecraft.world.entity.boss.enderdragon.EnderDragon;
 import net.minecraft.world.entity.monster.Blaze;
 import net.minecraft.world.entity.monster.cubemob.MagmaCube;
@@ -193,7 +193,7 @@ public class LivingEntityMixin {
             r = 0.2F;
             g = 0.9F;
             b = 0.2F;
-        } else if (entity instanceof EnderMan || entity instanceof EnderDragon || entity instanceof Endermite) {
+        } else if (entity instanceof Enderman || entity instanceof EnderDragon || entity instanceof Endermite) {
             r = 0.6F;
             g = 0.1F;
             b = 0.8F;
