@@ -17,7 +17,7 @@ class BloodSplatterTest {
 
 		int count = 0;
 		for (int t : texels) {
-			if (t == red) {
+			if (PaintColor.isPainted(t)) {
 				count++;
 			}
 		}
@@ -32,7 +32,7 @@ class BloodSplatterTest {
 		assertTrue(stamped);
 		int painted = 0;
 		for (int t : texels) {
-			if (t == red) painted++;
+			if (PaintColor.isPainted(t)) painted++;
 		}
 		assertTrue(painted > 0);
 	}
@@ -45,7 +45,7 @@ class BloodSplatterTest {
 
 		int initialPainted = 0;
 		for (int t : texels) {
-			if (t == red) initialPainted++;
+			if (PaintColor.isPainted(t)) initialPainted++;
 		}
 		assertTrue(initialPainted > 0);
 
@@ -54,7 +54,7 @@ class BloodSplatterTest {
 
 		int remaining = 0;
 		for (int t : texels) {
-			if (t == red) remaining++;
+			if (PaintColor.isPainted(t)) remaining++;
 		}
 		assertEquals(initialPainted - 3, remaining);
 	}
@@ -112,5 +112,31 @@ class BloodSplatterTest {
 		});
 
 		assertTrue(canvasMap.size() > 1, "Splatter on boundary should bleed into multiple adjacent block canvases");
+	}
+
+	@Test
+	void stampsTranslucentEdgePixelsWithDecreasingAlpha() {
+		int[] texels = new int[Canvas.TEXELS];
+		int red = 0xFFFF0000;
+		BloodSplatter.stamp(texels, 7, 7, red, 1, 1.0f);
+
+		int opaqueCount = 0;
+		int subPerimeterCount = 0;
+		int outerEdgeCount = 0;
+
+		for (int t : texels) {
+			if (!PaintColor.isPainted(t)) continue;
+			int alpha = (t >>> 24);
+			if (alpha == 255) {
+				opaqueCount++;
+			} else if (alpha == 195) {
+				subPerimeterCount++;
+			} else if (alpha >= 95 && alpha <= 145) {
+				outerEdgeCount++;
+			}
+		}
+
+		assertTrue(opaqueCount > 0, "Should have solid core pixels");
+		assertTrue(outerEdgeCount > 0, "Should have translucent outer edge pixels (alpha ~95-145)");
 	}
 }
