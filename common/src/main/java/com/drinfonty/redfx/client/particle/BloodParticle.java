@@ -1,7 +1,9 @@
 package com.drinfonty.redfx.client.particle;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -18,6 +20,7 @@ import net.minecraft.tags.FluidTags;
 
 import com.drinfonty.redfx.canvas.BloodSplatter;
 import com.drinfonty.redfx.canvas.Canvas;
+import com.drinfonty.redfx.canvas.EdgeDrip;
 import com.drinfonty.redfx.canvas.FaceAxes;
 import com.drinfonty.redfx.canvas.FaceStroke;
 import com.drinfonty.redfx.canvas.PaintColor;
@@ -207,89 +210,253 @@ public class BloodParticle extends TerrainParticle {
         int globalCenterV = FaceStroke.encodeV(face, blockV, centerV);
 
         ClientCanvasStore store = ClientCanvasStore.get();
-        Map<BlockPos, int[]> modifiedBlocks = new HashMap<>();
-        Map<Long, BlockPos> resolvedBlocks = new HashMap<>();
-        java.util.Set<Long> invalidBlocks = new java.util.HashSet<>();
+        Map<CanvasTarget, int[]> modifiedCanvases = new HashMap<>();
 
-        BloodSplatter.stampGlobal(globalCenterU, globalCenterV, argb, this.splatIndex, scale, (gu, gv, col) -> {
-            int bu = FaceStroke.blockOfU(face, gu);
-            int bv = FaceStroke.blockOfV(face, gv);
-            long blockKey = (((long) bu) << 32) | (((long) bv) & 0xFFFFFFFFL);
+        if (face == Direction.UP.get3DDataValue()) {
+            Set<BlockPos> solidTopBlocks = new HashSet<>();
 
-            if (invalidBlocks.contains(blockKey)) {
-                return;
-            }
+            BloodSplatter.stampGlobal(globalCenterU, globalCenterV, argb, this.splatIndex, scale, (gu, gv, col) -> {
+                int bu = FaceStroke.blockOfU(face, gu);
+                int bv = FaceStroke.blockOfV(face, gv);
+                int uTexel = gu - FaceStroke.encodeU(face, bu, 0);
+                int vTexel = gv - FaceStroke.encodeV(face, bv, 0);
 
-            int uTexel = gu - FaceStroke.encodeU(face, bu, 0);
-            int vTexel = gv - FaceStroke.encodeV(face, bv, 0);
+                if (uTexel < 0 || uTexel >= Canvas.SIZE || vTexel < 0 || vTexel >= Canvas.SIZE) {
+                    return;
+                }
 
-            if (uTexel < 0 || uTexel >= Canvas.SIZE || vTexel < 0 || vTexel >= Canvas.SIZE) {
-                return;
-            }
+                int wx = bu;
+                int wy = normal;
+                int wz = bv;
+                BlockPos colPos = new BlockPos(wx, wy, wz);
+                BlockPos surfacePos = resolveTopSurface(colPos);
 
-            BlockPos bPos = resolvedBlocks.get(blockKey);
-            if (bPos == null) {
-                int wx = FaceStroke.worldX(face, bu, bv, normal);
-                int wy = FaceStroke.worldY(face, bu, bv, normal);
-                int wz = FaceStroke.worldZ(face, bu, bv, normal);
-                bPos = new BlockPos(wx, wy, wz);
+                if (surfacePos != null) {
+                    paintTexel(modifiedCanvases, store, surfacePos, Direction.UP.get3DDataValue(), uTexel, vTexel, col);
+                    solidTopBlocks.add(surfacePos);
+                } else if (RedfxConfig.get().dripOverEdges) {
+                    // colPos is open air / drop-off! Find which adjacent solid block sheds into this column
+                    BlockPos bestNeighbor = null;
+                    Direction sideDir = null;
+                    int bestDist = Integer.MAX_VALUE;
 
-                if (face == Direction.UP.get3DDataValue()) {
-                    BlockState bs = this.level.getBlockState(bPos);
-                    BlockPos abovePos = bPos.above();
-                    BlockState aboveState = this.level.getBlockState(abovePos);
-                    if (!aboveState.isAir() && aboveState.getFluidState().isEmpty()) {
-                        double top = PaintSurface.topOf(this.level, abovePos, aboveState);
-                        if (top != PaintSurface.NONE && top < 1.0) {
-                            bPos = abovePos;
+                    // West neighbor (sheds East)
+                    BlockPos wPos = resolveTopSurface(colPos.west());
+                    if (wPos != null) {
+                        int dist = EdgeDrip.overhangDistance(FaceAxes.EAST, uTexel, vTexel);
+                        if (dist < bestDist || (dist == bestDist && wPos.equals(targetBlock))) {
+                            bestDist = dist;
+                            bestNeighbor = wPos;
+                            sideDir = Direction.EAST;
                         }
-                    } else if (bs.isAir()) {
-                        BlockPos belowPos = bPos.below();
-                        BlockState belowState = this.level.getBlockState(belowPos);
-                        if (!belowState.isAir() && belowState.getFluidState().isEmpty()
-                            && PaintSurface.topOf(this.level, belowPos, belowState) != PaintSurface.NONE) {
-                            bPos = belowPos;
+                    }
+                    // East neighbor (sheds West)
+                    BlockPos ePos = resolveTopSurface(colPos.east());
+                    if (ePos != null) {
+                        int dist = EdgeDrip.overhangDistance(FaceAxes.WEST, uTexel, vTexel);
+                        if (dist < bestDist || (dist == bestDist && ePos.equals(targetBlock))) {
+                            bestDist = dist;
+                            bestNeighbor = ePos;
+                            sideDir = Direction.WEST;
+                        }
+                    }
+                    // North neighbor (sheds South)
+                    BlockPos nPos = resolveTopSurface(colPos.north());
+                    if (nPos != null) {
+                        int dist = EdgeDrip.overhangDistance(FaceAxes.SOUTH, uTexel, vTexel);
+                        if (dist < bestDist || (dist == bestDist && nPos.equals(targetBlock))) {
+                            bestDist = dist;
+                            bestNeighbor = nPos;
+                            sideDir = Direction.SOUTH;
+                        }
+                    }
+                    // South neighbor (sheds North)
+                    BlockPos sPos = resolveTopSurface(colPos.south());
+                    if (sPos != null) {
+                        int dist = EdgeDrip.overhangDistance(FaceAxes.NORTH, uTexel, vTexel);
+                        if (dist < bestDist || (dist == bestDist && sPos.equals(targetBlock))) {
+                            bestDist = dist;
+                            bestNeighbor = sPos;
+                            sideDir = Direction.NORTH;
+                        }
+                    }
+
+                    if (bestNeighbor != null && sideDir != null) {
+                        BlockPos paintBlock = resolvePaintableSideBlock(bestNeighbor, sideDir);
+                        if (paintBlock != null) {
+                            int sideFace = sideDir.get3DDataValue();
+                            int uSide = EdgeDrip.sideU(sideFace, uTexel, vTexel);
+                            int vSide = bestDist;
+                            if (vSide < Canvas.SIZE) {
+                                paintTexel(modifiedCanvases, store, paintBlock, sideFace, uSide, vSide, col);
+                            }
                         }
                     }
                 }
+            });
 
-                BlockState bs = this.level.getBlockState(bPos);
-                if (bs.isAir() || !bs.getFluidState().isEmpty()) {
-                    invalidBlocks.add(blockKey);
-                    return;
+            if (RedfxConfig.get().dripOverEdges) {
+                Direction[] horizontalDirs = new Direction[] {
+                    Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST
+                };
+                for (BlockPos bPos : solidTopBlocks) {
+                    CanvasTarget topTarget = new CanvasTarget(bPos, Direction.UP.get3DDataValue());
+                    int[] topTexels = modifiedCanvases.get(topTarget);
+                    if (topTexels == null) continue;
+
+                    for (Direction hDir : horizontalDirs) {
+                        BlockPos neighborPos = bPos.relative(hDir);
+                        if (resolveTopSurface(neighborPos) == null) {
+                            BlockPos paintBlock = resolvePaintableSideBlock(bPos, hDir);
+                            if (paintBlock == null) continue;
+
+                            int sideFace = hDir.get3DDataValue();
+
+                            // 1. Connect rim pixels to vSide = 0
+                            for (int u = 0; u < Canvas.SIZE; u++) {
+                                int rimCol = switch (hDir) {
+                                    case NORTH -> topTexels[0 * Canvas.SIZE + u];
+                                    case SOUTH -> topTexels[15 * Canvas.SIZE + u];
+                                    case WEST -> topTexels[u * Canvas.SIZE + 0];
+                                    case EAST -> topTexels[u * Canvas.SIZE + 15];
+                                    default -> 0;
+                                };
+                                if (rimCol != 0) {
+                                    int uSide = switch (hDir) {
+                                        case NORTH -> EdgeDrip.sideU(sideFace, u, 0);
+                                        case SOUTH -> EdgeDrip.sideU(sideFace, u, 15);
+                                        case WEST -> EdgeDrip.sideU(sideFace, 0, u);
+                                        case EAST -> EdgeDrip.sideU(sideFace, 15, u);
+                                        default -> 0;
+                                    };
+                                    paintTexel(modifiedCanvases, store, paintBlock, sideFace, uSide, 0, rimCol);
+                                }
+                            }
+
+                            // 2. Drip elongation down the side face for columns with blood
+                            CanvasTarget sideTarget = new CanvasTarget(paintBlock, sideFace);
+                            int[] sideTexels = modifiedCanvases.get(sideTarget);
+                            if (sideTexels != null) {
+                                for (int uSide = 0; uSide < Canvas.SIZE; uSide++) {
+                                    int vMax = -1;
+                                    int vMaxCol = 0;
+                                    for (int v = Canvas.SIZE - 1; v >= 0; v--) {
+                                        int c = sideTexels[v * Canvas.SIZE + uSide];
+                                        if (c != 0) {
+                                            vMax = v;
+                                            vMaxCol = c;
+                                            break;
+                                        }
+                                    }
+                                    if (vMax >= 0) {
+                                        int extraDrip = EdgeDrip.extraDripLength(paintBlock.getX(), paintBlock.getZ(), sideFace, uSide, this.splatIndex);
+                                        int baseAlpha = (vMaxCol >>> 24);
+                                        int rgb = vMaxCol & 0xFFFFFF;
+                                        for (int step = 1; step <= extraDrip; step++) {
+                                            int dv = vMax + step;
+                                            if (dv >= Canvas.SIZE) break;
+                                            int dripAlpha = RedfxConfig.get().translucentEdges ? EdgeDrip.dripAlpha(baseAlpha, step) : 255;
+                                            int dripCol = (dripAlpha << 24) | rgb;
+                                            paintTexel(modifiedCanvases, store, paintBlock, sideFace, uSide, dv, dripCol);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
-                if (face == Direction.UP.get3DDataValue()) {
-                    if (PaintSurface.topOf(this.level, bPos, bs) == PaintSurface.NONE) {
+            }
+        } else {
+            Map<Long, BlockPos> resolvedBlocks = new HashMap<>();
+            Set<Long> invalidBlocks = new HashSet<>();
+
+            BloodSplatter.stampGlobal(globalCenterU, globalCenterV, argb, this.splatIndex, scale, (gu, gv, col) -> {
+                int bu = FaceStroke.blockOfU(face, gu);
+                int bv = FaceStroke.blockOfV(face, gv);
+                long blockKey = (((long) bu) << 32) | (((long) bv) & 0xFFFFFFFFL);
+
+                if (invalidBlocks.contains(blockKey)) return;
+
+                int uTexel = gu - FaceStroke.encodeU(face, bu, 0);
+                int vTexel = gv - FaceStroke.encodeV(face, bv, 0);
+                if (uTexel < 0 || uTexel >= Canvas.SIZE || vTexel < 0 || vTexel >= Canvas.SIZE) return;
+
+                BlockPos bPos = resolvedBlocks.get(blockKey);
+                if (bPos == null) {
+                    int wx = FaceStroke.worldX(face, bu, bv, normal);
+                    int wy = FaceStroke.worldY(face, bu, bv, normal);
+                    int wz = FaceStroke.worldZ(face, bu, bv, normal);
+                    bPos = new BlockPos(wx, wy, wz);
+
+                    BlockState bs = this.level.getBlockState(bPos);
+                    if (bs.isAir() || !bs.getFluidState().isEmpty()
+                        || !bs.isFaceSturdy(this.level, bPos, hitDirection) || !bs.isCollisionShapeFullBlock(this.level, bPos)) {
                         invalidBlocks.add(blockKey);
                         return;
                     }
-                } else if (!bs.isFaceSturdy(this.level, bPos, hitDirection) || !bs.isCollisionShapeFullBlock(this.level, bPos)) {
-                    invalidBlocks.add(blockKey);
-                    return;
+                    resolvedBlocks.put(blockKey, bPos);
                 }
 
-                resolvedBlocks.put(blockKey, bPos);
-            }
-
-            int[] texels = modifiedBlocks.get(bPos);
-            if (texels == null) {
-                Canvas existing = store.get(bPos, face);
-                texels = existing != null ? existing.texels().clone() : new int[Canvas.TEXELS];
-                modifiedBlocks.put(bPos, texels);
-            }
-
-            int idx = vTexel * Canvas.SIZE + uTexel;
-            int existing = texels[idx];
-            int existingAlpha = (existing >>> 24);
-            int newAlpha = (col >>> 24);
-            if (newAlpha > existingAlpha || (newAlpha == existingAlpha && existing != col)) {
-                texels[idx] = col;
-            }
-        });
+                paintTexel(modifiedCanvases, store, bPos, face, uTexel, vTexel, col);
+            });
+        }
 
         // Publish all modified block face canvases to the store
-        for (Map.Entry<BlockPos, int[]> entry : modifiedBlocks.entrySet()) {
-            store.put(entry.getKey(), face, new Canvas(entry.getValue(), expirationMs));
+        for (Map.Entry<CanvasTarget, int[]> entry : modifiedCanvases.entrySet()) {
+            store.put(entry.getKey().pos(), entry.getKey().face(), new Canvas(entry.getValue(), expirationMs));
+        }
+    }
+
+    private record CanvasTarget(BlockPos pos, int face) {
+    }
+
+    private BlockPos resolveTopSurface(BlockPos pos) {
+        BlockPos abovePos = pos.above();
+        BlockState aboveState = this.level.getBlockState(abovePos);
+        if (!aboveState.isAir() && aboveState.getFluidState().isEmpty()) {
+            double top = PaintSurface.topOf(this.level, abovePos, aboveState);
+            if (top != PaintSurface.NONE && top < 1.0) {
+                return abovePos;
+            }
+        }
+        BlockState bs = this.level.getBlockState(pos);
+        if (!bs.isAir() && bs.getFluidState().isEmpty() && PaintSurface.topOf(this.level, pos, bs) != PaintSurface.NONE) {
+            return pos;
+        }
+        return null;
+    }
+
+    private BlockPos resolvePaintableSideBlock(BlockPos pos, Direction sideDir) {
+        BlockState state = this.level.getBlockState(pos);
+        if (state.isFaceSturdy(this.level, pos, sideDir) || state.isCollisionShapeFullBlock(this.level, pos)) {
+            return pos;
+        }
+        BlockPos below = pos.below();
+        BlockState belowState = this.level.getBlockState(below);
+        if (belowState.isFaceSturdy(this.level, below, sideDir) || belowState.isCollisionShapeFullBlock(this.level, below)) {
+            return below;
+        }
+        return null;
+    }
+
+    private void paintTexel(Map<CanvasTarget, int[]> modifiedCanvases, ClientCanvasStore store,
+        BlockPos pos, int face, int u, int v, int col) {
+        if (u < 0 || u >= Canvas.SIZE || v < 0 || v >= Canvas.SIZE) {
+            return;
+        }
+        CanvasTarget target = new CanvasTarget(pos, face);
+        int[] texels = modifiedCanvases.get(target);
+        if (texels == null) {
+            Canvas existing = store.get(pos, face);
+            texels = existing != null ? existing.texels().clone() : new int[Canvas.TEXELS];
+            modifiedCanvases.put(target, texels);
+        }
+        int idx = v * Canvas.SIZE + u;
+        int existing = texels[idx];
+        int existingAlpha = (existing >>> 24);
+        int newAlpha = (col >>> 24);
+        if (newAlpha > existingAlpha || (newAlpha == existingAlpha && existing != col)) {
+            texels[idx] = col;
         }
     }
 }
