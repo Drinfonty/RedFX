@@ -84,7 +84,8 @@ public class RedfxWrapperModel extends WrapperBlockStateModel {
 
 		emitter.nominalFace(back ? direction.getOpposite() : direction);
 		emitter.cullFace(null);
-		emitter.renderLayer(ChunkSectionLayer.CUTOUT);
+		boolean isTranslucent = (argb >>> 24) < 255;
+		emitter.renderLayer(isTranslucent ? ChunkSectionLayer.TRANSLUCENT : ChunkSectionLayer.CUTOUT);
 		emitter.emit();
 	}
 
