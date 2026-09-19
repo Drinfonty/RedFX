@@ -451,9 +451,68 @@ public final class InGameSmokeTest {
 		}
 	}
 
+	private static boolean pressButton(Object button) {
+		try {
+			// 1. Search for declared onPress on class hierarchy
+			for (Class<?> c = button.getClass(); c != null && c != Object.class; c = c.getSuperclass()) {
+				try {
+					java.lang.reflect.Method m = c.getDeclaredMethod("onPress");
+					m.setAccessible(true);
+					m.invoke(button);
+					return true;
+				} catch (NoSuchMethodException ignored) {
+				}
+			}
+			// 2. Search for OnPress callback field
+			for (Class<?> c = button.getClass(); c != null && c != Object.class; c = c.getSuperclass()) {
+				for (java.lang.reflect.Field f : c.getDeclaredFields()) {
+					if (f.getType().getName().contains("OnPress")) {
+						f.setAccessible(true);
+						Object listener = f.get(button);
+						if (listener != null) {
+							for (java.lang.reflect.Method m : listener.getClass().getMethods()) {
+								if (m.getName().equals("onPress") && m.getParameterCount() == 1) {
+									m.setAccessible(true);
+									m.invoke(listener, button);
+									return true;
+								}
+							}
+						}
+					}
+				}
+			}
+		} catch (Throwable t) {
+			RedfxMod.LOGGER.warn("[SmokeTest] Error pressing button: " + t);
+		}
+		return false;
+	}
+
 	private static void tryAutoConfirmScreen(Minecraft client, Object screen) {
 		try {
-			// Check if screen has children/widgets (e.g. Button)
+			// 1. Direct callback check (e.g. BackupConfirmScreen listener or ConfirmScreen accept)
+			for (java.lang.reflect.Field f : screen.getClass().getDeclaredFields()) {
+				f.setAccessible(true);
+				Object val = f.get(screen);
+				if (val != null) {
+					for (java.lang.reflect.Method cbMethod : val.getClass().getMethods()) {
+						if (cbMethod.getName().equals("proceed") && cbMethod.getParameterCount() == 2) {
+							RedfxMod.LOGGER.info("[SmokeTest] Invoking proceed(false, false) on: " + screen.getClass().getSimpleName());
+							cbMethod.setAccessible(true);
+							cbMethod.invoke(val, false, false);
+							return;
+						}
+						if ((cbMethod.getName().equals("accept") && cbMethod.getParameterCount() == 1
+								&& cbMethod.getParameterTypes()[0] == boolean.class)) {
+							RedfxMod.LOGGER.info("[SmokeTest] Invoking accept(true) on: " + screen.getClass().getSimpleName());
+							cbMethod.setAccessible(true);
+							cbMethod.invoke(val, true);
+							return;
+						}
+					}
+				}
+			}
+
+			// 2. Check if screen has children/widgets (e.g. Button)
 			java.lang.reflect.Method childrenMethod = null;
 			for (java.lang.reflect.Method m : screen.getClass().getMethods()) {
 				if (m.getName().equals("children") && m.getParameterCount() == 0) {
@@ -464,12 +523,15 @@ public final class InGameSmokeTest {
 			if (childrenMethod != null) {
 				Object childrenObj = childrenMethod.invoke(screen);
 				if (childrenObj instanceof Iterable<?> iterable) {
+					Object bestButton = null;
+					int bestScore = -1;
+					String bestLabel = "";
+
 					for (Object child : iterable) {
 						if (child == null) continue;
 						String childName = child.getClass().getName().toLowerCase(java.util.Locale.ROOT);
 						if (!childName.contains("button")) continue;
 
-						// Check button text
 						String label = "";
 						try {
 							java.lang.reflect.Method getMessage = child.getClass().getMethod("getMessage");
@@ -480,42 +542,37 @@ public final class InGameSmokeTest {
 							}
 						} catch (Throwable ignored) {}
 
-						String lowerLabel = label.toLowerCase(java.util.Locale.ROOT);
-						if (lowerLabel.contains("load") || lowerLabel.contains("proceed")
-								|| lowerLabel.contains("continue") || lowerLabel.contains("yes")
-								|| lowerLabel.contains("backup") || lowerLabel.contains("know what i'm doing")
-								|| lowerLabel.contains("safe mode") || lowerLabel.contains("i know")) {
-							RedfxMod.LOGGER.info("[SmokeTest] Auto-pressing button: '" + label + "' (" + child.getClass().getSimpleName() + ")");
-							java.lang.reflect.Method onPress = child.getClass().getMethod("onPress");
-							onPress.invoke(child);
-							return;
+						String lower = label.toLowerCase(java.util.Locale.ROOT);
+						if (lower.contains("cancel") || lower.contains("create backup") || lower.contains("no")) {
+							continue;
+						}
+
+						int score = -1;
+						if (lower.contains("know what i'm doing") || lower.contains("i know") || lower.contains("skip")) {
+							score = 100;
+						} else if (lower.contains("safe mode") || lower.contains("load anyway")) {
+							score = 80;
+						} else if (lower.contains("proceed") || lower.contains("continue") || lower.contains("yes") || lower.contains("load")) {
+							score = 50;
+						}
+
+						if (score > bestScore) {
+							bestScore = score;
+							bestButton = child;
+							bestLabel = label;
 						}
 					}
-				}
-			}
 
-			// Fallback: Check if screen has callback field (like BooleanConsumer in ConfirmScreen)
-			for (java.lang.reflect.Field f : screen.getClass().getDeclaredFields()) {
-				f.setAccessible(true);
-				Object val = f.get(screen);
-				if (val != null) {
-					for (java.lang.reflect.Method cbMethod : val.getClass().getMethods()) {
-						if ((cbMethod.getName().equals("accept") && cbMethod.getParameterCount() == 1
-								&& cbMethod.getParameterTypes()[0] == boolean.class)) {
-							RedfxMod.LOGGER.info("[SmokeTest] Invoking confirm callback on screen: " + screen.getClass().getSimpleName());
-							cbMethod.invoke(val, true);
-							return;
-						}
-						if (cbMethod.getName().equals("proceed") && cbMethod.getParameterCount() == 2) {
-							RedfxMod.LOGGER.info("[SmokeTest] Invoking proceed callback on screen: " + screen.getClass().getSimpleName());
-							cbMethod.invoke(val, false, false);
+					if (bestButton != null) {
+						RedfxMod.LOGGER.info("[SmokeTest] Auto-pressing button: '" + bestLabel + "' (" + bestButton.getClass().getSimpleName() + ", score " + bestScore + ")");
+						if (pressButton(bestButton)) {
 							return;
 						}
 					}
 				}
 			}
 		} catch (Throwable t) {
-			RedfxMod.LOGGER.debug("[SmokeTest] tryAutoConfirmScreen error: " + t);
+			RedfxMod.LOGGER.warn("[SmokeTest] tryAutoConfirmScreen error: " + t);
 		}
 	}
 
