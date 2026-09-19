@@ -22,7 +22,7 @@ public class RedfxConfigScreen extends Screen {
         int buttonWidth = 230;
         int buttonHeight = 20;
         int x = (this.width - buttonWidth) / 2;
-        int startY = this.height / 2 - 75;
+        int startY = this.height / 2 - 85;
         int colWidth = 112;
         int leftX = x;
         int rightX = x + 118;
@@ -174,6 +174,16 @@ public class RedfxConfigScreen extends Screen {
         };
         this.addRenderableWidget(saturationSlider);
 
+        // Button: Toggle Soft Edges
+        Button softEdgesToggle = Button.builder(
+            getSoftEdgesButtonMessage(config),
+            btn -> {
+                config.translucentEdges = !config.translucentEdges;
+                btn.setMessage(getSoftEdgesButtonMessage(config));
+            }
+        ).bounds(x, startY + 125, buttonWidth, buttonHeight).build();
+        this.addRenderableWidget(softEdgesToggle);
+
         // Button: Done / Close
         Button doneButton = Button.builder(
             Component.literal("Done"),
@@ -183,7 +193,7 @@ public class RedfxConfigScreen extends Screen {
                     this.minecraft.setScreen(this.parent);
                 }
             }
-        ).bounds(leftX, startY + 130, colWidth, buttonHeight).build();
+        ).bounds(leftX, startY + 150, colWidth, buttonHeight).build();
         this.addRenderableWidget(doneButton);
 
         // Button: Reset Defaults
@@ -193,8 +203,12 @@ public class RedfxConfigScreen extends Screen {
                 config.resetToDefaults();
                 this.rebuildWidgets();
             }
-        ).bounds(rightX, startY + 130, colWidth, buttonHeight).build();
+        ).bounds(rightX, startY + 150, colWidth, buttonHeight).build();
         this.addRenderableWidget(resetButton);
+    }
+
+    private Component getSoftEdgesButtonMessage(RedfxConfig config) {
+        return Component.literal("Soft Edges: " + (config.translucentEdges ? "ON" : "OFF"));
     }
 
     private Component getBloodButtonMessage(RedfxConfig config) {

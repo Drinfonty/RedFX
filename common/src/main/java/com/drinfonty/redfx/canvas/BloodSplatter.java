@@ -105,8 +105,75 @@ public final class BloodSplatter {
 			}
 		}
 
+		int rgb = argb & 0xFFFFFF;
+		boolean enableTranslucent = com.drinfonty.redfx.config.RedfxConfig.get().translucentEdges;
+
+		if (!enableTranslucent) {
+			for (TexelPos p : points) {
+				writer.setTexel(p.u, p.v, 0xFF000000 | rgb);
+			}
+			return;
+		}
+
+		// Distance-to-boundary analysis of existing splat pixels (no extra pixels added):
+		// d1: pixels on the outermost perimeter (have at least one cardinal neighbor outside the splat)
+		Set<TexelPos> d1 = new HashSet<>();
 		for (TexelPos p : points) {
-			writer.setTexel(p.u, p.v, argb);
+			if (!points.contains(new TexelPos(p.u - 1, p.v))
+				|| !points.contains(new TexelPos(p.u + 1, p.v))
+				|| !points.contains(new TexelPos(p.u, p.v - 1))
+				|| !points.contains(new TexelPos(p.u, p.v + 1))) {
+				d1.add(p);
+			}
+		}
+
+		// d2: pixels 1 step inward from the perimeter (adjacent to d1, but not on the outer boundary)
+		Set<TexelPos> d2 = new HashSet<>();
+		for (TexelPos p : points) {
+			if (d1.contains(p)) continue;
+			if (d1.contains(new TexelPos(p.u - 1, p.v))
+				|| d1.contains(new TexelPos(p.u + 1, p.v))
+				|| d1.contains(new TexelPos(p.u, p.v - 1))
+				|| d1.contains(new TexelPos(p.u, p.v + 1))) {
+				d2.add(p);
+			}
+		}
+
+		boolean hasInterior = points.size() > d1.size();
+
+		for (TexelPos p : points) {
+			int alpha;
+			if (!d1.contains(p) && !d2.contains(p)) {
+				// Deep core: 100% opaque
+				alpha = 255;
+			} else if (d2.contains(p)) {
+				// Inner transition edge (1 step inward from perimeter): ~76% opacity
+				alpha = 195;
+			} else {
+				// Outermost edge (d1): progressively more transparent farther out
+				int cardinalNeighbors = 0;
+				if (points.contains(new TexelPos(p.u - 1, p.v))) cardinalNeighbors++;
+				if (points.contains(new TexelPos(p.u + 1, p.v))) cardinalNeighbors++;
+				if (points.contains(new TexelPos(p.u, p.v - 1))) cardinalNeighbors++;
+				if (points.contains(new TexelPos(p.u, p.v + 1))) cardinalNeighbors++;
+
+				if (!hasInterior && cardinalNeighbors >= 3) {
+					// In a tiny speck with no core, keep center pixels mostly solid
+					alpha = 220;
+				} else if (cardinalNeighbors <= 1) {
+					// Outermost tips / spurs: most transparent (~37% opacity)
+					alpha = 95;
+				} else if (cardinalNeighbors == 2) {
+					// Corners / exposed edges (~47% opacity)
+					alpha = 120;
+				} else {
+					// Perimeter borders (~57% opacity)
+					alpha = 145;
+				}
+			}
+
+			int col = (alpha << 24) | rgb;
+			writer.setTexel(p.u, p.v, col);
 		}
 	}
 
@@ -115,7 +182,10 @@ public final class BloodSplatter {
 		stampGlobal(centerU, centerV, argb, splatIndex, scale, (gu, gv, col) -> {
 			if (gu >= 0 && gu < Canvas.SIZE && gv >= 0 && gv < Canvas.SIZE) {
 				int idx = gv * Canvas.SIZE + gu;
-				if (texels[idx] != col) {
+				int existing = texels[idx];
+				int existingAlpha = (existing >>> 24);
+				int newAlpha = (col >>> 24);
+				if (newAlpha > existingAlpha || (newAlpha == existingAlpha && existing != col)) {
 					texels[idx] = col;
 					changed[0] = true;
 				}
