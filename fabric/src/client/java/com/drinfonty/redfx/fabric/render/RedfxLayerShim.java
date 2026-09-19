@@ -6,11 +6,11 @@ public final class RedfxLayerShim {
 	private RedfxLayerShim() {
 	}
 
-	public static void applyCutout(QuadEmitter emitter) {
+	public static void apply(QuadEmitter emitter, boolean isTranslucent) {
 		if (RedfxChunkLayerHelper.isAvailable()) {
-			RedfxChunkLayerHelper.apply(emitter);
+			RedfxChunkLayerHelper.apply(emitter, isTranslucent);
 		} else {
-			RedfxMaterialLayerHelper.apply(emitter);
+			RedfxMaterialLayerHelper.apply(emitter, isTranslucent);
 		}
 	}
 }

@@ -9,6 +9,7 @@ import net.fabricmc.loader.api.FabricLoader;
 
 final class RedfxChunkLayerHelper {
 	private static Object cutoutLayer;
+	private static Object translucentLayer;
 	private static MethodHandle renderLayerHandle;
 	private static boolean available = false;
 	private static boolean initialized = false;
@@ -30,6 +31,7 @@ final class RedfxChunkLayerHelper {
 			@SuppressWarnings("unchecked")
 			Class<? extends Enum> enumClass = (Class<? extends Enum>) layerClass;
 			cutoutLayer = Enum.valueOf(enumClass, "CUTOUT");
+			translucentLayer = Enum.valueOf(enumClass, "TRANSLUCENT");
 
 			MethodType type = MethodType.methodType(QuadEmitter.class, layerClass);
 			renderLayerHandle = MethodHandles.publicLookup().findVirtual(QuadEmitter.class, "renderLayer", type);
@@ -40,11 +42,14 @@ final class RedfxChunkLayerHelper {
 		return available;
 	}
 
-	static void apply(QuadEmitter emitter) {
-		if (isAvailable() && renderLayerHandle != null && cutoutLayer != null) {
-			try {
-				renderLayerHandle.invoke(emitter, cutoutLayer);
-			} catch (Throwable ignored) {
+	static void apply(QuadEmitter emitter, boolean isTranslucent) {
+		if (isAvailable() && renderLayerHandle != null) {
+			Object layer = isTranslucent ? translucentLayer : cutoutLayer;
+			if (layer != null) {
+				try {
+					renderLayerHandle.invoke(emitter, layer);
+				} catch (Throwable ignored) {
+				}
 			}
 		}
 	}

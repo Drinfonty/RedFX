@@ -11,7 +11,8 @@ import net.fabricmc.fabric.api.renderer.v1.Renderer;
 import net.fabricmc.fabric.api.renderer.v1.mesh.QuadEmitter;
 
 final class RedfxMaterialLayerHelper {
-	private static Object cachedMaterial;
+	private static Object cachedCutoutMaterial;
+	private static Object cachedTranslucentMaterial;
 	private static MethodHandle materialMethodHandle;
 	private static boolean initialized = false;
 
@@ -32,34 +33,39 @@ final class RedfxMaterialLayerHelper {
 			}
 
 			Method materialFinderMethod = renderer.getClass().getMethod("materialFinder");
-			Object finder = materialFinderMethod.invoke(renderer);
-
 			@SuppressWarnings("unchecked")
 			Class<? extends Enum> blendModeClass = (Class<? extends Enum>) Class.forName("net.fabricmc.fabric.api.renderer.v1.material.BlendMode");
+			Method blendModeMethod = materialFinderMethod.getReturnType().getMethod("blendMode", blendModeClass);
+			Method findMethod = materialFinderMethod.getReturnType().getMethod("find");
+
 			@SuppressWarnings("unchecked")
 			Enum<?> cutoutEnum = Enum.valueOf(blendModeClass, "CUTOUT");
+			Object cutoutFinder = materialFinderMethod.invoke(renderer);
+			blendModeMethod.invoke(cutoutFinder, cutoutEnum);
+			cachedCutoutMaterial = findMethod.invoke(cutoutFinder);
 
-			Method blendModeMethod = finder.getClass().getMethod("blendMode", blendModeClass);
-			blendModeMethod.invoke(finder, cutoutEnum);
-
-			Method findMethod = finder.getClass().getMethod("find");
-			cachedMaterial = findMethod.invoke(finder);
+			@SuppressWarnings("unchecked")
+			Enum<?> translucentEnum = Enum.valueOf(blendModeClass, "TRANSLUCENT");
+			Object translucentFinder = materialFinderMethod.invoke(renderer);
+			blendModeMethod.invoke(translucentFinder, translucentEnum);
+			cachedTranslucentMaterial = findMethod.invoke(translucentFinder);
 
 			Class<?> renderMaterialClass = Class.forName("net.fabricmc.fabric.api.renderer.v1.material.RenderMaterial");
 			MethodType type = MethodType.methodType(QuadEmitter.class, renderMaterialClass);
 			materialMethodHandle = MethodHandles.publicLookup().findVirtual(QuadEmitter.class, "material", type);
 		} catch (Throwable t) {
-			RedfxMod.LOGGER.error("Failed to initialize legacy FRAPI cutout material for 1.21.5 fallback", t);
+			RedfxMod.LOGGER.error("Failed to initialize legacy FRAPI materials for fallback", t);
 		}
 	}
 
-	static void apply(QuadEmitter emitter) {
-		if (cachedMaterial == null) {
+	static void apply(QuadEmitter emitter, boolean isTranslucent) {
+		if (cachedCutoutMaterial == null || cachedTranslucentMaterial == null) {
 			initMaterial();
 		}
-		if (materialMethodHandle != null && cachedMaterial != null) {
+		Object material = isTranslucent ? cachedTranslucentMaterial : cachedCutoutMaterial;
+		if (materialMethodHandle != null && material != null) {
 			try {
-				materialMethodHandle.invoke(emitter, cachedMaterial);
+				materialMethodHandle.invoke(emitter, material);
 			} catch (Throwable ignored) {
 			}
 		}
