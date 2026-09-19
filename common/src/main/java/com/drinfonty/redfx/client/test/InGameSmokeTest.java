@@ -364,7 +364,12 @@ public final class InGameSmokeTest {
 			} catch (Throwable ignored) {
 			}
 
-			// 0. Clear vegetation and obstructions above arena
+			// 0. Enforce difficulty and freeze ambient gamerules
+			commands.performPrefixedCommand(source, "difficulty normal");
+			commands.performPrefixedCommand(source, "gamerule doMobSpawning false");
+			commands.performPrefixedCommand(source, "gamerule doDaylightCycle false");
+
+			// 0a. Clear vegetation and obstructions above arena
 			commands.performPrefixedCommand(source, String.format(java.util.Locale.ROOT,
 				"fill %d %d %d %d %d %d air", ox - 3, floorY, oz - 3, ox + 3, floorY + 5, oz + 3));
 
