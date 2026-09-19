@@ -17,18 +17,7 @@ ALL_BRANCHES = [
     "mc-1.21.1",
 ]
 
-DEFAULT_WORLDS = {
-    "26.3": "New World",
-    "26.2": "New World",
-    "26.1.2": "New World (1)",
-    "26.1.1": "New World (1)",
-    "26.1": "New World (1)",
-    "1.21.11": "New World (2)",
-    "1.21.10": "New World (3)",
-    "1.21.8": "New World (5)",
-    "1.21.4": "New World (4)",
-    "1.21.1": "New World (4)",
-}
+import tarfile
 
 def get_mc_version(project_root):
     props = os.path.join(project_root, "gradle.properties")
@@ -40,11 +29,34 @@ def get_mc_version(project_root):
                     return line.split("=", 1)[1].strip()
     return "unknown"
 
+def prepare_test_world(project_root, loader, mc_slug, world):
+    if world != "auto":
+        return world
+
+    world_name = f"smoke_{mc_slug}"
+    saves_dir = os.path.join(project_root, loader, "run", "saves")
+    os.makedirs(saves_dir, exist_ok=True)
+    world_path = os.path.join(saves_dir, world_name)
+    if os.path.exists(world_path):
+        shutil.rmtree(world_path)
+
+    template_tar = os.path.join(project_root, "scripts", "smoke_test_world.tar.gz")
+    if not os.path.exists(template_tar):
+        raise FileNotFoundError(f"Smoke test world template not found: {template_tar}")
+
+    with tarfile.open(template_tar, "r:gz") as tar:
+        tar.extractall(saves_dir)
+
+    extracted_path = os.path.join(saves_dir, "smoke_test_world")
+    if extracted_path != world_path:
+        os.rename(extracted_path, world_path)
+
+    return world_name
+
 def run_single_test(project_root, loader, world):
     mc_version = get_mc_version(project_root)
     mc_slug = mc_version.replace(".", "_")
-    if world == "auto":
-        world = DEFAULT_WORLDS.get(mc_version, "New World")
+    world = prepare_test_world(project_root, loader, mc_slug, world)
 
     if loader == "neoforge":
         settings_path = os.path.join(project_root, "settings.gradle")

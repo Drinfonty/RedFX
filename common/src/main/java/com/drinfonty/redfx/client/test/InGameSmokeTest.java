@@ -149,7 +149,20 @@ public final class InGameSmokeTest {
 
 				// Perform client attack
 				client.gameMode.attack(client.player, targetMob);
-				client.player.swing(InteractionHand.MAIN_HAND);
+				try {
+					for (java.lang.reflect.Method m : client.player.getClass().getMethods()) {
+						if (m.getName().equals("swing")) {
+							if (m.getParameterCount() == 1) {
+								m.invoke(client.player, InteractionHand.MAIN_HAND);
+								break;
+							} else if (m.getParameterCount() == 3) {
+								m.invoke(client.player, InteractionHand.MAIN_HAND, null, true);
+								break;
+							}
+						}
+					}
+				} catch (Throwable ignored) {
+				}
 
 				RedfxMod.LOGGER.info("Executed attack on mob. Awaiting blood particle flight and splatter...");
 				state = 3;
@@ -351,7 +364,12 @@ public final class InGameSmokeTest {
 			} catch (Throwable ignored) {
 			}
 
-			// 0. Clear vegetation and obstructions above arena
+			// 0. Enforce difficulty and freeze ambient gamerules
+			commands.performPrefixedCommand(source, "difficulty normal");
+			commands.performPrefixedCommand(source, "gamerule doMobSpawning false");
+			commands.performPrefixedCommand(source, "gamerule doDaylightCycle false");
+
+			// 0a. Clear vegetation and obstructions above arena
 			commands.performPrefixedCommand(source, String.format(java.util.Locale.ROOT,
 				"fill %d %d %d %d %d %d air", ox - 3, floorY, oz - 3, ox + 3, floorY + 5, oz + 3));
 
