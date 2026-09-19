@@ -578,6 +578,14 @@ public final class InGameSmokeTest {
 
 	private static void captureScreenshot(Minecraft client) {
 		try {
+			try {
+				java.lang.reflect.Method m = net.minecraft.client.Screenshot.class.getMethod("grab", Minecraft.class, boolean.class);
+				m.invoke(null, client, false);
+				RedfxMod.LOGGER.info("Called Screenshot.grab(Minecraft, boolean) successfully!");
+				return;
+			} catch (NoSuchMethodException ignored) {
+			}
+
 			for (java.lang.reflect.Method m : net.minecraft.client.Screenshot.class.getMethods()) {
 				if (!m.getName().equals("grab") || !java.lang.reflect.Modifier.isStatic(m.getModifiers())) {
 					continue;
@@ -585,25 +593,34 @@ public final class InGameSmokeTest {
 				Class<?>[] params = m.getParameterTypes();
 				// Modern 26.2+: grab(Minecraft, boolean)
 				if (params.length == 2 && params[0].isAssignableFrom(client.getClass()) && params[1] == boolean.class) {
-					m.invoke(null, client, false);
-					RedfxMod.LOGGER.info("Called Screenshot.grab(Minecraft, boolean) successfully!");
-					return;
+					try {
+						m.invoke(null, client, false);
+						RedfxMod.LOGGER.info("Called Screenshot.grab(Minecraft, boolean) successfully!");
+						return;
+					} catch (Throwable ignored) {
+					}
 				}
 				// Standard: grab(File, RenderTarget, Consumer)
 				if (params.length == 3 && params[0] == File.class && params[2] == java.util.function.Consumer.class) {
-					java.lang.reflect.Method getTarget = client.getClass().getMethod("getMainRenderTarget");
-					Object target = getTarget.invoke(client);
-					m.invoke(null, client.gameDirectory, target, (java.util.function.Consumer<net.minecraft.network.chat.Component>) msg -> {});
-					RedfxMod.LOGGER.info("Called Screenshot.grab(File, RenderTarget, Consumer) successfully!");
-					return;
+					try {
+						java.lang.reflect.Method getTarget = client.getClass().getMethod("getMainRenderTarget");
+						Object target = getTarget.invoke(client);
+						m.invoke(null, client.gameDirectory, target, (java.util.function.Consumer<net.minecraft.network.chat.Component>) msg -> {});
+						RedfxMod.LOGGER.info("Called Screenshot.grab(File, RenderTarget, Consumer) successfully!");
+						return;
+					} catch (Throwable ignored) {
+					}
 				}
 				// 4-arg variant: grab(File, String, RenderTarget, Consumer)
 				if (params.length == 4 && params[0] == File.class && params[1] == String.class && params[3] == java.util.function.Consumer.class) {
-					java.lang.reflect.Method getTarget = client.getClass().getMethod("getMainRenderTarget");
-					Object target = getTarget.invoke(client);
-					m.invoke(null, client.gameDirectory, null, target, (java.util.function.Consumer<net.minecraft.network.chat.Component>) msg -> {});
-					RedfxMod.LOGGER.info("Called Screenshot.grab(File, String, RenderTarget, Consumer) successfully!");
-					return;
+					try {
+						java.lang.reflect.Method getTarget = client.getClass().getMethod("getMainRenderTarget");
+						Object target = getTarget.invoke(client);
+						m.invoke(null, client.gameDirectory, null, target, (java.util.function.Consumer<net.minecraft.network.chat.Component>) msg -> {});
+						RedfxMod.LOGGER.info("Called Screenshot.grab(File, String, RenderTarget, Consumer) successfully!");
+						return;
+					} catch (Throwable ignored) {
+					}
 				}
 			}
 		} catch (Throwable t) {
