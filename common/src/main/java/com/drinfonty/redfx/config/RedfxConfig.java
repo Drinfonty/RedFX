@@ -19,6 +19,7 @@ public class RedfxConfig {
     public float particleSizeScale = 1.0f; // Range: 0.5 to 2.0
     public float splatSizeScale = 1.0f; // Range: 0.5 to 2.0
     public float colorSaturation = 1.0f; // Range: 0.0 to 2.0
+    public boolean translucentEdges = true; // Translucent gradient falloff on splatter edges
 
     private static RedfxConfig instance;
 
@@ -93,6 +94,7 @@ public class RedfxConfig {
         this.particleSizeScale = 1.0f;
         this.splatSizeScale = 1.0f;
         this.colorSaturation = 1.0f;
+        this.translucentEdges = true;
     }
 
     public float getMultiplier() {
