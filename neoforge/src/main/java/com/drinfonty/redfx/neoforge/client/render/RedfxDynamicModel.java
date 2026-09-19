@@ -42,7 +42,7 @@ public class RedfxDynamicModel extends BakedModelWrapper<BakedModel> {
 	private static final Map<CacheKey, List<BakedQuad>> CACHE = new ConcurrentHashMap<>();
 	private static final int MAX_CACHED_CANVASES = 8192;
 
-	private record CacheKey(Canvas canvas, int face, float surfaceY, boolean seeThrough) {
+	private record CacheKey(Canvas canvas, int face, float surfaceY, boolean seeThrough, @Nullable RenderType renderType) {
 	}
 
 	public RedfxDynamicModel(BakedModel wrapped) {
@@ -74,7 +74,7 @@ public class RedfxDynamicModel extends BakedModelWrapper<BakedModel> {
 	public ChunkRenderTypeSet getRenderTypes(BlockState state, RandomSource rand, ModelData data) {
 		ChunkRenderTypeSet base = super.getRenderTypes(state, rand, data);
 		if (data.has(BLOOD_PROPERTY)) {
-			return ChunkRenderTypeSet.union(base, ChunkRenderTypeSet.of(RenderType.cutout()));
+			return ChunkRenderTypeSet.union(base, ChunkRenderTypeSet.of(RenderType.cutout(), RenderType.translucent()));
 		}
 		return base;
 	}
@@ -88,7 +88,7 @@ public class RedfxDynamicModel extends BakedModelWrapper<BakedModel> {
 			return base;
 		}
 
-		if (renderType != null && renderType != RenderType.cutout()) {
+		if (renderType != null && renderType != RenderType.cutout() && renderType != RenderType.translucent()) {
 			return base;
 		}
 
@@ -114,8 +114,8 @@ public class RedfxDynamicModel extends BakedModelWrapper<BakedModel> {
 
 			for (PaintSurface.SurfaceCanvas sc : PaintSurface.splitCanvas(null, data.pos, state, face, canvas)) {
 				List<BakedQuad> faceQuads = CACHE.computeIfAbsent(
-					new CacheKey(sc.canvas(), currentFace, sc.surfaceY(), data.seeThrough),
-					key -> build(key.canvas(), key.face(), key.surfaceY(), key.seeThrough()));
+					new CacheKey(sc.canvas(), currentFace, sc.surfaceY(), data.seeThrough, renderType),
+					key -> build(key.canvas(), key.face(), key.surfaceY(), key.seeThrough(), key.renderType()));
 
 				if (quads == null) {
 					quads = new ArrayList<>(base.size() + faceQuads.size() * 2);
@@ -133,13 +133,21 @@ public class RedfxDynamicModel extends BakedModelWrapper<BakedModel> {
 		return quads != null ? quads : base;
 	}
 
-	private static List<BakedQuad> build(Canvas canvas, int face, float surfaceY, boolean seeThrough) {
+	private static List<BakedQuad> build(Canvas canvas, int face, float surfaceY, boolean seeThrough, @Nullable RenderType renderType) {
 		Direction direction = Direction.from3DDataValue(face);
 		List<PaintQuad> rectangles = CanvasMesher.mesh(canvas.texels(), face);
 		List<BakedQuad> quads = new ArrayList<>(rectangles.size() * (seeThrough ? 2 : 1));
 		float[] corners = new float[12];
 
 		for (PaintQuad rectangle : rectangles) {
+			boolean isTranslucent = (rectangle.argb() >>> 24) < 255;
+			if (renderType == RenderType.cutout() && isTranslucent) {
+				continue;
+			}
+			if (renderType == RenderType.translucent() && !isTranslucent) {
+				continue;
+			}
+
 			PaintGeometry.corners(rectangle, corners, surfaceY);
 			quads.add(bake(corners, direction, rectangle.argb(), false));
 

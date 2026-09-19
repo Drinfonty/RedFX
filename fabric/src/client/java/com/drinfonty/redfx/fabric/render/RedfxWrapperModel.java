@@ -95,12 +95,15 @@ public class RedfxWrapperModel extends ForwardingBakedModel {
 
 		emitter.nominalFace(back ? direction.getOpposite() : direction);
 		emitter.cullFace(null);
-		RenderMaterial mat = getCutoutMaterial();
+		boolean isTranslucent = (argb >>> 24) < 255;
+		RenderMaterial mat = isTranslucent ? getTranslucentMaterial() : getCutoutMaterial();
 		if (mat != null) {
 			emitter.material(mat);
 		}
 		emitter.emit();
 	}
+
+	private static RenderMaterial translucentMaterial;
 
 	private static RenderMaterial getCutoutMaterial() {
 		if (cutoutMaterial == null) {
@@ -110,6 +113,16 @@ public class RedfxWrapperModel extends ForwardingBakedModel {
 			}
 		}
 		return cutoutMaterial;
+	}
+
+	private static RenderMaterial getTranslucentMaterial() {
+		if (translucentMaterial == null) {
+			var renderer = RendererAccess.INSTANCE.getRenderer();
+			if (renderer != null) {
+				translucentMaterial = renderer.materialFinder().blendMode(BlendMode.TRANSLUCENT).find();
+			}
+		}
+		return translucentMaterial;
 	}
 
 	private static float uOf(int vertex) {
