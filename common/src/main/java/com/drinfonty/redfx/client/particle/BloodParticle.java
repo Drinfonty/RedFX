@@ -279,7 +279,12 @@ public class BloodParticle extends TerrainParticle {
             }
 
             int idx = vTexel * Canvas.SIZE + uTexel;
-            texels[idx] = col;
+            int existing = texels[idx];
+            int existingAlpha = (existing >>> 24);
+            int newAlpha = (col >>> 24);
+            if (newAlpha > existingAlpha || (newAlpha == existingAlpha && existing != col)) {
+                texels[idx] = col;
+            }
         });
 
         // Publish all modified block face canvases to the store

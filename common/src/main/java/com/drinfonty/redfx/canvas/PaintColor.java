@@ -18,7 +18,7 @@ public final class PaintColor {
 	}
 
 	public static int normalise(int texel) {
-		return isPainted(texel) ? opaque(texel) : EMPTY;
+		return isPainted(texel) ? texel : EMPTY;
 	}
 
 	public static int fromRgb(float r, float g, float b) {
