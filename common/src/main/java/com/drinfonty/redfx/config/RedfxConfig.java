@@ -21,6 +21,8 @@ public class RedfxConfig {
     public float colorSaturation = 1.0f; // Range: 0.0 to 2.0
     public boolean translucentEdges = true; // Translucent gradient falloff on splatter edges
     public boolean dripOverEdges = true; // Wrap and drip splatters over block edges into open air
+    public boolean gradualSplatter = true; // Splatters blossom outward gradually (core -> sub-perimeter -> edge)
+    public int splatterGrowthDelayTicks = 1; // Delay in ticks between growth stages (1 = 50ms, 2 = 100ms)
 
     private static RedfxConfig instance;
 
@@ -97,6 +99,8 @@ public class RedfxConfig {
         this.colorSaturation = 1.0f;
         this.translucentEdges = true;
         this.dripOverEdges = true;
+        this.gradualSplatter = true;
+        this.splatterGrowthDelayTicks = 1;
     }
 
     public float getMultiplier() {

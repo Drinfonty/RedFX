@@ -67,7 +67,14 @@ public final class ClientCanvasStore {
 		return INSTANCE;
 	}
 
+	public record PendingTexel(BlockPos pos, int face, int u, int v, int col, long expirationMs) {
+	}
+
+	private record PendingStage(long executeAtMs, List<PendingTexel> texels) {
+	}
+
 	private final ConcurrentHashMap<Long, Long2ObjectMap<Canvas>> chunks = new ConcurrentHashMap<>();
+	private final List<PendingStage> pendingStages = new ArrayList<>();
 
 	private ClientCanvasStore() {
 	}
@@ -98,7 +105,90 @@ public final class ClientCanvasStore {
 	}
 
 	public boolean hasAnyBlood() {
-		return !chunks.isEmpty();
+		return !chunks.isEmpty() || !pendingStages.isEmpty();
+	}
+
+	public synchronized void scheduleStage(long executeAtMs, List<PendingTexel> texels) {
+		if (texels == null || texels.isEmpty()) {
+			return;
+		}
+		pendingStages.add(new PendingStage(executeAtMs, texels));
+	}
+
+	public synchronized void applyTexels(List<PendingTexel> texels) {
+		if (texels == null || texels.isEmpty()) {
+			return;
+		}
+		LongOpenHashSet toDirtySections = new LongOpenHashSet();
+		applyTexelsInternal(texels, toDirtySections);
+		for (long secKey : toDirtySections) {
+			dirtySectionCoord(unpackSectionX(secKey), unpackSectionY(secKey), unpackSectionZ(secKey));
+		}
+	}
+
+	private void applyTexelsInternal(List<PendingTexel> texels, LongOpenHashSet toDirtySections) {
+		Map<Long, Map<Long, List<PendingTexel>>> grouped = new java.util.HashMap<>();
+		for (PendingTexel pt : texels) {
+			if (pt.u < 0 || pt.u >= Canvas.SIZE || pt.v < 0 || pt.v >= Canvas.SIZE) continue;
+			long cKey = chunkKey(pt.pos);
+			long canKey = CanvasKey.pack(pt.pos.getX() & 0xF, pt.pos.getY(), pt.pos.getZ() & 0xF, pt.face);
+			grouped.computeIfAbsent(cKey, k -> new java.util.HashMap<>())
+				.computeIfAbsent(canKey, k -> new ArrayList<>())
+				.add(pt);
+		}
+
+		for (Map.Entry<Long, Map<Long, List<PendingTexel>>> chunkEntry : grouped.entrySet()) {
+			long cKey = chunkEntry.getKey();
+			Long2ObjectMap<Canvas> current = chunks.get(cKey);
+			Long2ObjectOpenHashMap<Canvas> next = current == null
+				? new Long2ObjectOpenHashMap<>()
+				: new Long2ObjectOpenHashMap<>(current);
+
+			boolean chunkChanged = false;
+
+			for (Map.Entry<Long, List<PendingTexel>> canEntry : chunkEntry.getValue().entrySet()) {
+				long canKey = canEntry.getKey();
+				Canvas existingCanvas = next.get(canKey);
+				int[] canvasTexels = existingCanvas != null ? existingCanvas.texels().clone() : new int[Canvas.TEXELS];
+				long fadeStart = existingCanvas != null ? existingCanvas.fadeStartTimeMs() : 0L;
+				long nextErode = existingCanvas != null ? existingCanvas.nextErodeTimeMs() : 0L;
+				boolean canvasChanged = false;
+
+				for (PendingTexel pt : canEntry.getValue()) {
+					int idx = pt.v * Canvas.SIZE + pt.u;
+					int existing = canvasTexels[idx];
+					int existingAlpha = (existing >>> 24);
+					int newAlpha = (pt.col >>> 24);
+
+					if (newAlpha > existingAlpha || (newAlpha == existingAlpha && existing != pt.col)) {
+						canvasTexels[idx] = pt.col;
+						canvasChanged = true;
+						if (pt.expirationMs > fadeStart) {
+							fadeStart = pt.expirationMs;
+							nextErode = fadeStart;
+						}
+					}
+				}
+
+				if (canvasChanged) {
+					chunkChanged = true;
+					next.put(canKey, new Canvas(canvasTexels, fadeStart, nextErode));
+
+					int chunkX = chunkX(cKey);
+					int chunkZ = chunkZ(cKey);
+					int secY = CanvasKey.y(canKey) >> 4;
+					toDirtySections.add(packSection(chunkX, secY, chunkZ));
+				}
+			}
+
+			if (chunkChanged) {
+				chunks.put(cKey, Long2ObjectMaps.unmodifiable(next));
+			}
+		}
+	}
+
+	public synchronized int pendingStageCount() {
+		return pendingStages.size();
 	}
 
 	public synchronized void put(BlockPos pos, int face, Canvas canvas) {
@@ -169,6 +259,10 @@ public final class ClientCanvasStore {
 
 	public synchronized void clearChunk(long chunkPosPacked, boolean dirtyRender) {
 		Long2ObjectMap<Canvas> removed = chunks.remove(chunkPosPacked);
+		pendingStages.removeIf(stage -> {
+			stage.texels.removeIf(pt -> chunkKey(pt.pos) == chunkPosPacked);
+			return stage.texels.isEmpty();
+		});
 		if (removed != null && !removed.isEmpty() && dirtyRender) {
 			int chunkX = chunkX(chunkPosPacked);
 			int chunkZ = chunkZ(chunkPosPacked);
@@ -178,67 +272,87 @@ public final class ClientCanvasStore {
 
 	public synchronized void clearAll() {
 		chunks.clear();
+		pendingStages.clear();
 	}
 
 	/**
-	 * Ticked every client tick to slowly erode and dissolve decals that have passed their fade start time.
+	 * Ticked every client tick to slowly erode and dissolve decals that have passed their fade start time,
+	 * and apply scheduled splatter expansion stages.
 	 */
 	public synchronized void tickExpiration(long nowMs) {
-		if (chunks.isEmpty()) {
+		if (chunks.isEmpty() && pendingStages.isEmpty()) {
 			return;
 		}
 
 		LongOpenHashSet toDirtySections = new LongOpenHashSet();
-		Iterator<Map.Entry<Long, Long2ObjectMap<Canvas>>> it = chunks.entrySet().iterator();
 
-		while (it.hasNext()) {
-			Map.Entry<Long, Long2ObjectMap<Canvas>> entry = it.next();
-			Long2ObjectMap<Canvas> map = entry.getValue();
-			Long2ObjectOpenHashMap<Canvas> next = null;
-
-			for (Long2ObjectMap.Entry<Canvas> cEntry : map.long2ObjectEntrySet()) {
-				Canvas c = cEntry.getValue();
-				if (c == null || c.fadeStartTimeMs() <= 0) {
-					continue;
-				}
-
-				if (nowMs >= c.fadeStartTimeMs() && nowMs >= c.nextErodeTimeMs()) {
-					long key = cEntry.getLongKey();
-					int[] texels = c.texels().clone();
-					int erased = BloodSplatter.erode(texels, ERODE_PIXELS_PER_STEP);
-
-					if (next == null) {
-						next = new Long2ObjectOpenHashMap<>(map);
-					}
-
-					boolean empty = true;
-					for (int t : texels) {
-						if (t != 0) {
-							empty = false;
-							break;
-						}
-					}
-
-					if (empty || erased == 0) {
-						next.remove(key);
-					} else {
-						Canvas erodedCanvas = new Canvas(texels, c.fadeStartTimeMs(), nowMs + ERODE_INTERVAL_MS);
-						next.put(key, erodedCanvas);
-					}
-
-					long chunkKey = entry.getKey();
-					int chunkX = chunkX(chunkKey);
-					int chunkZ = chunkZ(chunkKey);
-					int secY = CanvasKey.y(key) >> 4;
-					toDirtySections.add(packSection(chunkX, secY, chunkZ));
+		if (!pendingStages.isEmpty()) {
+			Iterator<PendingStage> pIt = pendingStages.iterator();
+			List<PendingTexel> readyTexels = new ArrayList<>();
+			while (pIt.hasNext()) {
+				PendingStage stage = pIt.next();
+				if (nowMs >= stage.executeAtMs) {
+					pIt.remove();
+					readyTexels.addAll(stage.texels);
 				}
 			}
+			if (!readyTexels.isEmpty()) {
+				applyTexelsInternal(readyTexels, toDirtySections);
+			}
+		}
 
-			if (next != null) {
-				if (next.isEmpty()) {
-					it.remove();
-				} else {
-					entry.setValue(Long2ObjectMaps.unmodifiable(next));
+		if (!chunks.isEmpty()) {
+			Iterator<Map.Entry<Long, Long2ObjectMap<Canvas>>> it = chunks.entrySet().iterator();
+
+			while (it.hasNext()) {
+				Map.Entry<Long, Long2ObjectMap<Canvas>> entry = it.next();
+				Long2ObjectMap<Canvas> map = entry.getValue();
+				Long2ObjectOpenHashMap<Canvas> next = null;
+
+				for (Long2ObjectMap.Entry<Canvas> cEntry : map.long2ObjectEntrySet()) {
+					Canvas c = cEntry.getValue();
+					if (c == null || c.fadeStartTimeMs() <= 0) {
+						continue;
+					}
+
+					if (nowMs >= c.fadeStartTimeMs() && nowMs >= c.nextErodeTimeMs()) {
+						long key = cEntry.getLongKey();
+						int[] texels = c.texels().clone();
+						int erased = BloodSplatter.erode(texels, ERODE_PIXELS_PER_STEP);
+
+						if (next == null) {
+							next = new Long2ObjectOpenHashMap<>(map);
+						}
+
+						boolean empty = true;
+						for (int t : texels) {
+							if (t != 0) {
+								empty = false;
+								break;
+							}
+						}
+
+						if (empty || erased == 0) {
+							next.remove(key);
+						} else {
+							Canvas erodedCanvas = new Canvas(texels, c.fadeStartTimeMs(), nowMs + ERODE_INTERVAL_MS);
+							next.put(key, erodedCanvas);
+						}
+
+						long chunkKey = entry.getKey();
+						int chunkX = chunkX(chunkKey);
+						int chunkZ = chunkZ(chunkKey);
+						int secY = CanvasKey.y(key) >> 4;
+						toDirtySections.add(packSection(chunkX, secY, chunkZ));
+					}
+				}
+
+				if (next != null) {
+					if (next.isEmpty()) {
+						it.remove();
+					} else {
+						entry.setValue(Long2ObjectMaps.unmodifiable(next));
+					}
 				}
 			}
 		}

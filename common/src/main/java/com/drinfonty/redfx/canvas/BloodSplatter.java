@@ -45,6 +45,11 @@ public final class BloodSplatter {
 		void setTexel(int globalU, int globalV, int argb);
 	}
 
+	@FunctionalInterface
+	public interface StagedCanvasWriter {
+		void setTexel(int globalU, int globalV, int argb, int stage);
+	}
+
 	private BloodSplatter() {
 	}
 
@@ -56,6 +61,16 @@ public final class BloodSplatter {
 	 * so edges don't appear blocky or straight.
 	 */
 	public static void stampGlobal(int globalCenterU, int globalCenterV, int argb, int splatIndex, float scale, CanvasWriter writer) {
+		stampGlobal(globalCenterU, globalCenterV, argb, splatIndex, scale, (gu, gv, col, stage) -> writer.setTexel(gu, gv, col));
+	}
+
+	/**
+	 * Stamps splatter into the global face plane with stage assignments:
+	 * Stage 0: Core (deep interior)
+	 * Stage 1: Sub-perimeter (inner transition layer)
+	 * Stage 2: Outermost perimeter (boundary edge)
+	 */
+	public static void stampGlobal(int globalCenterU, int globalCenterV, int argb, int splatIndex, float scale, StagedCanvasWriter writer) {
 		var random = java.util.concurrent.ThreadLocalRandom.current();
 		int pattern = (splatIndex >= 1 && splatIndex <= 5) ? (splatIndex - 1) : random.nextInt(5);
 		short[] mask = MASKS[pattern];
@@ -108,14 +123,7 @@ public final class BloodSplatter {
 		int rgb = argb & 0xFFFFFF;
 		boolean enableTranslucent = com.drinfonty.redfx.config.RedfxConfig.get().translucentEdges;
 
-		if (!enableTranslucent) {
-			for (TexelPos p : points) {
-				writer.setTexel(p.u, p.v, 0xFF000000 | rgb);
-			}
-			return;
-		}
-
-		// Distance-to-boundary analysis of existing splat pixels (no extra pixels added):
+		// Distance-to-boundary analysis of existing splat pixels:
 		// d1: pixels on the outermost perimeter (have at least one cardinal neighbor outside the splat)
 		Set<TexelPos> d1 = new HashSet<>();
 		for (TexelPos p : points) {
@@ -141,16 +149,48 @@ public final class BloodSplatter {
 
 		boolean hasInterior = points.size() > d1.size();
 
+		int minDistSq = Integer.MAX_VALUE;
+		int maxDistSq = Integer.MIN_VALUE;
+		if (!hasInterior) {
+			for (TexelPos p : points) {
+				int d2c = (p.u - globalCenterU) * (p.u - globalCenterU) + (p.v - globalCenterV) * (p.v - globalCenterV);
+				if (d2c < minDistSq) minDistSq = d2c;
+				if (d2c > maxDistSq) maxDistSq = d2c;
+			}
+		}
+
 		for (TexelPos p : points) {
+			int stage;
+			if (hasInterior) {
+				if (!d1.contains(p) && !d2.contains(p)) {
+					stage = 0; // Deep core
+				} else if (d2.contains(p)) {
+					stage = 1; // Sub-perimeter
+				} else {
+					stage = 2; // Outermost edge
+				}
+			} else {
+				int d2c = (p.u - globalCenterU) * (p.u - globalCenterU) + (p.v - globalCenterV) * (p.v - globalCenterV);
+				if (minDistSq == maxDistSq || d2c == minDistSq) {
+					stage = 0;
+				} else if (d2c < maxDistSq) {
+					stage = 1;
+				} else {
+					stage = 2;
+				}
+			}
+
 			int alpha;
-			if (!d1.contains(p) && !d2.contains(p)) {
+			if (!enableTranslucent) {
+				alpha = 255;
+			} else if (stage == 0) {
 				// Deep core: 100% opaque
 				alpha = 255;
-			} else if (d2.contains(p)) {
+			} else if (stage == 1) {
 				// Inner transition edge (1 step inward from perimeter): ~76% opacity
 				alpha = 195;
 			} else {
-				// Outermost edge (d1): progressively more transparent farther out
+				// Outermost edge: progressively more transparent farther out
 				int cardinalNeighbors = 0;
 				if (points.contains(new TexelPos(p.u - 1, p.v))) cardinalNeighbors++;
 				if (points.contains(new TexelPos(p.u + 1, p.v))) cardinalNeighbors++;
@@ -158,22 +198,18 @@ public final class BloodSplatter {
 				if (points.contains(new TexelPos(p.u, p.v + 1))) cardinalNeighbors++;
 
 				if (!hasInterior && cardinalNeighbors >= 3) {
-					// In a tiny speck with no core, keep center pixels mostly solid
 					alpha = 220;
 				} else if (cardinalNeighbors <= 1) {
-					// Outermost tips / spurs: most transparent (~37% opacity)
 					alpha = 95;
 				} else if (cardinalNeighbors == 2) {
-					// Corners / exposed edges (~47% opacity)
 					alpha = 120;
 				} else {
-					// Perimeter borders (~57% opacity)
 					alpha = 145;
 				}
 			}
 
 			int col = (alpha << 24) | rgb;
-			writer.setTexel(p.u, p.v, col);
+			writer.setTexel(p.u, p.v, col, stage);
 		}
 	}
 
