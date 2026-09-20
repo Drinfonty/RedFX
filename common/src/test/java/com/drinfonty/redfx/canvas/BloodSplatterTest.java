@@ -13,7 +13,8 @@ class BloodSplatterTest {
 		boolean stamped = BloodSplatter.stamp(texels, 7, 7, red, 1, 1.0f);
 
 		assertTrue(stamped);
-		assertEquals(red, texels[7 * 16 + 7]);
+		assertEquals(0x00FF0000, texels[7 * 16 + 7] & 0x00FFFFFF);
+		assertTrue(PaintColor.isPainted(texels[7 * 16 + 7]));
 
 		int count = 0;
 		for (int t : texels) {
