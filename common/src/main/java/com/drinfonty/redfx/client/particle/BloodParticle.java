@@ -214,6 +214,9 @@ public class BloodParticle extends TerrainParticle {
 
         if (face == Direction.UP.get3DDataValue()) {
             Set<BlockPos> solidTopBlocks = new HashSet<>();
+            Map<BlockPos, Double> blockElevations = new HashMap<>();
+            SurfaceInfo targetSurface = resolveTopSurfaceInfo(targetBlock);
+            double targetElevation = targetSurface != null ? targetSurface.elevation() : (double) (targetBlock.getY() + 1.0);
 
             BloodSplatter.stampGlobal(globalCenterU, globalCenterV, argb, this.splatIndex, scale, (gu, gv, col) -> {
                 int bu = FaceStroke.blockOfU(face, gu);
@@ -229,68 +232,14 @@ public class BloodParticle extends TerrainParticle {
                 int wy = normal;
                 int wz = bv;
                 BlockPos colPos = new BlockPos(wx, wy, wz);
-                BlockPos surfacePos = resolveTopSurface(colPos);
+                SurfaceInfo surfaceInfo = resolveTopSurfaceInfo(colPos);
 
-                if (surfacePos != null) {
-                    paintTexel(modifiedCanvases, store, surfacePos, Direction.UP.get3DDataValue(), uTexel, vTexel, col);
-                    solidTopBlocks.add(surfacePos);
-                } else if (RedfxConfig.get().dripOverEdges) {
-                    // colPos is open air / drop-off! Find which adjacent solid block sheds into this column
-                    BlockPos bestNeighbor = null;
-                    Direction sideDir = null;
-                    int bestDist = Integer.MAX_VALUE;
-
-                    // West neighbor (sheds East)
-                    BlockPos wPos = resolveTopSurface(colPos.west());
-                    if (wPos != null) {
-                        int dist = EdgeDrip.overhangDistance(FaceAxes.EAST, uTexel, vTexel);
-                        if (dist < bestDist || (dist == bestDist && wPos.equals(targetBlock))) {
-                            bestDist = dist;
-                            bestNeighbor = wPos;
-                            sideDir = Direction.EAST;
-                        }
-                    }
-                    // East neighbor (sheds West)
-                    BlockPos ePos = resolveTopSurface(colPos.east());
-                    if (ePos != null) {
-                        int dist = EdgeDrip.overhangDistance(FaceAxes.WEST, uTexel, vTexel);
-                        if (dist < bestDist || (dist == bestDist && ePos.equals(targetBlock))) {
-                            bestDist = dist;
-                            bestNeighbor = ePos;
-                            sideDir = Direction.WEST;
-                        }
-                    }
-                    // North neighbor (sheds South)
-                    BlockPos nPos = resolveTopSurface(colPos.north());
-                    if (nPos != null) {
-                        int dist = EdgeDrip.overhangDistance(FaceAxes.SOUTH, uTexel, vTexel);
-                        if (dist < bestDist || (dist == bestDist && nPos.equals(targetBlock))) {
-                            bestDist = dist;
-                            bestNeighbor = nPos;
-                            sideDir = Direction.SOUTH;
-                        }
-                    }
-                    // South neighbor (sheds North)
-                    BlockPos sPos = resolveTopSurface(colPos.south());
-                    if (sPos != null) {
-                        int dist = EdgeDrip.overhangDistance(FaceAxes.NORTH, uTexel, vTexel);
-                        if (dist < bestDist || (dist == bestDist && sPos.equals(targetBlock))) {
-                            bestDist = dist;
-                            bestNeighbor = sPos;
-                            sideDir = Direction.NORTH;
-                        }
-                    }
-
-                    if (bestNeighbor != null && sideDir != null) {
-                        BlockPos paintBlock = resolvePaintableSideBlock(bestNeighbor, sideDir);
-                        if (paintBlock != null) {
-                            int sideFace = sideDir.get3DDataValue();
-                            int uSide = EdgeDrip.sideU(sideFace, uTexel, vTexel);
-                            int vSide = bestDist;
-                            if (vSide < Canvas.SIZE) {
-                                paintTexel(modifiedCanvases, store, paintBlock, sideFace, uSide, vSide, col);
-                            }
-                        }
+                if (surfaceInfo != null) {
+                    // Only stamp on top faces that are roughly level with the impact surface
+                    if (Math.abs(surfaceInfo.elevation() - targetElevation) < 0.45) {
+                        paintTexel(modifiedCanvases, store, surfaceInfo.blockPos(), Direction.UP.get3DDataValue(), uTexel, vTexel, col);
+                        solidTopBlocks.add(surfaceInfo.blockPos());
+                        blockElevations.put(surfaceInfo.blockPos(), surfaceInfo.elevation());
                     }
                 }
             });
@@ -299,68 +248,161 @@ public class BloodParticle extends TerrainParticle {
                 Direction[] horizontalDirs = new Direction[] {
                     Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST
                 };
+
                 for (BlockPos bPos : solidTopBlocks) {
                     CanvasTarget topTarget = new CanvasTarget(bPos, Direction.UP.get3DDataValue());
                     int[] topTexels = modifiedCanvases.get(topTarget);
                     if (topTexels == null) continue;
 
+                    double myElevation = blockElevations.computeIfAbsent(bPos, p -> {
+                        SurfaceInfo si = resolveTopSurfaceInfo(p);
+                        return si != null ? si.elevation() : (double) (p.getY() + 1.0);
+                    });
+
                     for (Direction hDir : horizontalDirs) {
                         BlockPos neighborPos = bPos.relative(hDir);
-                        if (resolveTopSurface(neighborPos) == null) {
-                            BlockPos paintBlock = resolvePaintableSideBlock(bPos, hDir);
-                            if (paintBlock == null) continue;
+                        SurfaceInfo neighborInfo = resolveTopSurfaceInfo(neighborPos);
 
-                            int sideFace = hDir.get3DDataValue();
+                        double exposedHeight;
+                        if (neighborInfo != null) {
+                            double drop = myElevation - neighborInfo.elevation();
+                            if (drop < 0.05) {
+                                // Neighbor is at same height or higher; no exposed vertical drop
+                                continue;
+                            }
+                            exposedHeight = drop;
+                        } else {
+                            // Neighbor column is air/cliff! Side face is exposed down to block base
+                            exposedHeight = myElevation - bPos.getY();
+                        }
 
-                            // 1. Connect rim pixels to vSide = 0
-                            for (int u = 0; u < Canvas.SIZE; u++) {
-                                int rimCol = switch (hDir) {
-                                    case NORTH -> topTexels[0 * Canvas.SIZE + u];
-                                    case SOUTH -> topTexels[15 * Canvas.SIZE + u];
-                                    case WEST -> topTexels[u * Canvas.SIZE + 0];
-                                    case EAST -> topTexels[u * Canvas.SIZE + 15];
+                        int maxDropTexels = Math.min(Canvas.SIZE, (int) Math.round(exposedHeight * 16.0));
+                        if (maxDropTexels <= 0) continue;
+
+                        BlockPos paintBlock = resolvePaintableSideBlock(bPos, hDir);
+                        if (paintBlock == null) continue;
+
+                        int sideFace = hDir.get3DDataValue();
+
+                        // Identify columns along this edge that have blood, and connect them to the edge
+                        boolean[] hasBlood = new boolean[Canvas.SIZE];
+                        int[] rimColors = new int[Canvas.SIZE];
+
+                        for (int coord = 0; coord < Canvas.SIZE; coord++) {
+                            int edgeCol = switch (hDir) {
+                                case NORTH -> topTexels[0 * Canvas.SIZE + coord];
+                                case SOUTH -> topTexels[15 * Canvas.SIZE + coord];
+                                case WEST -> topTexels[coord * Canvas.SIZE + 0];
+                                case EAST -> topTexels[coord * Canvas.SIZE + 15];
+                                default -> 0;
+                            };
+
+                            // If outer edge pixel is empty, check up to 2 pixels inward (splash near edge)
+                            if (edgeCol == 0) {
+                                int inward1 = switch (hDir) {
+                                    case NORTH -> topTexels[1 * Canvas.SIZE + coord];
+                                    case SOUTH -> topTexels[14 * Canvas.SIZE + coord];
+                                    case WEST -> topTexels[coord * Canvas.SIZE + 1];
+                                    case EAST -> topTexels[coord * Canvas.SIZE + 14];
                                     default -> 0;
                                 };
-                                if (rimCol != 0) {
-                                    int uSide = switch (hDir) {
-                                        case NORTH -> EdgeDrip.sideU(sideFace, u, 0);
-                                        case SOUTH -> EdgeDrip.sideU(sideFace, u, 15);
-                                        case WEST -> EdgeDrip.sideU(sideFace, 0, u);
-                                        case EAST -> EdgeDrip.sideU(sideFace, 15, u);
+                                if (inward1 != 0) {
+                                    edgeCol = inward1;
+                                    switch (hDir) {
+                                        case NORTH -> topTexels[0 * Canvas.SIZE + coord] = inward1;
+                                        case SOUTH -> topTexels[15 * Canvas.SIZE + coord] = inward1;
+                                        case WEST -> topTexels[coord * Canvas.SIZE + 0] = inward1;
+                                        case EAST -> topTexels[coord * Canvas.SIZE + 15] = inward1;
+                                    }
+                                } else {
+                                    int inward2 = switch (hDir) {
+                                        case NORTH -> topTexels[2 * Canvas.SIZE + coord];
+                                        case SOUTH -> topTexels[13 * Canvas.SIZE + coord];
+                                        case WEST -> topTexels[coord * Canvas.SIZE + 2];
+                                        case EAST -> topTexels[coord * Canvas.SIZE + 13];
                                         default -> 0;
                                     };
-                                    paintTexel(modifiedCanvases, store, paintBlock, sideFace, uSide, 0, rimCol);
+                                    if (inward2 != 0) {
+                                        edgeCol = inward2;
+                                        switch (hDir) {
+                                            case NORTH -> {
+                                                topTexels[1 * Canvas.SIZE + coord] = inward2;
+                                                topTexels[0 * Canvas.SIZE + coord] = inward2;
+                                            }
+                                            case SOUTH -> {
+                                                topTexels[14 * Canvas.SIZE + coord] = inward2;
+                                                topTexels[15 * Canvas.SIZE + coord] = inward2;
+                                            }
+                                            case WEST -> {
+                                                topTexels[coord * Canvas.SIZE + 1] = inward2;
+                                                topTexels[coord * Canvas.SIZE + 0] = inward2;
+                                            }
+                                            case EAST -> {
+                                                topTexels[coord * Canvas.SIZE + 14] = inward2;
+                                                topTexels[coord * Canvas.SIZE + 15] = inward2;
+                                            }
+                                        }
+                                    }
                                 }
                             }
 
-                            // 2. Drip elongation down the side face for columns with blood
-                            CanvasTarget sideTarget = new CanvasTarget(paintBlock, sideFace);
-                            int[] sideTexels = modifiedCanvases.get(sideTarget);
-                            if (sideTexels != null) {
-                                for (int uSide = 0; uSide < Canvas.SIZE; uSide++) {
-                                    int vMax = -1;
-                                    int vMaxCol = 0;
-                                    for (int v = Canvas.SIZE - 1; v >= 0; v--) {
-                                        int c = sideTexels[v * Canvas.SIZE + uSide];
-                                        if (c != 0) {
-                                            vMax = v;
-                                            vMaxCol = c;
-                                            break;
-                                        }
-                                    }
-                                    if (vMax >= 0) {
-                                        int extraDrip = EdgeDrip.extraDripLength(paintBlock.getX(), paintBlock.getZ(), sideFace, uSide, this.splatIndex);
-                                        int baseAlpha = (vMaxCol >>> 24);
-                                        int rgb = vMaxCol & 0xFFFFFF;
-                                        for (int step = 1; step <= extraDrip; step++) {
-                                            int dv = vMax + step;
-                                            if (dv >= Canvas.SIZE) break;
-                                            int dripAlpha = RedfxConfig.get().translucentEdges ? EdgeDrip.dripAlpha(baseAlpha, step) : 255;
-                                            int dripCol = (dripAlpha << 24) | rgb;
-                                            paintTexel(modifiedCanvases, store, paintBlock, sideFace, uSide, dv, dripCol);
-                                        }
+                            if (edgeCol != 0) {
+                                hasBlood[coord] = true;
+                                rimColors[coord] = edgeCol;
+                            }
+                        }
+
+                        // Find continuous clusters of columns and paint realistic drips down the side face
+                        int cStart = -1;
+                        for (int coord = 0; coord <= Canvas.SIZE; coord++) {
+                            if (coord < Canvas.SIZE && hasBlood[coord]) {
+                                if (cStart == -1) cStart = coord;
+                            } else if (cStart != -1) {
+                                int cEnd = coord - 1;
+                                for (int c = cStart; c <= cEnd; c++) {
+                                    int col = rimColors[c];
+                                    int baseAlpha = (col >>> 24);
+                                    int rgb = col & 0xFFFFFF;
+
+                                    int uSide = switch (hDir) {
+                                        case NORTH -> EdgeDrip.sideU(sideFace, c, 0);
+                                        case SOUTH -> EdgeDrip.sideU(sideFace, c, 15);
+                                        case WEST -> EdgeDrip.sideU(sideFace, 0, c);
+                                        case EAST -> EdgeDrip.sideU(sideFace, 15, c);
+                                        default -> 0;
+                                    };
+
+                                    int uSideStart = switch (hDir) {
+                                        case NORTH -> EdgeDrip.sideU(sideFace, cEnd, 0);
+                                        case SOUTH -> EdgeDrip.sideU(sideFace, cStart, 15);
+                                        case WEST -> EdgeDrip.sideU(sideFace, 0, cStart);
+                                        case EAST -> EdgeDrip.sideU(sideFace, 15, cEnd);
+                                        default -> 0;
+                                    };
+                                    int uSideEnd = switch (hDir) {
+                                        case NORTH -> EdgeDrip.sideU(sideFace, cStart, 0);
+                                        case SOUTH -> EdgeDrip.sideU(sideFace, cEnd, 15);
+                                        case WEST -> EdgeDrip.sideU(sideFace, 0, cEnd);
+                                        case EAST -> EdgeDrip.sideU(sideFace, 15, cStart);
+                                        default -> 0;
+                                    };
+                                    int minUSide = Math.min(uSideStart, uSideEnd);
+                                    int maxUSide = Math.max(uSideStart, uSideEnd);
+
+                                    int dripLen = EdgeDrip.calculateDripLength(
+                                        paintBlock.getX(), paintBlock.getZ(), sideFace, uSide,
+                                        minUSide, maxUSide, maxDropTexels - 1, this.splatIndex
+                                    );
+
+                                    for (int step = 0; step <= dripLen; step++) {
+                                        int dripAlpha = RedfxConfig.get().translucentEdges
+                                            ? EdgeDrip.dripAlpha(baseAlpha, step, dripLen)
+                                            : 255;
+                                        int dripCol = (dripAlpha << 24) | rgb;
+                                        paintTexel(modifiedCanvases, store, paintBlock, sideFace, uSide, step, dripCol);
                                     }
                                 }
+                                cStart = -1;
                             }
                         }
                     }
@@ -410,20 +452,39 @@ public class BloodParticle extends TerrainParticle {
     private record CanvasTarget(BlockPos pos, int face) {
     }
 
-    private BlockPos resolveTopSurface(BlockPos pos) {
-        BlockPos abovePos = pos.above();
+    private record SurfaceInfo(BlockPos blockPos, double elevation) {
+    }
+
+    private SurfaceInfo resolveTopSurfaceInfo(BlockPos colPos) {
+        BlockPos abovePos = colPos.above();
         BlockState aboveState = this.level.getBlockState(abovePos);
         if (!aboveState.isAir() && aboveState.getFluidState().isEmpty()) {
             double top = PaintSurface.topOf(this.level, abovePos, aboveState);
             if (top != PaintSurface.NONE && top < 1.0) {
-                return abovePos;
+                return new SurfaceInfo(abovePos, abovePos.getY() + top);
             }
         }
-        BlockState bs = this.level.getBlockState(pos);
-        if (!bs.isAir() && bs.getFluidState().isEmpty() && PaintSurface.topOf(this.level, pos, bs) != PaintSurface.NONE) {
-            return pos;
+        BlockState bs = this.level.getBlockState(colPos);
+        if (!bs.isAir() && bs.getFluidState().isEmpty()) {
+            double top = PaintSurface.topOf(this.level, colPos, bs);
+            if (top != PaintSurface.NONE) {
+                return new SurfaceInfo(colPos, colPos.getY() + top);
+            }
+        }
+        BlockPos belowPos = colPos.below();
+        BlockState belowState = this.level.getBlockState(belowPos);
+        if (!belowState.isAir() && belowState.getFluidState().isEmpty()) {
+            double top = PaintSurface.topOf(this.level, belowPos, belowState);
+            if (top != PaintSurface.NONE) {
+                return new SurfaceInfo(belowPos, belowPos.getY() + top);
+            }
         }
         return null;
+    }
+
+    private BlockPos resolveTopSurface(BlockPos pos) {
+        SurfaceInfo info = resolveTopSurfaceInfo(pos);
+        return info != null ? info.blockPos() : null;
     }
 
     private BlockPos resolvePaintableSideBlock(BlockPos pos, Direction sideDir) {

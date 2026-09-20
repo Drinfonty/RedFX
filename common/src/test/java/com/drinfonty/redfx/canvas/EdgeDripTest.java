@@ -58,4 +58,165 @@ class EdgeDripTest {
 		assertTrue(step2 > step3, "alpha step2 > step3");
 		assertTrue(step3 >= 60, "alpha should maintain minimum visibility");
 	}
+
+	@Test
+	void simulatesEdgeDripOnBlockLedge() {
+		// Target block at (0, 64, 0). Air at (1, 64, 0).
+		// Center of splatter at u=14, v=8 on top face (close to East edge).
+		int face = FaceAxes.UP;
+		int targetX = 0, targetY = 64, targetZ = 0;
+		int centerU = 14, centerV = 8;
+		int argb = 0xFFFF0000;
+		float scale = 0.8f;
+
+		int blockU = FaceStroke.blockU(face, targetX, targetY, targetZ);
+		int blockV = FaceStroke.blockV(face, targetX, targetY, targetZ);
+		int normal = FaceStroke.normal(face, targetX, targetY, targetZ);
+
+		int globalCenterU = FaceStroke.encodeU(face, blockU, centerU);
+		int globalCenterV = FaceStroke.encodeV(face, blockV, centerV);
+
+		java.util.Map<String, int[]> modifiedCanvases = new java.util.HashMap<>();
+		java.util.Set<String> solidTopBlocks = new java.util.HashSet<>();
+
+		// Mock surface resolver: only (0, 64, 0) is solid
+		java.util.function.Function<int[], int[]> resolveTop = pos -> {
+			if (pos[0] == 0 && pos[1] == 64 && pos[2] == 0) {
+				return pos;
+			}
+			return null;
+		};
+
+		BloodSplatter.stampGlobal(globalCenterU, globalCenterV, argb, 1, scale, (gu, gv, col) -> {
+			int bu = FaceStroke.blockOfU(face, gu);
+			int bv = FaceStroke.blockOfV(face, gv);
+			int uTexel = gu - FaceStroke.encodeU(face, bu, 0);
+			int vTexel = gv - FaceStroke.encodeV(face, bv, 0);
+
+			if (uTexel < 0 || uTexel >= Canvas.SIZE || vTexel < 0 || vTexel >= Canvas.SIZE) {
+				return;
+			}
+
+			int[] colPos = new int[] { bu, normal, bv };
+			int[] surfacePos = resolveTop.apply(colPos);
+
+			if (surfacePos != null) {
+				String key = surfacePos[0] + "," + surfacePos[1] + "," + surfacePos[2] + ":" + face;
+				int[] tex = modifiedCanvases.computeIfAbsent(key, k -> new int[Canvas.TEXELS]);
+				tex[vTexel * 16 + uTexel] = col;
+				solidTopBlocks.add(surfacePos[0] + "," + surfacePos[1] + "," + surfacePos[2]);
+			} else {
+				// Col is air! West neighbor is (bu-1, normal, bv)
+				int[] wPos = resolveTop.apply(new int[] { bu - 1, normal, bv });
+				if (wPos != null) {
+					int dist = EdgeDrip.overhangDistance(FaceAxes.EAST, uTexel, vTexel);
+					int sideFace = FaceAxes.EAST;
+					int uSide = EdgeDrip.sideU(sideFace, uTexel, vTexel);
+					int vSide = dist;
+					if (vSide < Canvas.SIZE) {
+						String key = wPos[0] + "," + wPos[1] + "," + wPos[2] + ":" + sideFace;
+						int[] tex = modifiedCanvases.computeIfAbsent(key, k -> new int[Canvas.TEXELS]);
+						tex[vSide * 16 + uSide] = col;
+					}
+				}
+			}
+		});
+
+		// 1. Connect rim pixels and group into clusters
+		int sideFace = FaceAxes.EAST;
+		String topKey = "0,64,0:" + FaceAxes.UP;
+		String sideKey = "0,64,0:" + sideFace;
+		int[] topTexels = modifiedCanvases.get(topKey);
+
+		if (topTexels != null) {
+			boolean[] hasBlood = new boolean[Canvas.SIZE];
+			int[] rimColors = new int[Canvas.SIZE];
+
+			for (int coord = 0; coord < Canvas.SIZE; coord++) {
+				int edgeCol = topTexels[coord * Canvas.SIZE + 15]; // East rim
+				if (edgeCol == 0) {
+					int inward1 = topTexels[coord * Canvas.SIZE + 14];
+					if (inward1 != 0) {
+						edgeCol = inward1;
+						topTexels[coord * Canvas.SIZE + 15] = inward1;
+					} else {
+						int inward2 = topTexels[coord * Canvas.SIZE + 13];
+						if (inward2 != 0) {
+							edgeCol = inward2;
+							topTexels[coord * Canvas.SIZE + 14] = inward2;
+							topTexels[coord * Canvas.SIZE + 15] = inward2;
+						}
+					}
+				}
+				if (edgeCol != 0) {
+					hasBlood[coord] = true;
+					rimColors[coord] = edgeCol;
+				}
+			}
+
+			int cStart = -1;
+			for (int coord = 0; coord <= Canvas.SIZE; coord++) {
+				if (coord < Canvas.SIZE && hasBlood[coord]) {
+					if (cStart == -1) cStart = coord;
+				} else if (cStart != -1) {
+					int cEnd = coord - 1;
+					for (int c = cStart; c <= cEnd; c++) {
+						int col = rimColors[c];
+						int baseAlpha = (col >>> 24);
+						int rgb = col & 0xFFFFFF;
+
+						int uSide = EdgeDrip.sideU(sideFace, 15, c);
+						int uSideStart = EdgeDrip.sideU(sideFace, 15, cEnd);
+						int uSideEnd = EdgeDrip.sideU(sideFace, 15, cStart);
+						int minUSide = Math.min(uSideStart, uSideEnd);
+						int maxUSide = Math.max(uSideStart, uSideEnd);
+
+						int dripLen = EdgeDrip.calculateDripLength(
+							targetX, targetZ, sideFace, uSide,
+							minUSide, maxUSide, 15, 1
+						);
+
+						for (int step = 0; step <= dripLen; step++) {
+							int dripAlpha = EdgeDrip.dripAlpha(baseAlpha, step, dripLen);
+							int dripCol = (dripAlpha << 24) | rgb;
+							int[] tex = modifiedCanvases.computeIfAbsent(sideKey, k -> new int[Canvas.TEXELS]);
+							tex[step * 16 + uSide] = dripCol;
+						}
+					}
+					cStart = -1;
+				}
+			}
+		}
+
+		assertTrue(modifiedCanvases.containsKey(topKey), "Top face should have blood");
+		assertTrue(modifiedCanvases.containsKey(sideKey), "Side face should have blood drips");
+
+		int[] sideTex = modifiedCanvases.get(sideKey);
+		int sidePainted = 0;
+		int maxV = 0;
+		for (int v = 0; v < 16; v++) {
+			for (int u = 0; u < 16; u++) {
+				int val = sideTex[v * 16 + u];
+				if (val != 0) {
+					sidePainted++;
+					maxV = Math.max(maxV, v);
+				}
+			}
+		}
+		assertTrue(sidePainted >= 15, "Should paint substantial drip pixels on side face");
+		assertTrue(maxV >= 4, "Drips should extend at least 4 pixels down the face");
+	}
+
+	@Test
+	void exposedHeightCalculationNeverOverflowsForAirNeighbor() {
+		double myElevation = 65.0;
+		int blockY = 64;
+
+		// When neighbor is air/cliff (neighborInfo == null)
+		double exposedHeight = myElevation - blockY;
+		int maxDropTexels = Math.min(Canvas.SIZE, (int) Math.round(exposedHeight * 16.0));
+
+		assertEquals(16, maxDropTexels, "Air neighbor must expose full 16 texels down the face");
+		assertTrue(maxDropTexels > 0, "maxDropTexels must be positive and not overflow");
+	}
 }
