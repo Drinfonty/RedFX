@@ -283,4 +283,53 @@ class ClientCanvasStoreThreadSafetyTest {
 		assertTrue(done, "Concurrent operations did not finish within timeout (possible deadlock)");
 		assertTrue(errors.isEmpty(), "Encountered exceptions in concurrent store operations: " + errors);
 	}
+
+	@Test
+	void testStagedSplatterProgressionAppliesTexelsOverTime() {
+		BlockPos pos = new BlockPos(10, 64, 10);
+		long t0 = 1000L;
+
+		// Stage 0: Core pixel (7, 7) applied immediately
+		List<ClientCanvasStore.PendingTexel> stage0 = List.of(
+			new ClientCanvasStore.PendingTexel(pos, FaceAxes.UP, 7, 7, 0xFFFF0000, 5000L)
+		);
+		store.applyTexels(stage0);
+
+		assertTrue(store.isPainted(pos));
+		Canvas c0 = store.get(pos, FaceAxes.UP);
+		assertEquals(0xFFFF0000, c0.texels()[7 * 16 + 7]);
+		assertEquals(0, c0.texels()[8 * 16 + 8], "Outer pixel should not be painted yet");
+
+		// Stage 1: Sub-perimeter pixel (8, 8) scheduled for t0 + 50ms
+		List<ClientCanvasStore.PendingTexel> stage1 = List.of(
+			new ClientCanvasStore.PendingTexel(pos, FaceAxes.UP, 8, 8, 0xC3FF0000, 5000L)
+		);
+		store.scheduleStage(t0 + 50L, stage1);
+		assertEquals(1, store.pendingStageCount());
+
+		// Tick before scheduled time (t0 + 30ms) -> stage not applied yet
+		store.tickExpiration(t0 + 30L);
+		assertEquals(1, store.pendingStageCount());
+		assertEquals(0, store.get(pos, FaceAxes.UP).texels()[8 * 16 + 8]);
+
+		// Tick after scheduled time (t0 + 60ms) -> stage applied!
+		store.tickExpiration(t0 + 60L);
+		assertEquals(0, store.pendingStageCount());
+		Canvas c1 = store.get(pos, FaceAxes.UP);
+		assertEquals(0xFFFF0000, c1.texels()[7 * 16 + 7]);
+		assertEquals(0xC3FF0000, c1.texels()[8 * 16 + 8], "Sub-perimeter pixel should now be painted");
+	}
+
+	@Test
+	void testClearAllClearsPendingStages() {
+		BlockPos pos = new BlockPos(5, 64, 5);
+		store.scheduleStage(5000L, List.of(
+			new ClientCanvasStore.PendingTexel(pos, FaceAxes.UP, 5, 5, 0xFFFF0000, 10000L)
+		));
+		assertEquals(1, store.pendingStageCount());
+
+		store.clearAll();
+		assertEquals(0, store.pendingStageCount());
+		assertFalse(store.hasAnyBlood());
+	}
 }
