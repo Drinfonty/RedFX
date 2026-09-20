@@ -1,7 +1,9 @@
 package com.drinfonty.redfx.client.particle;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -211,6 +213,9 @@ public class BloodParticle extends TerrainParticle {
 
         ClientCanvasStore store = ClientCanvasStore.get();
         Map<CanvasTarget, int[]> modifiedCanvases = new HashMap<>();
+        List<ClientCanvasStore.PendingTexel> stage0Paints = new ArrayList<>();
+        List<ClientCanvasStore.PendingTexel> stage1Paints = new ArrayList<>();
+        List<ClientCanvasStore.PendingTexel> stage2Paints = new ArrayList<>();
 
         if (face == Direction.UP.get3DDataValue()) {
             Set<BlockPos> solidTopBlocks = new HashSet<>();
@@ -218,7 +223,7 @@ public class BloodParticle extends TerrainParticle {
             SurfaceInfo targetSurface = resolveTopSurfaceInfo(targetBlock);
             double targetElevation = targetSurface != null ? targetSurface.elevation() : (double) (targetBlock.getY() + 1.0);
 
-            BloodSplatter.stampGlobal(globalCenterU, globalCenterV, argb, this.splatIndex, scale, (gu, gv, col) -> {
+            BloodSplatter.stampGlobal(globalCenterU, globalCenterV, argb, this.splatIndex, scale, (gu, gv, col, stage) -> {
                 int bu = FaceStroke.blockOfU(face, gu);
                 int bv = FaceStroke.blockOfV(face, gv);
                 int uTexel = gu - FaceStroke.encodeU(face, bu, 0);
@@ -240,6 +245,13 @@ public class BloodParticle extends TerrainParticle {
                         paintTexel(modifiedCanvases, store, surfaceInfo.blockPos(), Direction.UP.get3DDataValue(), uTexel, vTexel, col);
                         solidTopBlocks.add(surfaceInfo.blockPos());
                         blockElevations.put(surfaceInfo.blockPos(), surfaceInfo.elevation());
+
+                        ClientCanvasStore.PendingTexel pt = new ClientCanvasStore.PendingTexel(
+                            surfaceInfo.blockPos(), Direction.UP.get3DDataValue(), uTexel, vTexel, col, expirationMs
+                        );
+                        if (stage == 0) stage0Paints.add(pt);
+                        else if (stage == 1) stage1Paints.add(pt);
+                        else stage2Paints.add(pt);
                     }
                 }
             });
@@ -309,10 +321,22 @@ public class BloodParticle extends TerrainParticle {
                                 if (inward1 != 0) {
                                     edgeCol = inward1;
                                     switch (hDir) {
-                                        case NORTH -> topTexels[0 * Canvas.SIZE + coord] = inward1;
-                                        case SOUTH -> topTexels[15 * Canvas.SIZE + coord] = inward1;
-                                        case WEST -> topTexels[coord * Canvas.SIZE + 0] = inward1;
-                                        case EAST -> topTexels[coord * Canvas.SIZE + 15] = inward1;
+                                        case NORTH -> {
+                                            topTexels[0 * Canvas.SIZE + coord] = inward1;
+                                            stage2Paints.add(new ClientCanvasStore.PendingTexel(bPos, Direction.UP.get3DDataValue(), coord, 0, inward1, expirationMs));
+                                        }
+                                        case SOUTH -> {
+                                            topTexels[15 * Canvas.SIZE + coord] = inward1;
+                                            stage2Paints.add(new ClientCanvasStore.PendingTexel(bPos, Direction.UP.get3DDataValue(), coord, 15, inward1, expirationMs));
+                                        }
+                                        case WEST -> {
+                                            topTexels[coord * Canvas.SIZE + 0] = inward1;
+                                            stage2Paints.add(new ClientCanvasStore.PendingTexel(bPos, Direction.UP.get3DDataValue(), 0, coord, inward1, expirationMs));
+                                        }
+                                        case EAST -> {
+                                            topTexels[coord * Canvas.SIZE + 15] = inward1;
+                                            stage2Paints.add(new ClientCanvasStore.PendingTexel(bPos, Direction.UP.get3DDataValue(), 15, coord, inward1, expirationMs));
+                                        }
                                     }
                                 } else {
                                     int inward2 = switch (hDir) {
@@ -328,18 +352,26 @@ public class BloodParticle extends TerrainParticle {
                                             case NORTH -> {
                                                 topTexels[1 * Canvas.SIZE + coord] = inward2;
                                                 topTexels[0 * Canvas.SIZE + coord] = inward2;
+                                                stage2Paints.add(new ClientCanvasStore.PendingTexel(bPos, Direction.UP.get3DDataValue(), coord, 1, inward2, expirationMs));
+                                                stage2Paints.add(new ClientCanvasStore.PendingTexel(bPos, Direction.UP.get3DDataValue(), coord, 0, inward2, expirationMs));
                                             }
                                             case SOUTH -> {
                                                 topTexels[14 * Canvas.SIZE + coord] = inward2;
                                                 topTexels[15 * Canvas.SIZE + coord] = inward2;
+                                                stage2Paints.add(new ClientCanvasStore.PendingTexel(bPos, Direction.UP.get3DDataValue(), coord, 14, inward2, expirationMs));
+                                                stage2Paints.add(new ClientCanvasStore.PendingTexel(bPos, Direction.UP.get3DDataValue(), coord, 15, inward2, expirationMs));
                                             }
                                             case WEST -> {
                                                 topTexels[coord * Canvas.SIZE + 1] = inward2;
                                                 topTexels[coord * Canvas.SIZE + 0] = inward2;
+                                                stage2Paints.add(new ClientCanvasStore.PendingTexel(bPos, Direction.UP.get3DDataValue(), 1, coord, inward2, expirationMs));
+                                                stage2Paints.add(new ClientCanvasStore.PendingTexel(bPos, Direction.UP.get3DDataValue(), 0, coord, inward2, expirationMs));
                                             }
                                             case EAST -> {
                                                 topTexels[coord * Canvas.SIZE + 14] = inward2;
                                                 topTexels[coord * Canvas.SIZE + 15] = inward2;
+                                                stage2Paints.add(new ClientCanvasStore.PendingTexel(bPos, Direction.UP.get3DDataValue(), 14, coord, inward2, expirationMs));
+                                                stage2Paints.add(new ClientCanvasStore.PendingTexel(bPos, Direction.UP.get3DDataValue(), 15, coord, inward2, expirationMs));
                                             }
                                         }
                                     }
@@ -399,7 +431,7 @@ public class BloodParticle extends TerrainParticle {
                                             ? EdgeDrip.dripAlpha(baseAlpha, step, dripLen)
                                             : 255;
                                         int dripCol = (dripAlpha << 24) | rgb;
-                                        paintTexel(modifiedCanvases, store, paintBlock, sideFace, uSide, step, dripCol);
+                                        stage2Paints.add(new ClientCanvasStore.PendingTexel(paintBlock, sideFace, uSide, step, dripCol, expirationMs));
                                     }
                                 }
                                 cStart = -1;
@@ -412,7 +444,7 @@ public class BloodParticle extends TerrainParticle {
             Map<Long, BlockPos> resolvedBlocks = new HashMap<>();
             Set<Long> invalidBlocks = new HashSet<>();
 
-            BloodSplatter.stampGlobal(globalCenterU, globalCenterV, argb, this.splatIndex, scale, (gu, gv, col) -> {
+            BloodSplatter.stampGlobal(globalCenterU, globalCenterV, argb, this.splatIndex, scale, (gu, gv, col, stage) -> {
                 int bu = FaceStroke.blockOfU(face, gu);
                 int bv = FaceStroke.blockOfV(face, gv);
                 long blockKey = (((long) bu) << 32) | (((long) bv) & 0xFFFFFFFFL);
@@ -439,13 +471,33 @@ public class BloodParticle extends TerrainParticle {
                     resolvedBlocks.put(blockKey, bPos);
                 }
 
-                paintTexel(modifiedCanvases, store, bPos, face, uTexel, vTexel, col);
+                ClientCanvasStore.PendingTexel pt = new ClientCanvasStore.PendingTexel(bPos, face, uTexel, vTexel, col, expirationMs);
+                if (stage == 0) stage0Paints.add(pt);
+                else if (stage == 1) stage1Paints.add(pt);
+                else stage2Paints.add(pt);
             });
         }
 
-        // Publish all modified block face canvases to the store
-        for (Map.Entry<CanvasTarget, int[]> entry : modifiedCanvases.entrySet()) {
-            store.put(entry.getKey().pos(), entry.getKey().face(), new Canvas(entry.getValue(), expirationMs));
+        // Publish texels: either immediately or staged across progressive growth steps
+        boolean gradual = RedfxConfig.get().gradualSplatter && RedfxConfig.get().splatterGrowthDelayTicks > 0;
+        if (!gradual) {
+            List<ClientCanvasStore.PendingTexel> all = new ArrayList<>(stage0Paints.size() + stage1Paints.size() + stage2Paints.size());
+            all.addAll(stage0Paints);
+            all.addAll(stage1Paints);
+            all.addAll(stage2Paints);
+            store.applyTexels(all);
+        } else {
+            long nowMs = System.currentTimeMillis();
+            long delayMs = RedfxConfig.get().splatterGrowthDelayTicks * 50L;
+            if (!stage0Paints.isEmpty()) {
+                store.applyTexels(stage0Paints);
+            }
+            if (!stage1Paints.isEmpty()) {
+                store.scheduleStage(nowMs + delayMs, stage1Paints);
+            }
+            if (!stage2Paints.isEmpty()) {
+                store.scheduleStage(nowMs + 2L * delayMs, stage2Paints);
+            }
         }
     }
 

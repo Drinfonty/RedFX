@@ -140,4 +140,37 @@ class BloodSplatterTest {
 		assertTrue(opaqueCount > 0, "Should have solid core pixels");
 		assertTrue(outerEdgeCount > 0, "Should have translucent outer edge pixels (alpha ~95-145)");
 	}
+
+	@Test
+	void stampsStagedSplatterWithCoreSubPerimeterAndOuterEdgeStages() {
+		java.util.List<Integer> stages = new java.util.ArrayList<>();
+		java.util.Map<Integer, Integer> stageAlphas = new java.util.HashMap<>();
+		int red = 0xFFFF0000;
+
+		BloodSplatter.stampGlobal(7, 7, red, 1, 1.0f, (u, v, argb, stage) -> {
+			stages.add(stage);
+			stageAlphas.put(stage, (argb >>> 24));
+		});
+
+		assertTrue(stages.contains(0), "Splatter must contain stage 0 (core)");
+		assertTrue(stages.contains(1), "Splatter must contain stage 1 (sub-perimeter)");
+		assertTrue(stages.contains(2), "Splatter must contain stage 2 (outermost perimeter)");
+
+		assertEquals(255, stageAlphas.get(0), "Stage 0 core pixels must be fully opaque");
+		assertEquals(195, stageAlphas.get(1), "Stage 1 sub-perimeter pixels must be ~76% opaque");
+		assertTrue(stageAlphas.get(2) < 195, "Stage 2 outer edge pixels must be more translucent");
+	}
+
+	@Test
+	void stampsSmallSpeckWithImmediateCoreStage() {
+		java.util.List<Integer> stages = new java.util.ArrayList<>();
+		int red = 0xFFFF0000;
+
+		// Extremely small scale (0.2x) to create a tiny 1-3 pixel speck
+		BloodSplatter.stampGlobal(7, 7, red, 4, 0.2f, (u, v, argb, stage) -> {
+			stages.add(stage);
+		});
+
+		assertTrue(stages.contains(0), "Even small specks must always have a stage 0 (immediate core) pixel");
+	}
 }
