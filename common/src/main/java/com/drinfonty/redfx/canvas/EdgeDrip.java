@@ -47,6 +47,29 @@ public final class EdgeDrip {
 	}
 
 	/**
+	 * Computes the organic drip length down a vertical face for column {@code uSide}
+	 * within a cluster of edge columns spanning {@code [clusterStart, clusterEnd]}.
+	 * Central columns in the cluster drip farther down than outer columns, forming natural teardrop rivulets.
+	 */
+	public static int calculateDripLength(int blockX, int blockZ, int sideFace, int uSide,
+		int clusterStart, int clusterEnd, int maxAllowedLength, int splatIndex) {
+		int clusterWidth = clusterEnd - clusterStart + 1;
+		float center = (clusterStart + clusterEnd) / 2.0f;
+		float dist = Math.abs(uSide - center);
+		float norm = dist / (clusterWidth / 2.0f + 0.5f);
+
+		int hash = Math.abs((blockX * 3127 + blockZ * 739 + sideFace * 101 + uSide * 37) ^ (splatIndex * 19));
+
+		// Base maximum drip length at cluster center (5..9 pixels)
+		int baseLen = 4 + (clusterWidth >= 3 ? 2 : 0) + (clusterWidth >= 6 ? 2 : 0) + (hash % 3);
+
+		// Central columns drip farthest; outer columns taper to ~40%
+		int len = Math.max(2, Math.round(baseLen * (1.0f - norm * 0.58f)));
+
+		return Math.max(1, Math.min(maxAllowedLength, len));
+	}
+
+	/**
 	 * Computes the attenuated alpha for a drip step down the face.
 	 * step 1: ~70% of base
 	 * step 2: ~45% of base
@@ -60,4 +83,19 @@ public final class EdgeDrip {
 		};
 		return Math.max(60, (int) (baseAlpha * factor));
 	}
+
+	/**
+	 * Computes the attenuated alpha for step {@code step} of a drip of total length {@code totalLength}.
+	 * The top remains rich and opaque, while the tip fades slightly while remaining distinctly visible.
+	 */
+	public static int dripAlpha(int baseAlpha, int step, int totalLength) {
+		if (step <= 0) {
+			return Math.max(200, baseAlpha);
+		}
+		float progress = (float) step / Math.max(1, totalLength);
+		float factor = 1.0f - progress * 0.45f;
+		int alpha = (int) (Math.max(200, baseAlpha) * factor);
+		return Math.max(110, Math.min(255, alpha));
+	}
 }
+
