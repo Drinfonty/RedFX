@@ -6,6 +6,7 @@ import java.util.List;
 import com.drinfonty.redfx.RedfxMod;
 import com.drinfonty.redfx.canvas.BloodSplatter;
 import com.drinfonty.redfx.canvas.Canvas;
+import com.drinfonty.redfx.canvas.EdgeDrip;
 import com.drinfonty.redfx.canvas.FaceAxes;
 import com.drinfonty.redfx.client.ClientCanvasStore;
 import com.drinfonty.redfx.client.render.CanvasMesher;
@@ -191,8 +192,15 @@ public final class InGameSmokeTest {
 			for (BlockPos pos : BlockPos.betweenClosed(testOrigin.offset(-3, -2, -3), testOrigin.offset(3, 2, 3))) {
 				if (store.isPainted(pos)) {
 					foundBlood = true;
-					RedfxMod.LOGGER.info("Found natural blood splatter at {}", pos);
-					break;
+					for (int f = 0; f < 6; f++) {
+						Canvas c = store.get(pos, f);
+						if (c != null) {
+							int count = 0;
+							for (int t : c.texels()) if (t != 0) count++;
+							RedfxMod.LOGGER.info("[SmokeTest] Painted block {} face {} ({} texels)",
+								pos.toShortString(), Direction.from3DDataValue(f), count);
+						}
+					}
 				}
 			}
 
@@ -380,11 +388,7 @@ public final class InGameSmokeTest {
 			commands.performPrefixedCommand(source, String.format(java.util.Locale.ROOT,
 				"fill %d %d %d %d %d %d stone", ox - 2, floorY - 1, oz - 2, ox + 2, floorY - 1, oz + 2));
 
-			// 2. Base stone floor
-			commands.performPrefixedCommand(source, String.format(java.util.Locale.ROOT,
-				"fill %d %d %d %d %d %d stone", ox - 2, floorY, oz - 2, ox + 2, floorY, oz + 2));
-
-			// 3. Center stone block
+			// 2. Center stone block
 			commands.performPrefixedCommand(source, String.format(java.util.Locale.ROOT,
 				"setblock %d %d %d stone", stonePos.getX(), stonePos.getY(), stonePos.getZ()));
 
@@ -578,6 +582,14 @@ public final class InGameSmokeTest {
 
 	private static void captureScreenshot(Minecraft client) {
 		try {
+			try {
+				java.lang.reflect.Method m = net.minecraft.client.Screenshot.class.getMethod("grab", Minecraft.class, boolean.class);
+				m.invoke(null, client, false);
+				RedfxMod.LOGGER.info("Called Screenshot.grab(Minecraft, boolean) successfully!");
+				return;
+			} catch (NoSuchMethodException ignored) {
+			}
+
 			for (java.lang.reflect.Method m : net.minecraft.client.Screenshot.class.getMethods()) {
 				if (!m.getName().equals("grab") || !java.lang.reflect.Modifier.isStatic(m.getModifiers())) {
 					continue;
@@ -585,25 +597,34 @@ public final class InGameSmokeTest {
 				Class<?>[] params = m.getParameterTypes();
 				// Modern 26.2+: grab(Minecraft, boolean)
 				if (params.length == 2 && params[0].isAssignableFrom(client.getClass()) && params[1] == boolean.class) {
-					m.invoke(null, client, false);
-					RedfxMod.LOGGER.info("Called Screenshot.grab(Minecraft, boolean) successfully!");
-					return;
+					try {
+						m.invoke(null, client, false);
+						RedfxMod.LOGGER.info("Called Screenshot.grab(Minecraft, boolean) successfully!");
+						return;
+					} catch (Throwable ignored) {
+					}
 				}
 				// Standard: grab(File, RenderTarget, Consumer)
 				if (params.length == 3 && params[0] == File.class && params[2] == java.util.function.Consumer.class) {
-					java.lang.reflect.Method getTarget = client.getClass().getMethod("getMainRenderTarget");
-					Object target = getTarget.invoke(client);
-					m.invoke(null, client.gameDirectory, target, (java.util.function.Consumer<net.minecraft.network.chat.Component>) msg -> {});
-					RedfxMod.LOGGER.info("Called Screenshot.grab(File, RenderTarget, Consumer) successfully!");
-					return;
+					try {
+						java.lang.reflect.Method getTarget = client.getClass().getMethod("getMainRenderTarget");
+						Object target = getTarget.invoke(client);
+						m.invoke(null, client.gameDirectory, target, (java.util.function.Consumer<net.minecraft.network.chat.Component>) msg -> {});
+						RedfxMod.LOGGER.info("Called Screenshot.grab(File, RenderTarget, Consumer) successfully!");
+						return;
+					} catch (Throwable ignored) {
+					}
 				}
 				// 4-arg variant: grab(File, String, RenderTarget, Consumer)
 				if (params.length == 4 && params[0] == File.class && params[1] == String.class && params[3] == java.util.function.Consumer.class) {
-					java.lang.reflect.Method getTarget = client.getClass().getMethod("getMainRenderTarget");
-					Object target = getTarget.invoke(client);
-					m.invoke(null, client.gameDirectory, null, target, (java.util.function.Consumer<net.minecraft.network.chat.Component>) msg -> {});
-					RedfxMod.LOGGER.info("Called Screenshot.grab(File, String, RenderTarget, Consumer) successfully!");
-					return;
+					try {
+						java.lang.reflect.Method getTarget = client.getClass().getMethod("getMainRenderTarget");
+						Object target = getTarget.invoke(client);
+						m.invoke(null, client.gameDirectory, null, target, (java.util.function.Consumer<net.minecraft.network.chat.Component>) msg -> {});
+						RedfxMod.LOGGER.info("Called Screenshot.grab(File, String, RenderTarget, Consumer) successfully!");
+						return;
+					} catch (Throwable ignored) {
+					}
 				}
 			}
 		} catch (Throwable t) {
@@ -670,6 +691,16 @@ public final class InGameSmokeTest {
 		// Foliage non-paintable
 		if (PaintSurface.topOf(client.level, origin, Blocks.SHORT_GRASS.defaultBlockState()) != PaintSurface.NONE) {
 			throw new AssertionError("Short grass should not have a top paint surface!");
+		}
+
+		// Edge drip calculations
+		int dripLen = EdgeDrip.calculateDripLength(origin.getX(), origin.getZ(), FaceAxes.EAST, 8, 5, 11, 15, 1);
+		if (dripLen < 3 || dripLen > 15) {
+			throw new AssertionError("EdgeDrip.calculateDripLength produced out-of-range length: " + dripLen);
+		}
+		int dripAlpha = EdgeDrip.dripAlpha(255, 3, 7);
+		if (dripAlpha < 100 || dripAlpha > 255) {
+			throw new AssertionError("EdgeDrip.dripAlpha produced invalid alpha: " + dripAlpha);
 		}
 	}
 }
