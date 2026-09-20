@@ -20,6 +20,7 @@ public class RedfxConfig {
     public float splatSizeScale = 1.0f; // Range: 0.5 to 2.0
     public float colorSaturation = 1.0f; // Range: 0.0 to 2.0
     public boolean translucentEdges = true; // Translucent gradient falloff on splatter edges
+    public boolean dripOverEdges = true; // Wrap and drip splatters over block edges into open air
 
     private static RedfxConfig instance;
 
@@ -95,6 +96,7 @@ public class RedfxConfig {
         this.splatSizeScale = 1.0f;
         this.colorSaturation = 1.0f;
         this.translucentEdges = true;
+        this.dripOverEdges = true;
     }
 
     public float getMultiplier() {

@@ -181,8 +181,18 @@ public class RedfxConfigScreen extends Screen {
                 config.translucentEdges = !config.translucentEdges;
                 btn.setMessage(getSoftEdgesButtonMessage(config));
             }
-        ).bounds(x, startY + 125, buttonWidth, buttonHeight).build();
+        ).bounds(leftX, startY + 125, colWidth, buttonHeight).build();
         this.addRenderableWidget(softEdgesToggle);
+
+        // Button: Toggle Edge Dripping
+        Button edgeDripToggle = Button.builder(
+            getEdgeDripButtonMessage(config),
+            btn -> {
+                config.dripOverEdges = !config.dripOverEdges;
+                btn.setMessage(getEdgeDripButtonMessage(config));
+            }
+        ).bounds(rightX, startY + 125, colWidth, buttonHeight).build();
+        this.addRenderableWidget(edgeDripToggle);
 
         // Button: Done / Close
         Button doneButton = Button.builder(
@@ -209,6 +219,10 @@ public class RedfxConfigScreen extends Screen {
 
     private Component getSoftEdgesButtonMessage(RedfxConfig config) {
         return Component.literal("Soft Edges: " + (config.translucentEdges ? "ON" : "OFF"));
+    }
+
+    private Component getEdgeDripButtonMessage(RedfxConfig config) {
+        return Component.literal("Edge Dripping: " + (config.dripOverEdges ? "ON" : "OFF"));
     }
 
     private Component getBloodButtonMessage(RedfxConfig config) {
