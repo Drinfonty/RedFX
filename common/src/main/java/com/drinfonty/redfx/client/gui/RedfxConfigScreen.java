@@ -22,7 +22,7 @@ public class RedfxConfigScreen extends Screen {
         int buttonWidth = 230;
         int buttonHeight = 20;
         int x = (this.width - buttonWidth) / 2;
-        int startY = this.height / 2 - 85;
+        int startY = this.height / 2 - 95;
         int colWidth = 112;
         int leftX = x;
         int rightX = x + 118;
@@ -194,6 +194,26 @@ public class RedfxConfigScreen extends Screen {
         ).bounds(rightX, startY + 125, colWidth, buttonHeight).build();
         this.addRenderableWidget(edgeDripToggle);
 
+        // Button: Toggle Gradual Splatter Bloom
+        Button gradualToggle = Button.builder(
+            getGradualSplatterButtonMessage(config),
+            btn -> {
+                config.gradualSplatter = !config.gradualSplatter;
+                btn.setMessage(getGradualSplatterButtonMessage(config));
+            }
+        ).bounds(leftX, startY + 150, colWidth, buttonHeight).build();
+        this.addRenderableWidget(gradualToggle);
+
+        // Button: Cycle Bloom Delay
+        Button delayToggle = Button.builder(
+            getSplatterDelayButtonMessage(config),
+            btn -> {
+                config.splatterGrowthDelayTicks = (config.splatterGrowthDelayTicks % 3) + 1;
+                btn.setMessage(getSplatterDelayButtonMessage(config));
+            }
+        ).bounds(rightX, startY + 150, colWidth, buttonHeight).build();
+        this.addRenderableWidget(delayToggle);
+
         // Button: Done / Close
         Button doneButton = Button.builder(
             Component.literal("Done"),
@@ -201,7 +221,7 @@ public class RedfxConfigScreen extends Screen {
                 config.save();
                 this.onClose();
             }
-        ).bounds(leftX, startY + 150, colWidth, buttonHeight).build();
+        ).bounds(leftX, startY + 175, colWidth, buttonHeight).build();
         this.addRenderableWidget(doneButton);
 
         // Button: Reset Defaults
@@ -211,8 +231,16 @@ public class RedfxConfigScreen extends Screen {
                 config.resetToDefaults();
                 this.rebuildWidgets();
             }
-        ).bounds(rightX, startY + 150, colWidth, buttonHeight).build();
+        ).bounds(rightX, startY + 175, colWidth, buttonHeight).build();
         this.addRenderableWidget(resetButton);
+    }
+
+    private Component getGradualSplatterButtonMessage(RedfxConfig config) {
+        return Component.literal("Bloom: " + (config.gradualSplatter ? "ON" : "OFF"));
+    }
+
+    private Component getSplatterDelayButtonMessage(RedfxConfig config) {
+        return Component.literal("Delay: " + config.splatterGrowthDelayTicks + "t (" + (config.splatterGrowthDelayTicks * 50) + "ms)");
     }
 
     private Component getSoftEdgesButtonMessage(RedfxConfig config) {
