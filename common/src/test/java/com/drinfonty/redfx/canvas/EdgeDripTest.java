@@ -160,20 +160,17 @@ class EdgeDripTest {
 					if (cStart == -1) cStart = coord;
 				} else if (cStart != -1) {
 					int cEnd = coord - 1;
-					for (int c = cStart; c <= cEnd; c++) {
+					int[] beadColumns = EdgeDrip.selectBeadColumns(cStart, cEnd, targetX, targetZ, sideFace, 1);
+					for (int c : beadColumns) {
 						int col = rimColors[c];
 						int baseAlpha = (col >>> 24);
 						int rgb = col & 0xFFFFFF;
 
 						int uSide = EdgeDrip.sideU(sideFace, 15, c);
-						int uSideStart = EdgeDrip.sideU(sideFace, 15, cEnd);
-						int uSideEnd = EdgeDrip.sideU(sideFace, 15, cStart);
-						int minUSide = Math.min(uSideStart, uSideEnd);
-						int maxUSide = Math.max(uSideStart, uSideEnd);
 
 						int dripLen = EdgeDrip.calculateDripLength(
 							targetX, targetZ, sideFace, uSide,
-							minUSide, maxUSide, 15, 1
+							cStart, cEnd, 15, 1
 						);
 
 						for (int step = 0; step <= dripLen; step++) {
@@ -203,8 +200,51 @@ class EdgeDripTest {
 				}
 			}
 		}
-		assertTrue(sidePainted >= 15, "Should paint substantial drip pixels on side face");
-		assertTrue(maxV >= 4, "Drips should extend at least 4 pixels down the face");
+		assertTrue(sidePainted >= 5, "Should paint teardrop bead pixels on side face");
+		assertTrue(maxV >= 4 && maxV <= 8, "Teardrop beads should extend 4 to 8 pixels down the face");
+	}
+
+	@Test
+	void selectBeadColumnsEliminatesRivuletsWithSeparatedSingleTexelBeads() {
+		// Single pixel cluster
+		int[] single = EdgeDrip.selectBeadColumns(5, 5, 0, 0, FaceAxes.NORTH, 1);
+		assertEquals(1, single.length);
+		assertEquals(5, single[0]);
+
+		// Narrow cluster (width 3): returns exactly 1 column within [2, 4]
+		int[] narrow = EdgeDrip.selectBeadColumns(2, 4, 10, 20, FaceAxes.EAST, 2);
+		assertEquals(1, narrow.length);
+		assertTrue(narrow[0] >= 2 && narrow[0] <= 4);
+
+		// Wide cluster (width 8): returns 1 or at most 2 separated columns that are NEVER adjacent
+		for (int splat = 1; splat <= 20; splat++) {
+			int[] wide = EdgeDrip.selectBeadColumns(2, 9, 5, 15, FaceAxes.SOUTH, splat);
+			assertTrue(wide.length >= 1 && wide.length <= 2, "Should pick 1 or 2 beads");
+			for (int b : wide) {
+				assertTrue(b >= 2 && b <= 9, "Bead must be within cluster bounds");
+			}
+			if (wide.length == 2) {
+				assertTrue(Math.abs(wide[0] - wide[1]) >= 2, "Bead columns must never be adjacent (no rivulets)");
+			}
+		}
+	}
+
+	@Test
+	void calculateDripLengthExtendsFourToEightPixels() {
+		for (int u = 0; u < 16; u++) {
+			int len = EdgeDrip.calculateDripLength(10, -5, FaceAxes.NORTH, u, 0, 15, 15, 1);
+			assertTrue(len >= 4 && len <= 8, "Bead drip length must be between 4 and 8 pixels: " + len);
+		}
+	}
+
+	@Test
+	void fasterBeadsRunLongerWithShorterStepDelays() {
+		long delayLen8 = EdgeDrip.beadStepDelayMs(8, 1.0f);
+		long delayLen6 = EdgeDrip.beadStepDelayMs(6, 1.0f);
+		long delayLen4 = EdgeDrip.beadStepDelayMs(4, 1.0f);
+
+		assertTrue(delayLen8 < delayLen6, "Length 8 bead should advance faster than length 6");
+		assertTrue(delayLen6 < delayLen4, "Length 6 bead should advance faster than length 4");
 	}
 
 	@Test
