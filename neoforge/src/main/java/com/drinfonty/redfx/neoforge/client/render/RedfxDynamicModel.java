@@ -112,9 +112,20 @@ public class RedfxDynamicModel extends DelegateBlockStateModel implements Dynami
 		return List.copyOf(quads);
 	}
 
+	@Override
+	public int materialFlags(BlockAndTintGetter level, BlockPos pos, BlockState state) {
+		int flags = super.materialFlags(level, pos, state);
+		if (ClientCanvasStore.get().isPainted(pos)) {
+			flags |= BakedQuad.FLAG_TRANSLUCENT;
+		}
+		return flags;
+	}
+
 	private static BakedQuad bake(float[] corners, Direction direction, int argb, boolean back) {
 		MutableQuad quad = new MutableQuad();
-		quad.setSprite(new Material.Baked(PaintSprites.paint(), false), Transparency.TRANSPARENT);
+		boolean isTranslucent = (argb >>> 24) < 255;
+		quad.setSprite(new Material.Baked(PaintSprites.paint(), false),
+			isTranslucent ? Transparency.TRANSLUCENT : Transparency.TRANSPARENT);
 		quad.setDirection(back ? direction.getOpposite() : direction);
 
 		for (int vertex = 0; vertex < 4; vertex++) {
@@ -158,7 +169,11 @@ public class RedfxDynamicModel extends DelegateBlockStateModel implements Dynami
 
 		@Override
 		public int materialFlags() {
-			return 0;
+			int flags = 0;
+			for (BakedQuad quad : quads) {
+				flags |= quad.materialInfo().flags();
+			}
+			return flags;
 		}
 	}
 }
