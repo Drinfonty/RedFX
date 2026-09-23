@@ -173,4 +173,51 @@ class BloodSplatterTest {
 
 		assertTrue(stages.contains(0), "Even small specks must always have a stage 0 (immediate core) pixel");
 	}
+
+	@Test
+	void stampsWallDripWithDownwardRivulets() {
+		java.util.List<Integer> vCoords = new java.util.ArrayList<>();
+		java.util.Map<Integer, java.util.List<Integer>> stageVs = new java.util.HashMap<>();
+		int red = 0xFFFF0000;
+		int impactV = 4;
+
+		BloodSplatter.stampWallDripGlobal(7, impactV, red, 1, 1.0f, (u, v, argb, stage) -> {
+			vCoords.add(v);
+			stageVs.computeIfAbsent(stage, k -> new java.util.ArrayList<>()).add(v);
+		});
+
+		int minV = vCoords.stream().min(Integer::compareTo).orElse(impactV);
+		int maxV = vCoords.stream().max(Integer::compareTo).orElse(impactV);
+
+		assertTrue(maxV - impactV >= 4, "Wall drip should extend downwards below impact point (+v)");
+		assertTrue(maxV - minV >= 4, "Wall drip total vertical extent should span multiple rows");
+
+		// Verify stage 0 is at or near the impact point
+		assertTrue(stageVs.containsKey(0), "Should contain stage 0 impact head");
+		int minStage0V = stageVs.get(0).stream().min(Integer::compareTo).orElse(0);
+		int maxStage0V = stageVs.get(0).stream().max(Integer::compareTo).orElse(0);
+		assertTrue(minStage0V <= impactV && maxStage0V <= impactV + 4, "Stage 0 should be concentrated at impact head");
+
+		// Verify all 3 drip stages are present
+		assertTrue(stageVs.containsKey(1), "Should contain drip stage 1");
+		assertTrue(stageVs.containsKey(2), "Should contain drip stage 2");
+		assertTrue(stageVs.containsKey(3), "Should contain drip stage 3");
+
+		// Verify highest stage contains the lowest dripping pixels
+		int maxStage = stageVs.keySet().stream().max(Integer::compareTo).orElse(0);
+		int maxStageV = stageVs.get(maxStage).stream().max(Integer::compareTo).orElse(0);
+		assertEquals(maxV, maxStageV, "Highest stage should reach the bottom-most teardrop pixels");
+	}
+
+	@Test
+	void stampsWallDripAllPatternsWithoutCrashing() {
+		int red = 0xFFFF0000;
+		for (int pattern = 1; pattern <= 10; pattern++) {
+			java.util.concurrent.atomic.AtomicInteger count = new java.util.concurrent.atomic.AtomicInteger(0);
+			BloodSplatter.stampWallDripGlobal(8, 4, red, pattern, 1.0f, (u, v, argb, stage) -> {
+				count.incrementAndGet();
+			});
+			assertTrue(count.get() >= 5, "Wall drip pattern " + pattern + " should produce dripping pixels");
+		}
+	}
 }
