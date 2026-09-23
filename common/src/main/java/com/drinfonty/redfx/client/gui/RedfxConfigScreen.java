@@ -22,7 +22,7 @@ public class RedfxConfigScreen extends Screen {
         int buttonWidth = 230;
         int buttonHeight = 20;
         int x = (this.width - buttonWidth) / 2;
-        int startY = this.height / 2 - 95;
+        int startY = this.height / 2 - 105;
         int colWidth = 112;
         int leftX = x;
         int rightX = x + 118;
@@ -194,6 +194,16 @@ public class RedfxConfigScreen extends Screen {
         ).bounds(rightX, startY + 125, colWidth, buttonHeight).build();
         this.addRenderableWidget(edgeDripToggle);
 
+        // Button: Toggle Wall Dripping
+        Button wallDripToggle = Button.builder(
+            getWallDripsButtonMessage(config),
+            btn -> {
+                config.wallDripping = !config.wallDripping;
+                btn.setMessage(getWallDripsButtonMessage(config));
+            }
+        ).bounds(leftX, startY + 150, colWidth, buttonHeight).build();
+        this.addRenderableWidget(wallDripToggle);
+
         // Button: Toggle Gradual Splatter Bloom
         Button gradualToggle = Button.builder(
             getGradualSplatterButtonMessage(config),
@@ -201,7 +211,7 @@ public class RedfxConfigScreen extends Screen {
                 config.gradualSplatter = !config.gradualSplatter;
                 btn.setMessage(getGradualSplatterButtonMessage(config));
             }
-        ).bounds(leftX, startY + 150, colWidth, buttonHeight).build();
+        ).bounds(rightX, startY + 150, colWidth, buttonHeight).build();
         this.addRenderableWidget(gradualToggle);
 
         // Button: Cycle Bloom Delay
@@ -211,7 +221,7 @@ public class RedfxConfigScreen extends Screen {
                 config.splatterGrowthDelayTicks = (config.splatterGrowthDelayTicks % 3) + 1;
                 btn.setMessage(getSplatterDelayButtonMessage(config));
             }
-        ).bounds(rightX, startY + 150, colWidth, buttonHeight).build();
+        ).bounds(x, startY + 175, buttonWidth, buttonHeight).build();
         this.addRenderableWidget(delayToggle);
 
         // Button: Done / Close
@@ -223,7 +233,7 @@ public class RedfxConfigScreen extends Screen {
                     this.minecraft.setScreen(this.parent);
                 }
             }
-        ).bounds(leftX, startY + 175, colWidth, buttonHeight).build();
+        ).bounds(leftX, startY + 200, colWidth, buttonHeight).build();
         this.addRenderableWidget(doneButton);
 
         // Button: Reset Defaults
@@ -233,8 +243,12 @@ public class RedfxConfigScreen extends Screen {
                 config.resetToDefaults();
                 this.rebuildWidgets();
             }
-        ).bounds(rightX, startY + 175, colWidth, buttonHeight).build();
+        ).bounds(rightX, startY + 200, colWidth, buttonHeight).build();
         this.addRenderableWidget(resetButton);
+    }
+
+    private Component getWallDripsButtonMessage(RedfxConfig config) {
+        return Component.literal("Wall Drips: " + (config.wallDripping ? "ON" : "OFF"));
     }
 
     private Component getGradualSplatterButtonMessage(RedfxConfig config) {
