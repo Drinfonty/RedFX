@@ -21,8 +21,9 @@ public class RedfxConfig {
     public float colorSaturation = 1.0f; // Range: 0.0 to 2.0
     public boolean translucentEdges = true; // Translucent gradient falloff on splatter edges
     public boolean dripOverEdges = true; // Wrap and drip splatters over block edges into open air
+    public boolean wallDripping = true; // Splatters on vertical walls form natural dripping rivulets running down the block
     public boolean gradualSplatter = true; // Splatters blossom outward gradually (core -> sub-perimeter -> edge)
-    public int splatterGrowthDelayTicks = 1; // Delay in ticks between growth stages (1 = 50ms, 2 = 100ms)
+    public int splatterGrowthDelayTicks = 2; // Delay in ticks between growth stages (1 = 50ms, 2 = 100ms, 3 = 150ms)
 
     private static RedfxConfig instance;
 
@@ -34,41 +35,59 @@ public class RedfxConfig {
     }
 
     public static RedfxConfig load() {
+        RedfxConfig config = new RedfxConfig();
         if (CONFIG_FILE.exists()) {
             try (FileReader reader = new FileReader(CONFIG_FILE)) {
-                RedfxConfig config = GSON.fromJson(reader, RedfxConfig.class);
-                if (config != null) {
-                    if (config.particleAmount == null) {
-                        config.particleAmount = "High";
-                    }
-                    if (config.particleLifetimeSeconds <= 0) {
-                        config.particleLifetimeSeconds = 5;
-                    }
-                    // Fallback to default if loaded particleType is one of the removed ones
-                    if (config.particleType == null || 
-                        config.particleType.equals("RedstoneBlock") || 
-                        config.particleType.equals("RedstoneWire")) {
-                        config.particleType = "RedWool";
-                    }
-                    if (config.waterParticleType == null) {
-                        config.waterParticleType = "Smoke";
-                    }
-                    if (config.particleSizeScale < 0.1f) {
-                        config.particleSizeScale = 1.0f;
-                    }
-                    if (config.splatSizeScale < 0.1f) {
-                        config.splatSizeScale = 1.0f;
-                    }
-                    if (config.colorSaturation < 0.0f) {
-                        config.colorSaturation = 1.0f;
-                    }
-                    return config;
+                com.google.gson.JsonElement element = com.google.gson.JsonParser.parseReader(reader);
+                if (element != null && element.isJsonObject()) {
+                    com.google.gson.JsonObject obj = element.getAsJsonObject();
+                    if (obj.has("bloodEnabled")) config.bloodEnabled = obj.get("bloodEnabled").getAsBoolean();
+                    if (obj.has("particleAmount")) config.particleAmount = obj.get("particleAmount").getAsString();
+                    if (obj.has("particleType")) config.particleType = obj.get("particleType").getAsString();
+                    if (obj.has("particleLifetimeSeconds")) config.particleLifetimeSeconds = obj.get("particleLifetimeSeconds").getAsInt();
+                    if (obj.has("enableSplatDust")) config.enableSplatDust = obj.get("enableSplatDust").getAsBoolean();
+                    if (obj.has("waterParticleType")) config.waterParticleType = obj.get("waterParticleType").getAsString();
+                    if (obj.has("particleSizeScale")) config.particleSizeScale = obj.get("particleSizeScale").getAsFloat();
+                    if (obj.has("splatSizeScale")) config.splatSizeScale = obj.get("splatSizeScale").getAsFloat();
+                    if (obj.has("colorSaturation")) config.colorSaturation = obj.get("colorSaturation").getAsFloat();
+                    if (obj.has("translucentEdges")) config.translucentEdges = obj.get("translucentEdges").getAsBoolean();
+                    if (obj.has("dripOverEdges")) config.dripOverEdges = obj.get("dripOverEdges").getAsBoolean();
+                    if (obj.has("wallDripping")) config.wallDripping = obj.get("wallDripping").getAsBoolean();
+                    if (obj.has("gradualSplatter")) config.gradualSplatter = obj.get("gradualSplatter").getAsBoolean();
+                    if (obj.has("splatterGrowthDelayTicks")) config.splatterGrowthDelayTicks = obj.get("splatterGrowthDelayTicks").getAsInt();
                 }
             } catch (Exception e) {
                 System.err.println("[RedFX] Failed to load config: " + e.getMessage());
             }
         }
-        RedfxConfig config = new RedfxConfig();
+        // Fallbacks & validation
+        if (config.particleAmount == null) {
+            config.particleAmount = "High";
+        }
+        if (config.particleLifetimeSeconds <= 0) {
+            config.particleLifetimeSeconds = 5;
+        }
+        if (config.particleType == null || 
+            config.particleType.equals("RedstoneBlock") || 
+            config.particleType.equals("RedstoneWire")) {
+            config.particleType = "RedWool";
+        }
+        if (config.waterParticleType == null) {
+            config.waterParticleType = "Smoke";
+        }
+        if (config.particleSizeScale < 0.1f) {
+            config.particleSizeScale = 1.0f;
+        }
+        if (config.splatSizeScale < 0.1f) {
+            config.splatSizeScale = 1.0f;
+        }
+        if (config.colorSaturation < 0.0f) {
+            config.colorSaturation = 1.0f;
+        }
+        if (config.splatterGrowthDelayTicks <= 0) {
+            config.splatterGrowthDelayTicks = 2;
+        }
+        // Save back so any newly introduced properties are persisted into user's config file
         config.save();
         return config;
     }
@@ -99,8 +118,9 @@ public class RedfxConfig {
         this.colorSaturation = 1.0f;
         this.translucentEdges = true;
         this.dripOverEdges = true;
+        this.wallDripping = true;
         this.gradualSplatter = true;
-        this.splatterGrowthDelayTicks = 1;
+        this.splatterGrowthDelayTicks = 2;
     }
 
     public float getMultiplier() {

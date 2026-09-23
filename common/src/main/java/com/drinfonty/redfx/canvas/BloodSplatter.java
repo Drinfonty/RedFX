@@ -2,8 +2,10 @@ package com.drinfonty.redfx.canvas;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
@@ -40,6 +42,7 @@ public final class BloodSplatter {
 			0x0FF0, 0x0FF0, 0x07F0, 0x07E0, 0x0500, 0x0000, 0x0000, 0x0000
 		}
 	};
+
 
 	public interface CanvasWriter {
 		void setTexel(int globalU, int globalV, int argb);
@@ -210,6 +213,83 @@ public final class BloodSplatter {
 
 			int col = (alpha << 24) | rgb;
 			writer.setTexel(p.u, p.v, col, stage);
+		}
+	}
+
+	/**
+	 * Stamps vertical dripping blood running down a wall (+v direction).
+	 * Features an impact splash at (globalCenterU, globalCenterV), streaming rivulets,
+	/**
+	 * Stamps vertical dripping blood running down a wall (+v direction).
+	 * Starts with a smaller, compact impact splatter, picks 1-2 drip points at the bottom of the splatter,
+	 * and slowly drips down across 3 stages with random lengths (1-3 pixels) and widths (1-2 pixels).
+	 *
+	 * Stage 0: Immediate compact impact head
+	 * Stage 1: Drip stage 1 (runs down 1-3 px, 1-2 px wide)
+	 * Stage 2: Drip stage 2 (runs down another 1-3 px, 1-2 px wide)
+	 * Stage 3: Drip stage 3 (runs down another 1-3 px, forming a teardrop bead at tip)
+	 */
+	/**
+	 * Stamps a blood splatter on a vertical wall with downward-dripping teardrop beads.
+	 *
+	 * Stage 0: Core splatter pixels
+	 * Stage 1: Sub-perimeter splatter pixels
+	 * Stage 2: Outermost perimeter splatter pixels
+	 * Stage 3+: Teardrop bead steps trickling downwards from the bottom of the splatter
+	 */
+	public static void stampWallDripGlobal(int globalCenterU, int globalCenterV, int argb, int splatIndex, float scale, StagedCanvasWriter writer) {
+		long seed = ((long) globalCenterU * 31237L) ^ ((long) globalCenterV * 982451L) ^ ((long) splatIndex * 7919L);
+		java.util.Random rand = new java.util.Random(seed);
+
+		int rgb = argb & 0xFFFFFF;
+		boolean enableTranslucent = com.drinfonty.redfx.config.RedfxConfig.get().translucentEdges;
+
+		// 1. Stamp the full organic blood splatter on the wall
+		Map<Integer, Integer> maxVPerU = new HashMap<>();
+		stampGlobal(globalCenterU, globalCenterV, argb, splatIndex, scale, (gu, gv, col, stage) -> {
+			maxVPerU.merge(gu, gv, Math::max);
+			writer.setTexel(gu, gv, col, stage);
+		});
+
+		if (maxVPerU.isEmpty()) return;
+
+		// 2. Select teardrop bead column(s) from columns that actually contain splatter texels
+		List<Integer> availableCols = new ArrayList<>(maxVPerU.keySet());
+		Collections.sort(availableCols);
+		int k = availableCols.size();
+		int hash = Math.abs((globalCenterU * 3127 + globalCenterV * 739 + splatIndex * 19));
+
+		List<Integer> beadColumns = new ArrayList<>();
+		if (k <= 5) {
+			beadColumns.add(availableCols.get(hash % k));
+		} else {
+			int b1 = availableCols.get(hash % (k / 2));
+			int b2 = availableCols.get(k - 1 - ((hash / 17) % (k / 2)));
+			beadColumns.add(b1);
+			if (Math.abs(b2 - b1) >= 2) {
+				beadColumns.add(b2);
+			}
+		}
+
+		// 3. Trickle teardrop beads down from the bottom of the splatter
+		for (int dripU : beadColumns) {
+			int startV = maxVPerU.get(dripU);
+			int beadLen = 4 + rand.nextInt(5); // 4..8 pixels long
+
+			for (int step = 1; step <= beadLen; step++) {
+				int v = startV + step;
+				int alpha;
+				if (!enableTranslucent) {
+					alpha = 255;
+				} else if (step == beadLen) {
+					alpha = 250; // Teardrop bead at tip
+				} else if (step == 1) {
+					alpha = 230;
+				} else {
+					alpha = 195; // Slender stream
+				}
+				writer.setTexel(dripU, v, (alpha << 24) | rgb, 2 + step);
+			}
 		}
 	}
 
