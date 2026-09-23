@@ -47,26 +47,55 @@ public final class EdgeDrip {
 	}
 
 	/**
-	 * Computes the organic drip length down a vertical face for column {@code uSide}
-	 * within a cluster of edge columns spanning {@code [clusterStart, clusterEnd]}.
-	 * Central columns in the cluster drip farther down than outer columns, forming natural teardrop rivulets.
+	 * Selects 1 or at most 2 separated column coordinates within [clusterStart, clusterEnd]
+	 * to trickle single-texel teardrop beads down the side face.
+	 * Rivulets are eliminated by ensuring selected bead columns are never adjacent.
+	 */
+	public static int[] selectBeadColumns(int clusterStart, int clusterEnd, int blockX, int blockZ, int sideFace, int splatIndex) {
+		int clusterWidth = clusterEnd - clusterStart + 1;
+		if (clusterWidth <= 0) return new int[0];
+		if (clusterWidth == 1) return new int[] { clusterStart };
+
+		int hash = Math.abs((blockX * 3127 + blockZ * 739 + sideFace * 101 + clusterStart * 37) ^ (splatIndex * 19));
+
+		// For narrow to medium clusters (width <= 5), choose exactly 1 bead column at random
+		if (clusterWidth <= 5) {
+			int bead = clusterStart + (hash % clusterWidth);
+			return new int[] { bead };
+		}
+
+		// For wider clusters, pick 1 or at most 2 separated bead columns
+		int b1 = clusterStart + (hash % (clusterWidth / 2));
+		int b2 = clusterEnd - ((hash / 17) % (clusterWidth / 2));
+
+		if (b2 - b1 >= 2) {
+			return new int[] { b1, b2 };
+		} else {
+			return new int[] { b1 };
+		}
+	}
+
+	/**
+	 * Computes the teardrop bead drip length (4..8 pixels) down a vertical face for column {@code uSide}.
 	 */
 	public static int calculateDripLength(int blockX, int blockZ, int sideFace, int uSide,
 		int clusterStart, int clusterEnd, int maxAllowedLength, int splatIndex) {
-		int clusterWidth = clusterEnd - clusterStart + 1;
-		float center = (clusterStart + clusterEnd) / 2.0f;
-		float dist = Math.abs(uSide - center);
-		float norm = dist / (clusterWidth / 2.0f + 0.5f);
-
 		int hash = Math.abs((blockX * 3127 + blockZ * 739 + sideFace * 101 + uSide * 37) ^ (splatIndex * 19));
 
-		// Base maximum drip length at cluster center (5..9 pixels)
-		int baseLen = 4 + (clusterWidth >= 3 ? 2 : 0) + (clusterWidth >= 6 ? 2 : 0) + (hash % 3);
+		// Teardrop bead drip length: 4..8 pixels long
+		int beadLen = 4 + (hash % 5);
 
-		// Central columns drip farthest; outer columns taper to ~40%
-		int len = Math.max(2, Math.round(baseLen * (1.0f - norm * 0.58f)));
+		return Math.max(1, Math.min(maxAllowedLength, beadLen));
+	}
 
-		return Math.max(1, Math.min(maxAllowedLength, len));
+	/**
+	 * Computes the step delay in milliseconds for a bead of length {@code beadLen}.
+	 * Longer (faster) beads advance more rapidly; shorter beads advance more slowly.
+	 */
+	public static long beadStepDelayMs(int beadLen, float configFactor) {
+		// Base delay: 70ms for len 8, up to 210ms for len 4
+		int baseDelay = 70 + Math.max(0, 8 - beadLen) * 35;
+		return Math.max(40L, Math.round(baseDelay * configFactor));
 	}
 
 	/**
@@ -85,17 +114,19 @@ public final class EdgeDrip {
 	}
 
 	/**
-	 * Computes the attenuated alpha for step {@code step} of a drip of total length {@code totalLength}.
-	 * The top remains rich and opaque, while the tip fades slightly while remaining distinctly visible.
+	 * Computes the attenuated alpha for step {@code step} of a teardrop bead drip of total length {@code totalLength}.
+	 * The top rim stays rich, the stream is slender and slightly translucent, and the tip forms a dense teardrop bead.
 	 */
 	public static int dripAlpha(int baseAlpha, int step, int totalLength) {
 		if (step <= 0) {
-			return Math.max(200, baseAlpha);
+			return Math.max(220, baseAlpha);
 		}
-		float progress = (float) step / Math.max(1, totalLength);
-		float factor = 1.0f - progress * 0.45f;
-		int alpha = (int) (Math.max(200, baseAlpha) * factor);
-		return Math.max(110, Math.min(255, alpha));
+		if (step >= totalLength) {
+			// Teardrop bead at the tip: concentrated, rich droplet
+			return Math.min(255, Math.max(245, baseAlpha));
+		}
+		// Slender stream connecting top edge to bead tip
+		return Math.max(160, (int) (Math.max(190, baseAlpha) * 0.80f));
 	}
 }
 
