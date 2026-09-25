@@ -45,34 +45,34 @@ public final class PaintGeometry {
 
 		switch (face) {
 			case FaceAxes.NORTH -> {
-				x = 1.0F - u;
-				y = 1.0F - v;
+				x = (u == 0.0F) ? (1.0F + d) : (u == 1.0F ? -d : (1.0F - u));
+				y = (v == 0.0F) ? (surfaceY + d) : (surfaceY - v);
 				z = -d;
 			}
 			case FaceAxes.SOUTH -> {
-				x = u;
-				y = 1.0F - v;
+				x = (u == 0.0F) ? -d : (u == 1.0F ? 1.0F + d : u);
+				y = (v == 0.0F) ? (surfaceY + d) : (surfaceY - v);
 				z = 1.0F + d;
 			}
 			case FaceAxes.WEST -> {
 				x = -d;
-				y = 1.0F - v;
-				z = u;
+				y = (v == 0.0F) ? (surfaceY + d) : (surfaceY - v);
+				z = (u == 0.0F) ? -d : (u == 1.0F ? 1.0F + d : u);
 			}
 			case FaceAxes.EAST -> {
 				x = 1.0F + d;
-				y = 1.0F - v;
-				z = 1.0F - u;
+				y = (v == 0.0F) ? (surfaceY + d) : (surfaceY - v);
+				z = (u == 0.0F) ? (1.0F + d) : (u == 1.0F ? -d : (1.0F - u));
 			}
 			case FaceAxes.UP -> {
-				x = u;
+				x = (u == 0.0F) ? -d : (u == 1.0F ? 1.0F + d : u);
 				y = surfaceY + d;
-				z = v;
+				z = (v == 0.0F) ? -d : (v == 1.0F ? 1.0F + d : v);
 			}
 			case FaceAxes.DOWN -> {
-				x = u;
+				x = (u == 0.0F) ? -d : (u == 1.0F ? 1.0F + d : u);
 				y = -d;
-				z = 1.0F - v;
+				z = (v == 0.0F) ? (1.0F + d) : (v == 1.0F ? -d : (1.0F - v));
 			}
 			default -> throw new IllegalArgumentException("bad face: " + face);
 		}
