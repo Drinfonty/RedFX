@@ -181,36 +181,33 @@ public class LivingEntityMixin {
     }
 
     private float[] getBloodColor(LivingEntity entity) {
-        float r = 1.0F;
-        float g = 0.05F;
-        float b = 0.05F;
+        RedfxConfig config = RedfxConfig.get();
+        String entityKey = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).toString();
+        float[] base = config.getBloodColorForEntity(entityKey);
 
-        if (entity instanceof Blaze || entity instanceof MagmaCube) {
-            r = 0.9F;
-            g = 0.7F;
-            b = 0.1F;
-        } else if (entity instanceof Slime || entity instanceof Creeper) {
-            r = 0.2F;
-            g = 0.9F;
-            b = 0.2F;
-        } else if (entity instanceof EnderMan || entity instanceof EnderDragon || entity instanceof Endermite) {
-            r = 0.6F;
-            g = 0.1F;
-            b = 0.8F;
-        } else if (entity instanceof AbstractSkeleton || entity.getType().builtInRegistryHolder().is(EntityTypeTags.SKELETONS)) {
-            r = 0.52F;
-            g = 0.32F;
-            b = 0.18F;
-        } else if (entity instanceof SulfurCube) {
-            r = 0.92F;
-            g = 0.92F;
-            b = 0.92F;
-        } else if (entity instanceof Warden) {
-            r = 0.05F;
-            g = 0.3F;
-            b = 0.7F;
+        if (base == null) {
+            if (entity instanceof Blaze || entity instanceof MagmaCube) {
+                base = new float[]{0.9F, 0.7F, 0.1F};
+            } else if (entity instanceof Slime || entity instanceof Creeper) {
+                base = new float[]{0.2F, 0.9F, 0.2F};
+            } else if (entity instanceof EnderMan || entity instanceof EnderDragon || entity instanceof Endermite) {
+                base = new float[]{0.6F, 0.1F, 0.8F};
+            } else if (entity instanceof AbstractSkeleton || entity.getType().builtInRegistryHolder().is(EntityTypeTags.SKELETONS)) {
+                base = new float[]{0.52F, 0.32F, 0.18F};
+            } else if (entity instanceof SulfurCube) {
+                base = new float[]{0.92F, 0.92F, 0.92F};
+            } else if (entity instanceof Warden) {
+                base = new float[]{0.05F, 0.3F, 0.7F};
+            } else {
+                base = config.getDefaultBloodColor();
+            }
         }
-        float sat = com.drinfonty.redfx.config.RedfxConfig.get().colorSaturation;
+
+        float r = base[0];
+        float g = base[1];
+        float b = base[2];
+
+        float sat = config.colorSaturation;
         float l = 0.2126f * r + 0.7152f * g + 0.0722f * b;
         r = l + sat * (r - l);
         g = l + sat * (g - l);
