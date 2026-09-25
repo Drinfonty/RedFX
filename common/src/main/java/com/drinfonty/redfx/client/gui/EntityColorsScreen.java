@@ -218,18 +218,17 @@ public class EntityColorsScreen extends Screen {
                 hexBox.setMaxLength(7);
                 addEntryWidget(hexBox);
 
-                // 3. Preset cycle button
+                // 3. Color Picker button
                 final Button[] presetBtnRef = new Button[1];
                 Button presetBtn = Button.builder(
                     getPresetButtonMessage(currentHex),
                     btn -> {
                         String hexNow = config.entityBloodColors.getOrDefault(entityId, "#FF0D0D");
-                        String nextHex = getNextPresetHex(hexNow);
-                        config.entityBloodColors.put(entityId, nextHex);
-                        hexBox.setValue(nextHex);
-                        btn.setMessage(getPresetButtonMessage(nextHex));
+                        openColorPicker(entityId, hexNow);
                     }
-                ).bounds(leftX + 168, entryY, 100, 20).build();
+                ).bounds(leftX + 168, entryY, 100, 20).tooltip(
+                    Tooltip.create(Component.literal("Click to open color picker"))
+                ).build();
                 presetBtnRef[0] = presetBtn;
                 addEntryWidget(presetBtn);
 
@@ -268,12 +267,10 @@ public class EntityColorsScreen extends Screen {
                 Button previewPresetBtn = Button.builder(
                     getPresetButtonMessage(currentHex),
                     btn -> {
-                        String nextHex = getNextPresetHex(currentHex);
-                        config.entityBloodColors.put(entityId, nextHex);
-                        refreshEntries();
+                        openColorPicker(entityId, currentHex);
                     }
                 ).bounds(leftX + 109, entryY, 100, 20).tooltip(
-                    Tooltip.create(Component.literal("Click to customize color and add"))
+                    Tooltip.create(Component.literal("Click to pick color and add"))
                 ).build();
                 addEntryWidget(previewPresetBtn);
 
@@ -402,6 +399,16 @@ public class EntityColorsScreen extends Screen {
             }
         }
         return PRESETS.get(0).hex;
+    }
+
+    private void openColorPicker(String entityId, String currentHex) {
+        if (this.minecraft != null) {
+            this.minecraft.setScreenAndShow(new ColorPickerScreen(this, entityId, currentHex, newHex -> {
+                RedfxConfig.get().entityBloodColors.put(entityId, newHex);
+                RedfxConfig.get().save();
+                refreshEntries();
+            }));
+        }
     }
 
     @Override
