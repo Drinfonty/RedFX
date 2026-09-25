@@ -17,6 +17,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.client.particle.Particle;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.world.level.block.AbstractChestBlock;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.tags.FluidTags;
@@ -279,7 +280,25 @@ public class BloodParticle extends TerrainParticle {
                         return si != null ? si.elevation() : (double) (p.getY() + 1.0);
                     });
 
+                    BlockState bState = this.level.getBlockState(bPos);
+                    double localTop = PaintSurface.topOf(this.level, bPos, bState);
+                    if (localTop == PaintSurface.NONE) {
+                        localTop = 1.0;
+                    }
+                    int localTexels = Math.max(1, (int) Math.round(localTop * 16.0));
+
+                    BlockPos belowPos = bPos.below();
+                    BlockState belowState = this.level.getBlockState(belowPos);
+
                     for (Direction hDir : horizontalDirs) {
+                        boolean sidePaintable = bState.isFaceSturdy(this.level, bPos, hDir)
+                            || bState.isCollisionShapeFullBlock(this.level, bPos)
+                            || (localTop != PaintSurface.NONE && !(bState.getBlock() instanceof AbstractChestBlock));
+                        if (!sidePaintable) continue;
+
+                        boolean belowPaintable = belowState.isFaceSturdy(this.level, belowPos, hDir)
+                            || belowState.isCollisionShapeFullBlock(this.level, belowPos);
+
                         BlockPos neighborPos = bPos.relative(hDir);
                         SurfaceInfo neighborInfo = resolveTopSurfaceInfo(neighborPos);
 
@@ -290,17 +309,22 @@ public class BloodParticle extends TerrainParticle {
                                 // Neighbor is at same height or higher; no exposed vertical drop
                                 continue;
                             }
-                            exposedHeight = drop;
+                            if (drop <= localTop) {
+                                exposedHeight = drop;
+                            } else {
+                                exposedHeight = belowPaintable
+                                    ? Math.min(drop, myElevation - (double) belowPos.getY())
+                                    : localTop;
+                            }
                         } else {
-                            // Neighbor column is air/cliff! Side face is exposed down to block base
-                            exposedHeight = myElevation - bPos.getY();
+                            // Neighbor column is air/cliff!
+                            exposedHeight = belowPaintable
+                                ? (myElevation - (double) belowPos.getY())
+                                : (myElevation - (double) bPos.getY());
                         }
 
                         int maxDropTexels = Math.min(Canvas.SIZE, (int) Math.round(exposedHeight * 16.0));
                         if (maxDropTexels <= 0) continue;
-
-                        BlockPos paintBlock = resolvePaintableSideBlock(bPos, hDir);
-                        if (paintBlock == null) continue;
 
                         int sideFace = hDir.get3DDataValue();
 
@@ -402,7 +426,7 @@ public class BloodParticle extends TerrainParticle {
                                 int cEnd = coord - 1;
 
                                 int[] beadColumns = EdgeDrip.selectBeadColumns(
-                                    cStart, cEnd, paintBlock.getX(), paintBlock.getZ(), sideFace, this.splatIndex
+                                    cStart, cEnd, bPos.getX(), bPos.getZ(), sideFace, this.splatIndex
                                 );
 
                                 for (int c : beadColumns) {
@@ -419,22 +443,34 @@ public class BloodParticle extends TerrainParticle {
                                     };
 
                                     int dripLen = EdgeDrip.calculateDripLength(
-                                        paintBlock.getX(), paintBlock.getZ(), sideFace, uSide,
+                                        bPos.getX(), bPos.getZ(), sideFace, uSide,
                                         cStart, cEnd, maxDropTexels - 1, this.splatIndex
                                     );
 
                                     long stepDelayMs = EdgeDrip.beadStepDelayMs(dripLen, configFactor);
-                                    int beadHash = Math.abs((paintBlock.getX() * 3127 + paintBlock.getZ() * 739 + sideFace * 101 + uSide * 37) ^ (this.splatIndex * 19));
+                                    int beadHash = Math.abs((bPos.getX() * 3127 + bPos.getZ() * 739 + sideFace * 101 + uSide * 37) ^ (this.splatIndex * 19));
                                     long beadStartMs = nowMs + 2 * baseDelayMs + (beadHash % 35);
 
                                     for (int step = 0; step <= dripLen; step++) {
+                                        BlockPos beadBlock;
+                                        int vTexel;
+                                        if (step < localTexels) {
+                                            beadBlock = bPos;
+                                            vTexel = step;
+                                        } else if (belowPaintable) {
+                                            beadBlock = belowPos;
+                                            vTexel = step - localTexels;
+                                        } else {
+                                            break;
+                                        }
+
                                         int dripAlpha = RedfxConfig.get().translucentEdges
                                             ? EdgeDrip.dripAlpha(baseAlpha, step, dripLen)
                                             : 255;
                                         int dripCol = (dripAlpha << 24) | rgb;
 
                                         ClientCanvasStore.PendingTexel pt = new ClientCanvasStore.PendingTexel(
-                                            paintBlock, sideFace, uSide, step, dripCol, expirationMs
+                                            beadBlock, sideFace, uSide, vTexel, dripCol, expirationMs
                                         );
                                         long execTime = beadStartMs + (long) step * stepDelayMs;
                                         addTexel.accept(pt, execTime);
@@ -570,24 +606,6 @@ public class BloodParticle extends TerrainParticle {
             if (top != PaintSurface.NONE) {
                 return new SurfaceInfo(belowPos, belowPos.getY() + top);
             }
-        }
-        return null;
-    }
-
-    private BlockPos resolveTopSurface(BlockPos pos) {
-        SurfaceInfo info = resolveTopSurfaceInfo(pos);
-        return info != null ? info.blockPos() : null;
-    }
-
-    private BlockPos resolvePaintableSideBlock(BlockPos pos, Direction sideDir) {
-        BlockState state = this.level.getBlockState(pos);
-        if (state.isFaceSturdy(this.level, pos, sideDir) || state.isCollisionShapeFullBlock(this.level, pos)) {
-            return pos;
-        }
-        BlockPos below = pos.below();
-        BlockState belowState = this.level.getBlockState(below);
-        if (belowState.isFaceSturdy(this.level, below, sideDir) || belowState.isCollisionShapeFullBlock(this.level, below)) {
-            return below;
         }
         return null;
     }
