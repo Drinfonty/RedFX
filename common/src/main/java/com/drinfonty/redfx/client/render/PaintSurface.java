@@ -139,7 +139,7 @@ public final class PaintSurface {
 	}
 
 	public static double planeFor(BlockGetter level, BlockPos pos, BlockState state, int face) {
-		if (face != FaceAxes.UP) {
+		if (face == FaceAxes.DOWN) {
 			return 1.0;
 		}
 		double top = topOf(level, pos, state);
