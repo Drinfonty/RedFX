@@ -221,8 +221,19 @@ public class RedfxConfigScreen extends Screen {
                 config.splatterGrowthDelayTicks = (config.splatterGrowthDelayTicks % 3) + 1;
                 btn.setMessage(getSplatterDelayButtonMessage(config));
             }
-        ).bounds(x, startY + 175, buttonWidth, buttonHeight).build();
+        ).bounds(leftX, startY + 175, colWidth, buttonHeight).build();
         this.addRenderableWidget(delayToggle);
+
+        // Button: Entity Blood Colors
+        Button entityColorsButton = Button.builder(
+            Component.literal("Entity Colors..."),
+            btn -> {
+                if (this.minecraft != null) {
+                    this.minecraft.setScreenAndShow(new EntityColorsScreen(this));
+                }
+            }
+        ).bounds(rightX, startY + 175, colWidth, buttonHeight).build();
+        this.addRenderableWidget(entityColorsButton);
 
         // Button: Done / Close
         Button doneButton = Button.builder(
