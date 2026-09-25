@@ -85,7 +85,7 @@ public final class EdgeDrip {
 		// Teardrop bead drip length: 4..8 pixels long
 		int beadLen = 4 + (hash % 5);
 
-		return Math.max(1, Math.min(maxAllowedLength, beadLen));
+		return Math.max(0, Math.min(maxAllowedLength, beadLen));
 	}
 
 	/**
