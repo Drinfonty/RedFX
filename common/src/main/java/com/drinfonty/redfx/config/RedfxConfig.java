@@ -24,6 +24,30 @@ public class RedfxConfig {
     public boolean wallDripping = true; // Splatters on vertical walls form natural dripping rivulets running down the block
     public boolean gradualSplatter = true; // Splatters blossom outward gradually (core -> sub-perimeter -> edge)
     public int splatterGrowthDelayTicks = 2; // Delay in ticks between growth stages (1 = 50ms, 2 = 100ms, 3 = 150ms)
+    public java.util.Map<String, String> entityBloodColors = new java.util.LinkedHashMap<>();
+
+    public RedfxConfig() {
+        initDefaultEntityColors();
+    }
+
+    public void initDefaultEntityColors() {
+        entityBloodColors.clear();
+        entityBloodColors.put("default", "#FF0D0D");
+        entityBloodColors.put("minecraft:creeper", "#33E633");
+        entityBloodColors.put("minecraft:slime", "#33E633");
+        entityBloodColors.put("minecraft:blaze", "#E6B21A");
+        entityBloodColors.put("minecraft:magma_cube", "#E6B21A");
+        entityBloodColors.put("minecraft:enderman", "#991ACC");
+        entityBloodColors.put("minecraft:ender_dragon", "#991ACC");
+        entityBloodColors.put("minecraft:endermite", "#991ACC");
+        entityBloodColors.put("minecraft:skeleton", "#85522E");
+        entityBloodColors.put("minecraft:skeleton_horse", "#85522E");
+        entityBloodColors.put("minecraft:stray", "#6B8A99");
+        entityBloodColors.put("minecraft:bogged", "#4D6633");
+        entityBloodColors.put("minecraft:wither_skeleton", "#262626");
+        entityBloodColors.put("minecraft:warden", "#0D4DB2");
+        entityBloodColors.put("minecraft:sulfur_cube", "#EBEBEB");
+    }
 
     private static RedfxConfig instance;
 
@@ -55,6 +79,14 @@ public class RedfxConfig {
                     if (obj.has("wallDripping")) config.wallDripping = obj.get("wallDripping").getAsBoolean();
                     if (obj.has("gradualSplatter")) config.gradualSplatter = obj.get("gradualSplatter").getAsBoolean();
                     if (obj.has("splatterGrowthDelayTicks")) config.splatterGrowthDelayTicks = obj.get("splatterGrowthDelayTicks").getAsInt();
+                    if (obj.has("entityBloodColors") && obj.get("entityBloodColors").isJsonObject()) {
+                        config.entityBloodColors.clear();
+                        for (java.util.Map.Entry<String, com.google.gson.JsonElement> entry : obj.getAsJsonObject("entityBloodColors").entrySet()) {
+                            if (entry.getValue().isJsonPrimitive()) {
+                                config.entityBloodColors.put(entry.getKey(), entry.getValue().getAsString());
+                            }
+                        }
+                    }
                 }
             } catch (Exception e) {
                 System.err.println("[RedFX] Failed to load config: " + e.getMessage());
@@ -121,6 +153,7 @@ public class RedfxConfig {
         this.wallDripping = true;
         this.gradualSplatter = true;
         this.splatterGrowthDelayTicks = 2;
+        initDefaultEntityColors();
     }
 
     public float getMultiplier() {
@@ -131,5 +164,76 @@ public class RedfxConfig {
             case "Ultra" -> 4.0f;
             default -> 1.0f;
         };
+    }
+
+    public float[] getBloodColorForEntity(String entityId) {
+        if (entityId != null) {
+            String hex = entityBloodColors.get(entityId);
+            if (hex != null) {
+                float[] rgb = parseColor(hex);
+                if (rgb != null) return rgb;
+            }
+            int colon = entityId.indexOf(':');
+            if (colon >= 0) {
+                String shortKey = entityId.substring(colon + 1);
+                hex = entityBloodColors.get(shortKey);
+                if (hex != null) {
+                    float[] rgb = parseColor(hex);
+                    if (rgb != null) return rgb;
+                }
+            }
+        }
+        return null;
+    }
+
+    public float[] getDefaultBloodColor() {
+        String hex = entityBloodColors.get("default");
+        if (hex != null) {
+            float[] rgb = parseColor(hex);
+            if (rgb != null) return rgb;
+        }
+        return new float[]{1.0F, 0.05F, 0.05F};
+    }
+
+    public static float[] parseColor(String hex) {
+        if (hex == null || hex.isBlank()) return null;
+        String s = hex.trim();
+        if (s.startsWith("#")) {
+            s = s.substring(1);
+        }
+        try {
+            if (s.length() == 3) {
+                int r = Integer.parseInt(s.substring(0, 1), 16) * 17;
+                int g = Integer.parseInt(s.substring(1, 2), 16) * 17;
+                int b = Integer.parseInt(s.substring(2, 3), 16) * 17;
+                return new float[]{r / 255.0f, g / 255.0f, b / 255.0f};
+            } else if (s.length() == 6 || s.length() == 8) {
+                if (s.length() == 8) {
+                    s = s.substring(2);
+                }
+                int val = Integer.parseInt(s, 16);
+                float r = ((val >> 16) & 0xFF) / 255.0f;
+                float g = ((val >> 8) & 0xFF) / 255.0f;
+                float b = (val & 0xFF) / 255.0f;
+                return new float[]{r, g, b};
+            }
+        } catch (NumberFormatException ignored) {}
+        return null;
+    }
+
+    public static int parseColorInt(String hex, int fallback) {
+        float[] rgb = parseColor(hex);
+        if (rgb == null) return fallback;
+        int r = Math.round(rgb[0] * 255.0f);
+        int g = Math.round(rgb[1] * 255.0f);
+        int b = Math.round(rgb[2] * 255.0f);
+        return (r << 16) | (g << 8) | b;
+    }
+
+    public static String toHex(float r, float g, float b) {
+        int ri = Math.max(0, Math.min(255, Math.round(r * 255.0f)));
+        int gi = Math.max(0, Math.min(255, Math.round(g * 255.0f)));
+        int bi = Math.max(0, Math.min(255, Math.round(b * 255.0f)));
+        return String.format("#%02X%02X%02X", ri, gi, bi);
     }
 }

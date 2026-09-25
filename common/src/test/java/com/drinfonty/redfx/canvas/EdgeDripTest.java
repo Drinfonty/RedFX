@@ -259,4 +259,36 @@ class EdgeDripTest {
 		assertEquals(16, maxDropTexels, "Air neighbor must expose full 16 texels down the face");
 		assertTrue(maxDropTexels > 0, "maxDropTexels must be positive and not overflow");
 	}
+
+	@Test
+	void partialBlockSnowLayerDripSplitsAcrossBlocks() {
+		// Snow layer at Y=64, height 2 texels (0.125). Dirt block at Y=63 (below).
+		int localTexels = 2;
+		boolean belowPaintable = true;
+		int dripLen = 5; // 6 steps total: 0..5
+
+		java.util.List<String> painted = new java.util.ArrayList<>();
+		for (int step = 0; step <= dripLen; step++) {
+			String block;
+			int vTexel;
+			if (step < localTexels) {
+				block = "snow";
+				vTexel = step;
+			} else if (belowPaintable) {
+				block = "dirt";
+				vTexel = step - localTexels;
+			} else {
+				break;
+			}
+			painted.add(block + ":" + vTexel);
+		}
+
+		assertEquals(6, painted.size());
+		assertEquals("snow:0", painted.get(0));
+		assertEquals("snow:1", painted.get(1));
+		assertEquals("dirt:0", painted.get(2));
+		assertEquals("dirt:1", painted.get(3));
+		assertEquals("dirt:2", painted.get(4));
+		assertEquals("dirt:3", painted.get(5));
+	}
 }
