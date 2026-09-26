@@ -442,7 +442,7 @@ public class EntityColorsScreen extends Screen {
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         this.renderTransparentBackground(graphics);
         int startY = Math.max(12, (this.height - 225) / 2);
-        graphics.drawCenteredString(this.font, this.title, this.width / 2, Math.max(4, startY - 2), 0xFFFFFF);
+        graphics.drawCenteredString(this.font, this.title, this.width / 2, Math.max(4, startY - 2), 0xFFFFFFFF);
         super.render(graphics, mouseX, mouseY, partialTick);
     }
 
