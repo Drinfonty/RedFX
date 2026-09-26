@@ -302,9 +302,9 @@ public class ColorPickerScreen extends Screen {
         int startY = Math.max(8, (this.height - 232) / 2);
 
         // Title and entity subtitle
-        graphics.drawCenteredString(this.font, this.title, this.width / 2, startY + 2, 0xFFFFFF);
+        graphics.drawCenteredString(this.font, this.title, this.width / 2, startY + 2, 0xFFFFFFFF);
         String sub = entityId.startsWith("minecraft:") ? entityId.substring(10) : entityId;
-        graphics.drawCenteredString(this.font, Component.literal("(" + sub + ")"), this.width / 2, startY + 14, 0xAAAAAA);
+        graphics.drawCenteredString(this.font, Component.literal("(" + sub + ")"), this.width / 2, startY + 14, 0xFFAAAAAA);
 
         // Preview Swatches
         int previewY = startY + 28;
@@ -316,14 +316,14 @@ public class ColorPickerScreen extends Screen {
         graphics.fill(oldX - 1, previewY - 1, oldX + oldW + 1, previewY + oldH + 1, 0xFF888888);
         if (this.initialIsDisabled) {
             graphics.fill(oldX, previewY, oldX + oldW, previewY + oldH, 0xFF333333);
-            graphics.drawCenteredString(this.font, "Current", oldX + oldW / 2, previewY + 7, 0xFFAAAAAA);
+            drawCenteredNoShadow(graphics, "Current", oldX + oldW / 2, previewY + 7, 0xFFAAAAAA);
         } else {
             graphics.fill(oldX, previewY, oldX + oldW, previewY + oldH, 0xFF000000 | this.initialColorInt);
-            graphics.drawCenteredString(this.font, "Current", oldX + oldW / 2, previewY + 7, getContrastColor(this.initialColorInt));
+            drawCenteredNoShadow(graphics, "Current", oldX + oldW / 2, previewY + 7, getContrastColor(this.initialColorInt));
         }
 
         // Arrow
-        graphics.drawCenteredString(this.font, "➔", leftX + 75, previewY + 7, 0xCCCCCC);
+        drawCenteredNoShadow(graphics, "->", leftX + 74, previewY + 7, 0xFFCCCCCC);
 
         // New color box
         int newX = leftX + 88;
@@ -332,18 +332,23 @@ public class ColorPickerScreen extends Screen {
         if (this.isDisabled) {
             graphics.fill(newX - 1, previewY - 1, newX + newW + 1, previewY + newH + 1, 0xFF888888);
             graphics.fill(newX, previewY, newX + newW, previewY + newH, 0xFF2A2A2A);
-            graphics.drawCenteredString(this.font, "⊘ Disabled", newX + newW / 2, previewY + 7, 0xFFFF6666);
+            drawCenteredNoShadow(graphics, "⊘ Disabled", newX + newW / 2, previewY + 7, 0xFFFF6666);
         } else {
             int currentInt = getCurrentColorInt();
             graphics.fill(newX - 1, previewY - 1, newX + newW + 1, previewY + newH + 1, 0xFFFFFFFF);
             graphics.fill(newX, previewY, newX + newW, previewY + newH, currentInt);
-            graphics.drawCenteredString(this.font, this.currentHex, newX + newW / 2, previewY + 7, getContrastColor(currentInt));
+            drawCenteredNoShadow(graphics, this.currentHex, newX + newW / 2, previewY + 7, getContrastColor(currentInt));
         }
 
         // Presets header
-        graphics.drawString(this.font, "Quick Presets:", leftX, startY + 118, 0xDDDDDD);
+        graphics.drawString(this.font, "Quick Presets:", leftX, startY + 118, 0xFFDDDDDD, false);
 
         super.render(graphics, mouseX, mouseY, partialTick);
+    }
+
+    private void drawCenteredNoShadow(GuiGraphics graphics, String text, int centerX, int y, int color) {
+        int x = centerX - this.font.width(text) / 2;
+        graphics.drawString(this.font, text, x, y, color, false);
     }
 
     @Override
