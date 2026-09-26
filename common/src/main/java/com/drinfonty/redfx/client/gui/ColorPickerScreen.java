@@ -17,18 +17,21 @@ public class ColorPickerScreen extends Screen {
     private final String entityId;
     private final String initialHex;
     private final int initialColorInt;
+    private final boolean initialIsDisabled;
     private final Consumer<String> onApply;
 
     private int red;
     private int green;
     private int blue;
     private String currentHex;
+    private boolean isDisabled;
     private boolean isUpdating = false;
 
     private ColorSlider redSlider;
     private ColorSlider greenSlider;
     private ColorSlider blueSlider;
     private EditBox hexBox;
+    private Button disableBtn;
 
     public record PresetSwatch(String name, String hex) {
         public int colorInt() {
@@ -70,15 +73,26 @@ public class ColorPickerScreen extends Screen {
         super(Component.literal("Blood Color Picker"));
         this.parent = parent;
         this.entityId = entityId;
-        this.initialHex = currentHex.startsWith("#") ? currentHex.toUpperCase() : "#" + currentHex.toUpperCase();
-        this.initialColorInt = RedfxConfig.parseColorInt(this.initialHex, 0xFF0000);
+        this.initialIsDisabled = RedfxConfig.isNone(currentHex);
+        this.isDisabled = this.initialIsDisabled;
         this.onApply = onApply;
 
-        int c = this.initialColorInt;
-        this.red = (c >> 16) & 0xFF;
-        this.green = (c >> 8) & 0xFF;
-        this.blue = c & 0xFF;
-        this.currentHex = this.initialHex;
+        if (this.initialIsDisabled) {
+            this.initialHex = "none";
+            this.initialColorInt = 0x555555;
+            this.red = 255;
+            this.green = 13;
+            this.blue = 13;
+            this.currentHex = "none";
+        } else {
+            this.initialHex = currentHex.startsWith("#") ? currentHex.toUpperCase() : "#" + currentHex.toUpperCase();
+            this.initialColorInt = RedfxConfig.parseColorInt(this.initialHex, 0xFF0000);
+            int c = this.initialColorInt;
+            this.red = (c >> 16) & 0xFF;
+            this.green = (c >> 8) & 0xFF;
+            this.blue = c & 0xFF;
+            this.currentHex = this.initialHex;
+        }
     }
 
     @Override
@@ -91,20 +105,30 @@ public class ColorPickerScreen extends Screen {
         int previewY = startY + 28;
         hexBox = new EditBox(this.font, leftX + 198, previewY, 82, 22, Component.literal("Hex"));
         hexBox.setValue(this.currentHex);
-        hexBox.setMaxLength(7);
+        hexBox.setMaxLength(8);
+        hexBox.setTextColor(0xFFFFFFFF);
         hexBox.setResponder(val -> {
             if (isUpdating) return;
-            float[] rgb = RedfxConfig.parseColor(val);
-            if (rgb != null) {
-                hexBox.setTextColor(0xFFFFFF);
-                int color = RedfxConfig.parseColorInt(val, 0xFF0000);
-                this.red = (color >> 16) & 0xFF;
-                this.green = (color >> 8) & 0xFF;
-                this.blue = color & 0xFF;
-                this.currentHex = val.startsWith("#") ? val.toUpperCase() : "#" + val.toUpperCase();
-                updateSlidersFromRgb();
+            if (RedfxConfig.isNone(val)) {
+                this.isDisabled = true;
+                this.currentHex = "none";
+                hexBox.setTextColor(0xFFFFFFFF);
+                updateDisableButton();
             } else {
-                hexBox.setTextColor(0xFF5555);
+                float[] rgb = RedfxConfig.parseColor(val);
+                if (rgb != null) {
+                    this.isDisabled = false;
+                    hexBox.setTextColor(0xFFFFFFFF);
+                    int color = RedfxConfig.parseColorInt(val, 0xFF0000);
+                    this.red = (color >> 16) & 0xFF;
+                    this.green = (color >> 8) & 0xFF;
+                    this.blue = color & 0xFF;
+                    this.currentHex = val.startsWith("#") ? val.toUpperCase() : "#" + val.toUpperCase();
+                    updateSlidersFromRgb();
+                    updateDisableButton();
+                } else {
+                    hexBox.setTextColor(0xFFFF5555);
+                }
             }
         });
         this.addRenderableWidget(hexBox);
@@ -152,46 +176,72 @@ public class ColorPickerScreen extends Screen {
             this.addRenderableWidget(swatchBtn);
         }
 
-        // Bottom action buttons: Apply, Reset, Cancel
+        // Bottom action buttons: Apply, Reset, Disable/Enable, Cancel
         int btnY = startY + 206;
         Button applyBtn = Button.builder(
             Component.literal("Apply"),
             btn -> {
                 if (onApply != null) {
-                    onApply.accept(this.currentHex);
+                    onApply.accept(this.isDisabled ? "none" : this.currentHex);
                 }
                 this.onClose();
             }
-        ).bounds(leftX, btnY, 88, 20).build();
+        ).bounds(leftX, btnY, 66, 20).build();
         this.addRenderableWidget(applyBtn);
 
         Button resetBtn = Button.builder(
             Component.literal("Reset"),
             btn -> {
-                setColor(this.initialHex);
+                if (this.initialIsDisabled) {
+                    setDisabled();
+                } else {
+                    setColor(this.initialHex);
+                }
             }
-        ).bounds(leftX + 94, btnY, 88, 20).tooltip(
-            Tooltip.create(Component.literal("Revert to initial color: " + this.initialHex))
+        ).bounds(leftX + 70, btnY, 66, 20).tooltip(
+            Tooltip.create(Component.literal("Revert to initial state: " + this.initialHex))
         ).build();
         this.addRenderableWidget(resetBtn);
+
+        disableBtn = Button.builder(
+            Component.literal(this.isDisabled ? "Enable" : "Disable"),
+            btn -> {
+                if (this.isDisabled) {
+                    onRgbChanged();
+                } else {
+                    setDisabled();
+                }
+            }
+        ).bounds(leftX + 140, btnY, 70, 20).tooltip(
+            Tooltip.create(Component.literal("Toggle blood effects for this entity"))
+        ).build();
+        this.addRenderableWidget(disableBtn);
 
         Button cancelBtn = Button.builder(
             Component.literal("Cancel"),
             btn -> {
                 this.onClose();
             }
-        ).bounds(leftX + 188, btnY, 92, 20).build();
+        ).bounds(leftX + 214, btnY, 66, 20).build();
         this.addRenderableWidget(cancelBtn);
     }
 
+    private void updateDisableButton() {
+        if (disableBtn != null) {
+            disableBtn.setMessage(Component.literal(this.isDisabled ? "Enable" : "Disable"));
+        }
+    }
+
     private void onRgbChanged() {
+        this.isDisabled = false;
         this.currentHex = String.format("#%02X%02X%02X", this.red, this.green, this.blue);
         if (hexBox != null && !isUpdating) {
             isUpdating = true;
             hexBox.setValue(this.currentHex);
-            hexBox.setTextColor(0xFFFFFF);
+            hexBox.setTextColor(0xFFFFFFFF);
             isUpdating = false;
         }
+        updateDisableButton();
     }
 
     private void updateSlidersFromRgb() {
@@ -203,6 +253,7 @@ public class ColorPickerScreen extends Screen {
     }
 
     public void setColor(String hex) {
+        this.isDisabled = false;
         int color = RedfxConfig.parseColorInt(hex, 0xFF0000);
         this.red = (color >> 16) & 0xFF;
         this.green = (color >> 8) & 0xFF;
@@ -212,9 +263,22 @@ public class ColorPickerScreen extends Screen {
         if (hexBox != null) {
             isUpdating = true;
             hexBox.setValue(this.currentHex);
-            hexBox.setTextColor(0xFFFFFF);
+            hexBox.setTextColor(0xFFFFFFFF);
             isUpdating = false;
         }
+        updateDisableButton();
+    }
+
+    public void setDisabled() {
+        this.isDisabled = true;
+        this.currentHex = "none";
+        if (hexBox != null) {
+            isUpdating = true;
+            hexBox.setValue("none");
+            hexBox.setTextColor(0xFFFFFFFF);
+            isUpdating = false;
+        }
+        updateDisableButton();
     }
 
     private int getCurrentColorInt() {
@@ -226,7 +290,7 @@ public class ColorPickerScreen extends Screen {
         int g = (colorInt >> 8) & 0xFF;
         int b = colorInt & 0xFF;
         double lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255.0;
-        return lum > 0.6 ? 0x000000 : 0xFFFFFF;
+        return lum > 0.6 ? 0xFF000000 : 0xFFFFFFFF;
     }
 
     @Override
@@ -245,13 +309,18 @@ public class ColorPickerScreen extends Screen {
         // Preview Swatches
         int previewY = startY + 28;
 
-        // Old color box
+        // Old / Current color box
         int oldX = leftX + 4;
         int oldW = 60;
         int oldH = 22;
         graphics.fill(oldX - 1, previewY - 1, oldX + oldW + 1, previewY + oldH + 1, 0xFF888888);
-        graphics.fill(oldX, previewY, oldX + oldW, previewY + oldH, 0xFF000000 | this.initialColorInt);
-        graphics.drawCenteredString(this.font, "Old", oldX + oldW / 2, previewY + 7, getContrastColor(this.initialColorInt));
+        if (this.initialIsDisabled) {
+            graphics.fill(oldX, previewY, oldX + oldW, previewY + oldH, 0xFF333333);
+            graphics.drawCenteredString(this.font, "Current", oldX + oldW / 2, previewY + 7, 0xFFAAAAAA);
+        } else {
+            graphics.fill(oldX, previewY, oldX + oldW, previewY + oldH, 0xFF000000 | this.initialColorInt);
+            graphics.drawCenteredString(this.font, "Current", oldX + oldW / 2, previewY + 7, getContrastColor(this.initialColorInt));
+        }
 
         // Arrow
         graphics.drawCenteredString(this.font, "➔", leftX + 75, previewY + 7, 0xCCCCCC);
@@ -260,10 +329,16 @@ public class ColorPickerScreen extends Screen {
         int newX = leftX + 88;
         int newW = 100;
         int newH = 22;
-        int currentInt = getCurrentColorInt();
-        graphics.fill(newX - 1, previewY - 1, newX + newW + 1, previewY + newH + 1, 0xFFFFFFFF);
-        graphics.fill(newX, previewY, newX + newW, previewY + newH, currentInt);
-        graphics.drawCenteredString(this.font, this.currentHex, newX + newW / 2, previewY + 7, getContrastColor(currentInt));
+        if (this.isDisabled) {
+            graphics.fill(newX - 1, previewY - 1, newX + newW + 1, previewY + newH + 1, 0xFF888888);
+            graphics.fill(newX, previewY, newX + newW, previewY + newH, 0xFF2A2A2A);
+            graphics.drawCenteredString(this.font, "⊘ Disabled", newX + newW / 2, previewY + 7, 0xFFFF6666);
+        } else {
+            int currentInt = getCurrentColorInt();
+            graphics.fill(newX - 1, previewY - 1, newX + newW + 1, previewY + newH + 1, 0xFFFFFFFF);
+            graphics.fill(newX, previewY, newX + newW, previewY + newH, currentInt);
+            graphics.drawCenteredString(this.font, this.currentHex, newX + newW / 2, previewY + 7, getContrastColor(currentInt));
+        }
 
         // Presets header
         graphics.drawString(this.font, "Quick Presets:", leftX, startY + 118, 0xDDDDDD);
