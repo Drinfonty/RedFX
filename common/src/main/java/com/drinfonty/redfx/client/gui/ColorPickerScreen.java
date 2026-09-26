@@ -302,9 +302,9 @@ public class ColorPickerScreen extends Screen {
         int startY = Math.max(8, (this.height - 232) / 2);
 
         // Title and entity subtitle
-        extractor.centeredText(this.font, this.title, this.width / 2, startY + 2, 0xFFFFFF);
+        extractor.centeredText(this.font, this.title, this.width / 2, startY + 2, 0xFFFFFFFF);
         String sub = entityId.startsWith("minecraft:") ? entityId.substring(10) : entityId;
-        extractor.centeredText(this.font, Component.literal("(" + sub + ")"), this.width / 2, startY + 14, 0xAAAAAA);
+        extractor.centeredText(this.font, Component.literal("(" + sub + ")"), this.width / 2, startY + 14, 0xFFAAAAAA);
 
         // Preview Swatches
         int previewY = startY + 28;
@@ -316,14 +316,14 @@ public class ColorPickerScreen extends Screen {
         extractor.fill(oldX - 1, previewY - 1, oldX + oldW + 1, previewY + oldH + 1, 0xFF888888);
         if (this.initialIsDisabled) {
             extractor.fill(oldX, previewY, oldX + oldW, previewY + oldH, 0xFF333333);
-            extractor.centeredText(this.font, "Current", oldX + oldW / 2, previewY + 7, 0xFFAAAAAA);
+            drawCenteredNoShadow(extractor, "Current", oldX + oldW / 2, previewY + 7, 0xFFAAAAAA);
         } else {
             extractor.fill(oldX, previewY, oldX + oldW, previewY + oldH, 0xFF000000 | this.initialColorInt);
-            extractor.centeredText(this.font, "Current", oldX + oldW / 2, previewY + 7, getContrastColor(this.initialColorInt));
+            drawCenteredNoShadow(extractor, "Current", oldX + oldW / 2, previewY + 7, getContrastColor(this.initialColorInt));
         }
 
         // Arrow
-        extractor.centeredText(this.font, "➔", leftX + 75, previewY + 7, 0xCCCCCC);
+        drawCenteredNoShadow(extractor, "->", leftX + 74, previewY + 7, 0xFFCCCCCC);
 
         // New color box
         int newX = leftX + 88;
@@ -332,18 +332,23 @@ public class ColorPickerScreen extends Screen {
         if (this.isDisabled) {
             extractor.fill(newX - 1, previewY - 1, newX + newW + 1, previewY + newH + 1, 0xFF888888);
             extractor.fill(newX, previewY, newX + newW, previewY + newH, 0xFF2A2A2A);
-            extractor.centeredText(this.font, "⊘ Disabled", newX + newW / 2, previewY + 7, 0xFFFF6666);
+            drawCenteredNoShadow(extractor, "⊘ Disabled", newX + newW / 2, previewY + 7, 0xFFFF6666);
         } else {
             int currentInt = getCurrentColorInt();
             extractor.fill(newX - 1, previewY - 1, newX + newW + 1, previewY + newH + 1, 0xFFFFFFFF);
             extractor.fill(newX, previewY, newX + newW, previewY + newH, currentInt);
-            extractor.centeredText(this.font, this.currentHex, newX + newW / 2, previewY + 7, getContrastColor(currentInt));
+            drawCenteredNoShadow(extractor, this.currentHex, newX + newW / 2, previewY + 7, getContrastColor(currentInt));
         }
 
         // Presets header
-        extractor.text(this.font, "Quick Presets:", leftX, startY + 118, 0xDDDDDD);
+        extractor.text(this.font, "Quick Presets:", leftX, startY + 118, 0xFFDDDDDD, false);
 
         super.extractRenderState(extractor, mouseX, mouseY, partialTick);
+    }
+
+    private void drawCenteredNoShadow(GuiGraphicsExtractor extractor, String text, int centerX, int y, int color) {
+        int x = centerX - this.font.width(text) / 2;
+        extractor.text(this.font, text, x, y, color, false);
     }
 
     @Override
