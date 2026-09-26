@@ -442,7 +442,7 @@ public class EntityColorsScreen extends Screen {
     public void extractRenderState(GuiGraphicsExtractor extractor, int mouseX, int mouseY, float partialTick) {
         this.extractTransparentBackground(extractor);
         int startY = Math.max(12, (this.height - 225) / 2);
-        extractor.centeredText(this.font, this.title, this.width / 2, Math.max(4, startY - 2), 0xFFFFFF);
+        extractor.centeredText(this.font, this.title, this.width / 2, Math.max(4, startY - 2), 0xFFFFFFFF);
         super.extractRenderState(extractor, mouseX, mouseY, partialTick);
     }
 
