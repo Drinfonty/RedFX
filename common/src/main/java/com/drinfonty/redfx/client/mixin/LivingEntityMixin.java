@@ -71,6 +71,9 @@ public class LivingEntityMixin {
     }
 
     private void spawnBloodParticles(LivingEntity entity, float yaw, boolean isDeath) {
+        String entityKey = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).toString();
+        if (!RedfxConfig.get().isBloodEnabledFor(entityKey)) return;
+
         float configMultiplier = RedfxConfig.get().getMultiplier();
         float weaponMultiplier = getWeaponMultiplier(entity);
         float totalMultiplier = configMultiplier * weaponMultiplier;
@@ -216,6 +219,9 @@ public class LivingEntityMixin {
     }
 
     private void spawnBloodDrip(LivingEntity entity) {
+        String entityKey = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).toString();
+        if (!RedfxConfig.get().isBloodEnabledFor(entityKey)) return;
+
         ClientLevel clientLevel = (ClientLevel) entity.level();
         String particleType = RedfxConfig.get().particleType;
         boolean isPoof = particleType.equals("RedPoof");

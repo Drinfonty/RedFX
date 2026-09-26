@@ -32,18 +32,33 @@ public class EntityColorsScreen extends Screen {
     }
 
     public static final List<ColorPreset> PRESETS = List.of(
+        new ColorPreset("Pure Red", "#FF0000"),
         new ColorPreset("Blood Red", "#FF0D0D"),
-        new ColorPreset("Slime Green", "#33E633"),
+        new ColorPreset("Crimson", "#8B0000"),
+        new ColorPreset("Rust Brown", "#85522E"),
         new ColorPreset("Blaze Orange", "#E6B21A"),
-        new ColorPreset("Ender Purple", "#991ACC"),
-        new ColorPreset("Sculk Cyan", "#0D4DB2"),
-        new ColorPreset("Bone White", "#E6E6E6"),
-        new ColorPreset("Skeleton Brown", "#85522E"),
+        new ColorPreset("Bright Orange", "#FF7700"),
+
+        new ColorPreset("Gold", "#FFD700"),
+        new ColorPreset("Yellow", "#FFE600"),
+        new ColorPreset("Slime Green", "#33E633"),
+        new ColorPreset("Acid Lime", "#00FF00"),
+        new ColorPreset("Forest Green", "#1B4D1B"),
         new ColorPreset("Bogged Olive", "#4D6633"),
-        new ColorPreset("Wither Dark", "#262626"),
-        new ColorPreset("Bright Yellow", "#FFE600"),
+
+        new ColorPreset("Turquoise", "#00CED1"),
+        new ColorPreset("Sculk Cyan", "#0D4DB2"),
         new ColorPreset("Sky Blue", "#1E90FF"),
-        new ColorPreset("Hot Pink", "#FF69B4")
+        new ColorPreset("Royal Blue", "#0033CC"),
+        new ColorPreset("Ender Purple", "#991ACC"),
+        new ColorPreset("Deep Violet", "#660099"),
+
+        new ColorPreset("Hot Pink", "#FF69B4"),
+        new ColorPreset("Magenta", "#FF00FF"),
+        new ColorPreset("Bone White", "#E6E6E6"),
+        new ColorPreset("Light Gray", "#A0A0A0"),
+        new ColorPreset("Dark Gray", "#555555"),
+        new ColorPreset("Wither Dark", "#262626")
     );
 
     public EntityColorsScreen(Screen parent) {
@@ -215,7 +230,8 @@ public class EntityColorsScreen extends Screen {
                 // 2. Hex EditBox
                 EditBox hexBox = new EditBox(this.font, leftX + 109, entryY, 55, 20, Component.literal("Hex"));
                 hexBox.setValue(currentHex);
-                hexBox.setMaxLength(7);
+                hexBox.setMaxLength(8);
+                hexBox.setTextColor(0xFFFFFFFF);
                 addEntryWidget(hexBox);
 
                 // 3. Color Picker button
@@ -233,16 +249,24 @@ public class EntityColorsScreen extends Screen {
                 addEntryWidget(presetBtn);
 
                 hexBox.setResponder(val -> {
-                    float[] rgb = RedfxConfig.parseColor(val);
-                    if (rgb != null) {
-                        hexBox.setTextColor(0xFFFFFF);
-                        String validHex = val.startsWith("#") ? val.toUpperCase() : "#" + val.toUpperCase();
-                        config.entityBloodColors.put(entityId, validHex);
+                    if (RedfxConfig.isNone(val)) {
+                        hexBox.setTextColor(0xFFFFFFFF);
+                        config.entityBloodColors.put(entityId, "none");
                         if (presetBtnRef[0] != null) {
-                            presetBtnRef[0].setMessage(getPresetButtonMessage(validHex));
+                            presetBtnRef[0].setMessage(getPresetButtonMessage("none"));
                         }
                     } else {
-                        hexBox.setTextColor(0xFF5555);
+                        float[] rgb = RedfxConfig.parseColor(val);
+                        if (rgb != null) {
+                            hexBox.setTextColor(0xFFFFFFFF);
+                            String validHex = val.startsWith("#") ? val.toUpperCase() : "#" + val.toUpperCase();
+                            config.entityBloodColors.put(entityId, validHex);
+                            if (presetBtnRef[0] != null) {
+                                presetBtnRef[0].setMessage(getPresetButtonMessage(validHex));
+                            }
+                        } else {
+                            hexBox.setTextColor(0xFFFF5555);
+                        }
                     }
                 });
 
@@ -381,6 +405,9 @@ public class EntityColorsScreen extends Screen {
     }
 
     private Component getPresetButtonMessage(String hex) {
+        if (RedfxConfig.isNone(hex)) {
+            return Component.literal("⊘ Disabled").withColor(0xFFAAAAAA);
+        }
         int colorInt = RedfxConfig.parseColorInt(hex, 0xFF0000);
         String name = "Custom";
         for (ColorPreset p : PRESETS) {
