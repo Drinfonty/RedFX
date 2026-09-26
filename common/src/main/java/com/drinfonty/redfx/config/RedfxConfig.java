@@ -166,10 +166,38 @@ public class RedfxConfig {
         };
     }
 
+    public boolean isBloodEnabledFor(String entityId) {
+        if (!bloodEnabled) return false;
+        if (entityId != null) {
+            String val = entityBloodColors.get(entityId);
+            if (val != null) {
+                return !isNone(val);
+            }
+            int colon = entityId.indexOf(':');
+            if (colon >= 0) {
+                String shortKey = entityId.substring(colon + 1);
+                val = entityBloodColors.get(shortKey);
+                if (val != null) {
+                    return !isNone(val);
+                }
+            }
+        }
+        String def = entityBloodColors.get("default");
+        if (def != null && isNone(def)) return false;
+        return true;
+    }
+
+    public static boolean isNone(String val) {
+        if (val == null) return false;
+        String s = val.trim().toLowerCase();
+        return s.equals("none") || s.equals("off") || s.equals("disabled") || s.equals("false");
+    }
+
     public float[] getBloodColorForEntity(String entityId) {
         if (entityId != null) {
             String hex = entityBloodColors.get(entityId);
             if (hex != null) {
+                if (isNone(hex)) return null;
                 float[] rgb = parseColor(hex);
                 if (rgb != null) return rgb;
             }
@@ -178,6 +206,7 @@ public class RedfxConfig {
                 String shortKey = entityId.substring(colon + 1);
                 hex = entityBloodColors.get(shortKey);
                 if (hex != null) {
+                    if (isNone(hex)) return null;
                     float[] rgb = parseColor(hex);
                     if (rgb != null) return rgb;
                 }

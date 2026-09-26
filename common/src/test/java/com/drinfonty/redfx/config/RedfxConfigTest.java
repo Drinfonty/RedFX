@@ -78,5 +78,11 @@ class RedfxConfigTest {
 
         // Unknown entity returns null
         org.junit.jupiter.api.Assertions.assertNull(config.getBloodColorForEntity("minecraft:unknown_mob_xyz"));
+
+        // Entity disabled
+        config.entityBloodColors.put("minecraft:iron_golem", "none");
+        org.junit.jupiter.api.Assertions.assertFalse(config.isBloodEnabledFor("minecraft:iron_golem"));
+        org.junit.jupiter.api.Assertions.assertNull(config.getBloodColorForEntity("minecraft:iron_golem"));
+        org.junit.jupiter.api.Assertions.assertTrue(config.isBloodEnabledFor("minecraft:creeper"));
     }
 }
