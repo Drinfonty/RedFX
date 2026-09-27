@@ -229,6 +229,8 @@ public final class InGameSmokeTest {
 		}
 
 		if (state == 4) {
+			hideGui(client);
+
 			// Lock camera angles continuously on mob and splatters
 			client.player.setYRot(targetYaw);
 			client.player.setXRot(targetPitch);
@@ -596,7 +598,70 @@ public final class InGameSmokeTest {
 		}
 	}
 
+	private static void hideGui(Minecraft client) {
+		// Modern 26.x: client.gui.hud.toggle() if not already hidden
+		try {
+			for (java.lang.reflect.Field f : client.gui.getClass().getFields()) {
+				if (f.getName().equals("hud")) {
+					Object hud = f.get(client.gui);
+					if (hud != null) {
+						java.lang.reflect.Method isHiddenMethod = hud.getClass().getMethod("isHidden");
+						boolean isHidden = (boolean) isHiddenMethod.invoke(hud);
+						if (!isHidden) {
+							java.lang.reflect.Method toggleMethod = hud.getClass().getMethod("toggle");
+							toggleMethod.invoke(hud);
+						}
+						return;
+					}
+				}
+			}
+		} catch (Throwable ignored) {
+		}
+
+		try {
+			for (java.lang.reflect.Field f : client.gui.getClass().getDeclaredFields()) {
+				if (f.getName().equals("hud")) {
+					f.setAccessible(true);
+					Object hud = f.get(client.gui);
+					if (hud != null) {
+						java.lang.reflect.Method isHiddenMethod = hud.getClass().getMethod("isHidden");
+						boolean isHidden = (boolean) isHiddenMethod.invoke(hud);
+						if (!isHidden) {
+							java.lang.reflect.Method toggleMethod = hud.getClass().getMethod("toggle");
+							toggleMethod.invoke(hud);
+						}
+						return;
+					}
+				}
+			}
+		} catch (Throwable ignored) {
+		}
+
+		// Legacy 1.21.x: client.options.hideGui = true
+		try {
+			for (java.lang.reflect.Field f : client.options.getClass().getFields()) {
+				if (f.getName().equals("hideGui")) {
+					f.setBoolean(client.options, true);
+					return;
+				}
+			}
+		} catch (Throwable ignored) {
+		}
+
+		try {
+			for (java.lang.reflect.Field f : client.options.getClass().getDeclaredFields()) {
+				if (f.getName().equals("hideGui")) {
+					f.setAccessible(true);
+					f.setBoolean(client.options, true);
+					return;
+				}
+			}
+		} catch (Throwable ignored) {
+		}
+	}
+
 	private static void captureScreenshot(Minecraft client) {
+		hideGui(client);
 		try {
 			try {
 				java.lang.reflect.Method m = net.minecraft.client.Screenshot.class.getMethod("grab", Minecraft.class, boolean.class);
