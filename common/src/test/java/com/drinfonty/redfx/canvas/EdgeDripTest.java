@@ -291,4 +291,16 @@ class EdgeDripTest {
 		assertEquals("dirt:2", painted.get(4));
 		assertEquals("dirt:3", painted.get(5));
 	}
+
+	@Test
+	void stairEdgeDripOnLowerStepDoesNotExceedHalfBlock() {
+		int localTexels = 8;
+		int maxDropTexels = 8;
+		int dripLen = EdgeDrip.calculateDripLength(0, 0, FaceAxes.NORTH, 5, 4, 6, maxDropTexels - 1, 1);
+		assertTrue(dripLen <= 7, "dripLen must not exceed maxDropTexels - 1");
+
+		for (int step = 0; step <= dripLen; step++) {
+			assertTrue(step < localTexels, "All steps fit on stair lower step without overflowing");
+		}
+	}
 }

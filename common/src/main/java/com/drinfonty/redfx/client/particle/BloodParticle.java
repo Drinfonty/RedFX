@@ -17,7 +17,6 @@ import net.minecraft.core.Direction;
 import net.minecraft.client.particle.Particle;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.world.level.block.AbstractChestBlock;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.tags.FluidTags;
@@ -251,7 +250,7 @@ public class BloodParticle extends TerrainParticle {
 
                 if (surfaceInfo != null) {
                     // Only stamp on top faces that are roughly level with the impact surface
-                    if (Math.abs(surfaceInfo.elevation() - targetElevation) < 0.45) {
+                    if (surfaceInfo.blockPos().equals(targetBlock) || Math.abs(surfaceInfo.elevation() - targetElevation) < 0.45) {
                         paintTexel(modifiedCanvases, store, surfaceInfo.blockPos(), Direction.UP.get3DDataValue(), uTexel, vTexel, col);
                         solidTopBlocks.add(surfaceInfo.blockPos());
                         blockElevations.put(surfaceInfo.blockPos(), surfaceInfo.elevation());
@@ -290,10 +289,13 @@ public class BloodParticle extends TerrainParticle {
                     BlockPos belowPos = bPos.below();
                     BlockState belowState = this.level.getBlockState(belowPos);
 
+                    net.minecraft.world.phys.AABB bBounds = bState.getShape(this.level, bPos).bounds();
+                    boolean isFullFootprint = bBounds.minX <= 0.01 && bBounds.maxX >= 0.99 && bBounds.minZ <= 0.01 && bBounds.maxZ >= 0.99;
+
                     for (Direction hDir : horizontalDirs) {
                         boolean sidePaintable = bState.isFaceSturdy(this.level, bPos, hDir)
                             || bState.isCollisionShapeFullBlock(this.level, bPos)
-                            || (localTop != PaintSurface.NONE && !(bState.getBlock() instanceof AbstractChestBlock));
+                            || (localTop != PaintSurface.NONE && isFullFootprint);
                         if (!sidePaintable) continue;
 
                         boolean belowPaintable = belowState.isFaceSturdy(this.level, belowPos, hDir)
@@ -302,29 +304,10 @@ public class BloodParticle extends TerrainParticle {
                         BlockPos neighborPos = bPos.relative(hDir);
                         SurfaceInfo neighborInfo = resolveTopSurfaceInfo(neighborPos);
 
-                        double exposedHeight;
-                        if (neighborInfo != null) {
-                            double drop = myElevation - neighborInfo.elevation();
-                            if (drop < 0.05) {
-                                // Neighbor is at same height or higher; no exposed vertical drop
-                                continue;
-                            }
-                            if (drop <= localTop) {
-                                exposedHeight = drop;
-                            } else {
-                                exposedHeight = belowPaintable
-                                    ? Math.min(drop, myElevation - (double) belowPos.getY())
-                                    : localTop;
-                            }
-                        } else {
-                            // Neighbor column is air/cliff!
-                            exposedHeight = belowPaintable
-                                ? (myElevation - (double) belowPos.getY())
-                                : (myElevation - (double) bPos.getY());
+                        if (neighborInfo != null && myElevation - neighborInfo.elevation() < 0.05 && bState.isCollisionShapeFullBlock(this.level, bPos)) {
+                            // Neighbor is at same height or higher; no exposed vertical drop
+                            continue;
                         }
-
-                        int maxDropTexels = Math.min(Canvas.SIZE, (int) Math.round(exposedHeight * 16.0));
-                        if (maxDropTexels <= 0) continue;
 
                         int sideFace = hDir.get3DDataValue();
 
@@ -442,9 +425,69 @@ public class BloodParticle extends TerrainParticle {
                                         default -> 0;
                                     };
 
+                                    double localX = switch (hDir) {
+                                        case NORTH, SOUTH -> (c + 0.5) / 16.0;
+                                        case WEST -> 0.03125;
+                                        case EAST -> 0.96875;
+                                        default -> 0.5;
+                                    };
+                                    double localZ = switch (hDir) {
+                                        case NORTH -> 0.03125;
+                                        case SOUTH -> 0.96875;
+                                        case WEST, EAST -> (c + 0.5) / 16.0;
+                                        default -> 0.5;
+                                    };
+
+                                    double colTop = PaintSurface.surfaceElevationAt(this.level, bPos, bState, localX, localZ);
+                                    if (colTop == PaintSurface.NONE) {
+                                        colTop = localTop;
+                                    }
+                                    double colBottom = PaintSurface.surfaceBottomAt(this.level, bPos, bState, localX, localZ);
+                                    double colHeight = Math.max(0.0, colTop - colBottom);
+                                    double colElevation = (double) bPos.getY() + colTop;
+                                    int colLocalTexels = Math.max(1, (int) Math.round(colHeight * 16.0));
+
+                                    double neighborX = switch (hDir) {
+                                        case NORTH, SOUTH -> localX;
+                                        case WEST -> 0.96875;
+                                        case EAST -> 0.03125;
+                                        default -> localX;
+                                    };
+                                    double neighborZ = switch (hDir) {
+                                        case NORTH -> 0.96875;
+                                        case SOUTH -> 0.03125;
+                                        case WEST, EAST -> localZ;
+                                        default -> localZ;
+                                    };
+
+                                    double neighborElevation = PaintSurface.elevationAt(this.level, neighborPos, neighborX, neighborZ);
+
+                                    double colExposedHeight;
+                                    if (neighborElevation != PaintSurface.NONE) {
+                                        double drop = colElevation - neighborElevation;
+                                        if (drop < 0.05) {
+                                            // Neighbor is at same height or higher; no exposed vertical drop
+                                            continue;
+                                        }
+                                        if (drop <= colHeight) {
+                                            colExposedHeight = drop;
+                                        } else {
+                                            colExposedHeight = belowPaintable
+                                                ? Math.min(drop, colElevation - (double) belowPos.getY())
+                                                : colHeight;
+                                        }
+                                    } else {
+                                        colExposedHeight = belowPaintable
+                                            ? (colElevation - (double) belowPos.getY())
+                                            : (colElevation - (double) bPos.getY());
+                                    }
+
+                                    int colMaxDropTexels = Math.min(Canvas.SIZE, (int) Math.round(colExposedHeight * 16.0));
+                                    if (colMaxDropTexels <= 0) continue;
+
                                     int dripLen = EdgeDrip.calculateDripLength(
                                         bPos.getX(), bPos.getZ(), sideFace, uSide,
-                                        cStart, cEnd, maxDropTexels - 1, this.splatIndex
+                                        cStart, cEnd, colMaxDropTexels - 1, this.splatIndex
                                     );
 
                                     long stepDelayMs = EdgeDrip.beadStepDelayMs(dripLen, configFactor);
@@ -454,12 +497,12 @@ public class BloodParticle extends TerrainParticle {
                                     for (int step = 0; step <= dripLen; step++) {
                                         BlockPos beadBlock;
                                         int vTexel;
-                                        if (step < localTexels) {
+                                        if (step < colLocalTexels) {
                                             beadBlock = bPos;
                                             vTexel = step;
                                         } else if (belowPaintable) {
                                             beadBlock = belowPos;
-                                            vTexel = step - localTexels;
+                                            vTexel = step - colLocalTexels;
                                         } else {
                                             break;
                                         }
