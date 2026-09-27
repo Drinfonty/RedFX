@@ -44,6 +44,7 @@ public final class InGameSmokeTest {
 	private static int state = 0;
 	private static int tickCounter = 0;
 	private static BlockPos testOrigin = null;
+	private static BlockPos testGrassPos = null;
 	private static LivingEntity targetMob = null;
 	private static float targetYaw = 0.0f;
 	private static float targetPitch = 25.0f;
@@ -212,6 +213,11 @@ public final class InGameSmokeTest {
 				return;
 			}
 
+			if (testGrassPos != null && store.isPainted(testGrassPos)) {
+				fail(new AssertionError("Foliage / grass at " + testGrassPos.toShortString() + " was painted with blood decals!"));
+				return;
+			}
+
 			RedfxMod.LOGGER.info("=================================================");
 			RedfxMod.LOGGER.info("VERIFIED: Combat hit produced natural blood decals on the ground!");
 			RedfxMod.LOGGER.info("ALL REDFX IN-GAME SMOKE TESTS PASSED CLEANLY!");
@@ -345,6 +351,8 @@ public final class InGameSmokeTest {
 		BlockPos snowLayerPos = floorOrigin.relative(forward, 1).relative(left, 1);
 		BlockPos chestPos = floorOrigin.relative(forward, 1).relative(right, 1);
 		BlockPos stairPos = floorOrigin.relative(forward, 1);
+		BlockPos grassPos = floorOrigin.relative(forward.getOpposite(), 1);
+		testGrassPos = grassPos;
 
 		client.level.setBlock(stonePos, Blocks.STONE.defaultBlockState(), 3);
 		client.level.setBlock(snowBlockPos, Blocks.SNOW_BLOCK.defaultBlockState(), 3);
@@ -357,6 +365,8 @@ public final class InGameSmokeTest {
 		client.level.setBlock(stairPos, Blocks.OAK_STAIRS.defaultBlockState()
 			.setValue(StairBlock.FACING, forward.getOpposite())
 			.setValue(StairBlock.HALF, Half.BOTTOM), 3);
+		client.level.setBlock(grassPos.below(), Blocks.GRASS_BLOCK.defaultBlockState(), 3);
+		client.level.setBlock(grassPos, Blocks.SHORT_GRASS.defaultBlockState(), 3);
 
 		// Synchronize arena and summon mob via server
 		var server = client.getSingleplayerServer();
@@ -412,6 +422,12 @@ public final class InGameSmokeTest {
 			commands.performPrefixedCommand(source, String.format(java.util.Locale.ROOT,
 				"setblock %d %d %d oak_stairs[facing=%s,half=bottom]",
 				stairPos.getX(), stairPos.getY(), stairPos.getZ(), forward.getOpposite().getName()));
+
+			// 8b. Grass plant (foliage) in front on grass block base
+			commands.performPrefixedCommand(source, String.format(java.util.Locale.ROOT,
+				"setblock %d %d %d grass_block", grassPos.getX(), floorY - 1, grassPos.getZ()));
+			commands.performPrefixedCommand(source, String.format(java.util.Locale.ROOT,
+				"setblock %d %d %d short_grass", grassPos.getX(), grassPos.getY(), grassPos.getZ()));
 
 			// 9. Ensure player stands firmly 2 blocks in front on solid stone
 			BlockPos playerStandPos = floorOrigin.relative(forward.getOpposite(), 2);
