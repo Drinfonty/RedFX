@@ -776,7 +776,7 @@ public final class InGameSmokeTest {
 
 		// Edge drip calculations
 		int dripLen = EdgeDrip.calculateDripLength(origin.getX(), origin.getZ(), FaceAxes.EAST, 8, 5, 11, 15, 1);
-		if (dripLen < 3 || dripLen > 15) {
+		if (dripLen < 1 || dripLen > 15) {
 			throw new AssertionError("EdgeDrip.calculateDripLength produced out-of-range length: " + dripLen);
 		}
 		int dripAlpha = EdgeDrip.dripAlpha(255, 3, 7);

@@ -33,11 +33,17 @@ import com.drinfonty.redfx.config.RedfxConfig;
 
 public class BloodParticle extends TerrainParticle {
     private final int splatIndex; // Picks one of 5 splat patterns (1 to 5)
+    private final boolean isDripDrop;
 
     public BloodParticle(ClientLevel level, double x, double y, double z, double vx, double vy, double vz, BlockState state) {
+        this(level, x, y, z, vx, vy, vz, state, false);
+    }
+
+    public BloodParticle(ClientLevel level, double x, double y, double z, double vx, double vy, double vz, BlockState state, boolean isDripDrop) {
         super(level, x, y, z, vx, vy, vz, state);
-        
-        this.lifetime = 40; // max 2s flying in air before despawning if it doesn't hit anything
+        this.isDripDrop = isDripDrop;
+
+        this.lifetime = isDripDrop ? 60 : 40; // max fall time before despawning
         this.gravity = 1.0F;
         this.friction = 0.98F;
         this.hasPhysics = true;
@@ -49,6 +55,18 @@ public class BloodParticle extends TerrainParticle {
 
         float sizeScale = 0.8F + this.random.nextFloat() * 1.0F;
         this.quadSize *= sizeScale * RedfxConfig.get().particleSizeScale * 0.8F;
+
+        if (isDripDrop) {
+            this.quadSize *= 0.40F; // Small falling droplet bead
+        }
+    }
+
+    public static BloodParticle createDripDrop(ClientLevel level, double x, double y, double z, float r, float g, float b) {
+        BloodParticle drop = new BloodParticle(
+            level, x, y, z, 0.0, -0.02, 0.0, Blocks.REDSTONE_BLOCK.defaultBlockState(), true
+        );
+        drop.setColor(r, g, b);
+        return drop;
     }
 
     private BlockPos getAttachedBlockPos(Direction dir) {
@@ -147,7 +165,11 @@ public class BloodParticle extends TerrainParticle {
             if (targetState.isAir() || !targetState.getFluidState().isEmpty()) {
                 hitDirection = null;
             } else {
-                stampToCanvas(targetBlock, hitDirection);
+                if (this.isDripDrop) {
+                    stampSmallDripSplatter(targetBlock, hitDirection);
+                } else {
+                    stampToCanvas(targetBlock, hitDirection);
+                }
 
                 if (RedfxConfig.get().enableSplatDust) {
                     try {
@@ -173,6 +195,52 @@ public class BloodParticle extends TerrainParticle {
                 this.remove();
             }
         }
+    }
+
+    private void stampSmallDripSplatter(BlockPos targetBlock, Direction hitDirection) {
+        BlockState targetState = this.level.getBlockState(targetBlock);
+        if (targetState.isAir() || !targetState.getFluidState().isEmpty()) {
+            return;
+        }
+        if (hitDirection == Direction.UP && PaintSurface.topOf(this.level, targetBlock, targetState) == PaintSurface.NONE) {
+            return;
+        }
+
+        int face = hitDirection.get3DDataValue();
+        double lx = Math.max(0.0, Math.min(1.0, this.x - targetBlock.getX()));
+        double ly = Math.max(0.0, Math.min(1.0, this.y - targetBlock.getY()));
+        double lz = Math.max(0.0, Math.min(1.0, this.z - targetBlock.getZ()));
+
+        int centerU = FaceAxes.texel(FaceAxes.u(face, lx, ly, lz));
+        int centerV = FaceAxes.texel(FaceAxes.v(face, lx, ly, lz));
+
+        int argb = PaintColor.fromRgb(this.rCol, this.gCol, this.bCol);
+        int baseLifetimeSec = RedfxConfig.get().particleLifetimeSeconds;
+        long expirationMs = baseLifetimeSec > 0 ? System.currentTimeMillis() + (long) baseLifetimeSec * 1000L : 0L;
+
+        List<ClientCanvasStore.PendingTexel> smallSplat = new ArrayList<>();
+        smallSplat.add(new ClientCanvasStore.PendingTexel(
+            targetBlock, face, centerU, centerV, argb, expirationMs
+        ));
+
+        int[][] offsets = { {1, 0}, {-1, 0}, {0, 1}, {0, -1} };
+        int splatHash = Math.abs(this.random.nextInt());
+        int fadeAlpha = (int) (((argb >>> 24) & 0xFF) * 0.75f);
+        int fadeCol = (fadeAlpha << 24) | (argb & 0xFFFFFF);
+
+        for (int i = 0; i < 4; i++) {
+            if (((splatHash >> i) & 1) == 0) {
+                int nu = centerU + offsets[i][0];
+                int nv = centerV + offsets[i][1];
+                if (nu >= 0 && nu < Canvas.SIZE && nv >= 0 && nv < Canvas.SIZE) {
+                    smallSplat.add(new ClientCanvasStore.PendingTexel(
+                        targetBlock, face, nu, nv, fadeCol, expirationMs
+                    ));
+                }
+            }
+        }
+
+        ClientCanvasStore.get().applyTexels(smallSplat);
     }
 
     private void stampToCanvas(BlockPos targetBlock, Direction hitDirection) {
@@ -454,13 +522,14 @@ public class BloodParticle extends TerrainParticle {
                                     int colMaxDropTexels = Math.min(Canvas.SIZE, (int) Math.round(colExposedHeight * 16.0));
                                     if (colMaxDropTexels <= 0) continue;
 
+                                    int maxAllowedStep = Math.max(1, colMaxDropTexels - 1);
                                     int dripLen = EdgeDrip.calculateDripLength(
                                         bPos.getX(), bPos.getZ(), sideFace, uSide,
-                                        cStart, cEnd, colMaxDropTexels - 1, this.splatIndex
+                                        cStart, cEnd, maxAllowedStep, this.splatIndex
                                     );
 
-                                    long stepDelayMs = EdgeDrip.beadStepDelayMs(dripLen, configFactor);
                                     int beadHash = Math.abs((bPos.getX() * 3127 + bPos.getZ() * 739 + sideFace * 101 + uSide * 37) ^ (this.splatIndex * 19));
+                                    long stepDelayMs = EdgeDrip.beadStepDelayMs(dripLen, configFactor, beadHash);
                                     long beadStartMs = nowMs + 2 * baseDelayMs + (beadHash % 35);
 
                                     for (int step = 0; step <= dripLen; step++) {
@@ -486,6 +555,135 @@ public class BloodParticle extends TerrainParticle {
                                         );
                                         long execTime = beadStartMs + (long) step * stepDelayMs;
                                         addTexel.accept(pt, execTime);
+                                    }
+
+                                    if (dripLen == maxAllowedStep) {
+                                        double dripBaseY = colElevation - colExposedHeight;
+                                        double worldX = bPos.getX();
+                                        double worldZ = bPos.getZ();
+                                        switch (hDir) {
+                                            case NORTH -> {
+                                                worldZ += colPlane;
+                                                worldX += (15 - uSide + 0.5) / 16.0;
+                                            }
+                                            case SOUTH -> {
+                                                worldZ += colPlane;
+                                                worldX += (uSide + 0.5) / 16.0;
+                                            }
+                                            case WEST -> {
+                                                worldX += colPlane;
+                                                worldZ += (uSide + 0.5) / 16.0;
+                                            }
+                                            case EAST -> {
+                                                worldX += colPlane;
+                                                worldZ += (15 - uSide + 0.5) / 16.0;
+                                            }
+                                        }
+
+                                        double frontX = worldX + hDir.getStepX() * 0.04;
+                                        double frontZ = worldZ + hDir.getStepZ() * 0.04;
+
+                                        BlockPos checkPos;
+                                        BlockState checkState;
+                                        if (isInternalStep) {
+                                            checkPos = bPos;
+                                            checkState = bState;
+                                        } else {
+                                            checkPos = BlockPos.containing(frontX, dripBaseY - 0.05, frontZ);
+                                            checkState = this.level.getBlockState(checkPos);
+                                        }
+
+                                        double floorElevation = PaintSurface.elevationAt(
+                                            this.level, checkPos, frontX - checkPos.getX(), frontZ - checkPos.getZ()
+                                        );
+
+                                        boolean touchesBlock = floorElevation != PaintSurface.NONE
+                                            && Math.abs(floorElevation - dripBaseY) < 0.15
+                                            && PaintSurface.topOf(this.level, checkPos, checkState) != PaintSurface.NONE;
+
+                                        long arrivalTime = beadStartMs + (long) dripLen * stepDelayMs;
+
+                                        if (touchesBlock) {
+                                            double relX = Math.max(0.0, Math.min(1.0, frontX - checkPos.getX()));
+                                            double relZ = Math.max(0.0, Math.min(1.0, frontZ - checkPos.getZ()));
+                                            int landU = FaceAxes.texel(FaceAxes.u(Direction.UP.get3DDataValue(), relX, 0, relZ));
+                                            int landV = FaceAxes.texel(FaceAxes.v(Direction.UP.get3DDataValue(), relX, 0, relZ));
+
+                                            List<ClientCanvasStore.PendingTexel> smallSplat = new ArrayList<>();
+                                            int splatAlpha = Math.min(255, Math.max(220, baseAlpha));
+                                            int splatColor = (splatAlpha << 24) | rgb;
+                                            int fadeColor = ((int) (splatAlpha * 0.75f) << 24) | rgb;
+
+                                            smallSplat.add(new ClientCanvasStore.PendingTexel(
+                                                checkPos, Direction.UP.get3DDataValue(), landU, landV, splatColor, expirationMs
+                                            ));
+
+                                            int[][] offsets = { {1, 0}, {-1, 0}, {0, 1}, {0, -1} };
+                                            int splatHash = Math.abs(beadHash ^ 0x5DEECE66);
+                                            for (int i = 0; i < 4; i++) {
+                                                if (((splatHash >> i) & 1) == 0 || (splatHash % 3 == 0)) {
+                                                    int nu = landU + offsets[i][0];
+                                                    int nv = landV + offsets[i][1];
+                                                    if (nu >= 0 && nu < Canvas.SIZE && nv >= 0 && nv < Canvas.SIZE) {
+                                                        smallSplat.add(new ClientCanvasStore.PendingTexel(
+                                                            checkPos, Direction.UP.get3DDataValue(), nu, nv, fadeColor, expirationMs
+                                                        ));
+                                                    }
+                                                }
+                                            }
+                                            int diagIdx = splatHash % 4;
+                                            int[][] diags = { {1, 1}, {-1, 1}, {1, -1}, {-1, -1} };
+                                            int du = landU + diags[diagIdx][0];
+                                            int dv = landV + diags[diagIdx][1];
+                                            if (du >= 0 && du < Canvas.SIZE && dv >= 0 && dv < Canvas.SIZE) {
+                                                smallSplat.add(new ClientCanvasStore.PendingTexel(
+                                                    checkPos, Direction.UP.get3DDataValue(), du, dv, fadeColor, expirationMs
+                                                ));
+                                            }
+
+                                            ClientCanvasStore.get().scheduleStage(arrivalTime, smallSplat);
+
+                                            if (RedfxConfig.get().enableSplatDust) {
+                                                final double splatFloorY = floorElevation;
+                                                ClientCanvasStore.get().scheduleAction(arrivalTime, () -> {
+                                                    try {
+                                                        BlockState dustState = Blocks.SNOW_BLOCK.defaultBlockState();
+                                                        Particle dust = Minecraft.getInstance().particleEngine.createParticle(
+                                                            new BlockParticleOption(ParticleTypes.FALLING_DUST, dustState),
+                                                            frontX, splatFloorY + 0.02, frontZ, 0.0, 0.01, 0.0
+                                                        );
+                                                        if (dust instanceof SingleQuadParticle sqp) {
+                                                            sqp.setColor(this.rCol, this.gCol, this.bCol);
+                                                        }
+                                                        if (dust != null) {
+                                                            Minecraft.getInstance().particleEngine.add(dust);
+                                                        }
+                                                    } catch (Throwable ignored) {
+                                                    }
+                                                });
+                                            }
+                                        } else {
+                                            final double dropSpawnX = frontX;
+                                            final double dropSpawnY = dripBaseY - 0.02;
+                                            final double dropSpawnZ = frontZ;
+                                            final float r = this.rCol;
+                                            final float g = this.gCol;
+                                            final float b = this.bCol;
+
+                                            ClientCanvasStore.get().scheduleAction(arrivalTime, () -> {
+                                                try {
+                                                    Minecraft mc = Minecraft.getInstance();
+                                                    if (mc.level == null) return;
+                                                    BloodParticle drop = BloodParticle.createDripDrop(
+                                                        mc.level, dropSpawnX, dropSpawnY, dropSpawnZ, r, g, b
+                                                    );
+                                                    if (drop != null) {
+                                                        mc.particleEngine.add(drop);
+                                                    }
+                                                } catch (Throwable ignored) {
+                                                }
+                                            });
+                                        }
                                     }
                                 }
                                 cStart = -1;

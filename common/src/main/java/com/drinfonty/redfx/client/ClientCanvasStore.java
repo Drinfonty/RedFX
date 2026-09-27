@@ -73,8 +73,12 @@ public final class ClientCanvasStore {
 	private record PendingStage(long executeAtMs, List<PendingTexel> texels) {
 	}
 
+	private record PendingAction(long executeAtMs, Runnable action) {
+	}
+
 	private final ConcurrentHashMap<Long, Long2ObjectMap<Canvas>> chunks = new ConcurrentHashMap<>();
 	private final List<PendingStage> pendingStages = new ArrayList<>();
+	private final List<PendingAction> pendingActions = new ArrayList<>();
 
 	private ClientCanvasStore() {
 	}
@@ -113,6 +117,12 @@ public final class ClientCanvasStore {
 			return;
 		}
 		pendingStages.add(new PendingStage(executeAtMs, texels));
+	}
+
+	public synchronized void scheduleAction(long executeAtMs, Runnable action) {
+		if (action != null) {
+			pendingActions.add(new PendingAction(executeAtMs, action));
+		}
 	}
 
 	public synchronized void applyTexels(List<PendingTexel> texels) {
@@ -273,18 +283,37 @@ public final class ClientCanvasStore {
 	public synchronized void clearAll() {
 		chunks.clear();
 		pendingStages.clear();
+		pendingActions.clear();
 	}
 
 	/**
 	 * Ticked every client tick to slowly erode and dissolve decals that have passed their fade start time,
-	 * and apply scheduled splatter expansion stages.
+	 * and apply scheduled splatter expansion stages and actions.
 	 */
 	public synchronized void tickExpiration(long nowMs) {
-		if (chunks.isEmpty() && pendingStages.isEmpty()) {
+		if (chunks.isEmpty() && pendingStages.isEmpty() && pendingActions.isEmpty()) {
 			return;
 		}
 
 		LongOpenHashSet toDirtySections = new LongOpenHashSet();
+
+		if (!pendingActions.isEmpty()) {
+			Iterator<PendingAction> aIt = pendingActions.iterator();
+			List<Runnable> readyActions = new ArrayList<>();
+			while (aIt.hasNext()) {
+				PendingAction pa = aIt.next();
+				if (nowMs >= pa.executeAtMs) {
+					aIt.remove();
+					readyActions.add(pa.action);
+				}
+			}
+			for (Runnable r : readyActions) {
+				try {
+					r.run();
+				} catch (Throwable ignored) {
+				}
+			}
+		}
 
 		if (!pendingStages.isEmpty()) {
 			Iterator<PendingStage> pIt = pendingStages.iterator();
