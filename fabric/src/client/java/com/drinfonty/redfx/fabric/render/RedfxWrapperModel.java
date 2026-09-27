@@ -61,7 +61,7 @@ public class RedfxWrapperModel extends WrapperBlockStateModel {
 
 			for (PaintSurface.SurfaceCanvas sc : PaintSurface.splitCanvas(level, pos, state, face, canvas)) {
 				for (PaintQuad quad : CanvasMesher.mesh(sc.canvas().texels(), face)) {
-					PaintGeometry.corners(quad, corners, sc.surfaceY());
+					PaintGeometry.corners(quad, corners, sc.facePlane(), sc.surfaceY());
 					emit(emitter, sprite, direction, corners, quad.argb(), false);
 
 					if (seeThrough) {

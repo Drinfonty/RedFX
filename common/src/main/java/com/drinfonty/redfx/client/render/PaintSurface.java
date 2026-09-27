@@ -24,7 +24,16 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 public final class PaintSurface {
 	public static final double NONE = -1.0;
 
-	public record SurfaceCanvas(Canvas canvas, float surfaceY) {
+	public record SurfaceCanvas(Canvas canvas, float facePlane, float surfaceY) {
+		public SurfaceCanvas(Canvas canvas, float surfaceY) {
+			this(canvas, Float.NaN, surfaceY);
+		}
+	}
+
+	public record FacePlaneInfo(float facePlane, float surfaceY) {
+	}
+
+	public record BlockEdge(int edgeU, int edgeV, double colTop, double colBottom, double colPlane) {
 	}
 
 	private PaintSurface() {
@@ -197,22 +206,85 @@ public final class PaintSurface {
 		};
 	}
 
+	public static BlockEdge findEdge(BlockGetter level, BlockPos pos, BlockState state, Direction hDir, int coord) {
+		if (state == null || state.isAir()) return null;
+
+		BlockGetter bg = level != null ? level : EmptyBlockGetter.INSTANCE;
+		BlockPos bp = pos != null ? pos : BlockPos.ZERO;
+
+		VoxelShape shape = state.getShape(bg, bp);
+		if (shape.isEmpty()) return null;
+
+		double tangent = (coord + 0.5) / (double) Canvas.SIZE;
+
+		AABB bestBox = null;
+		double bestTop = NONE;
+
+		for (AABB box : shape.toAabbs()) {
+			boolean tangentMatch = switch (hDir) {
+				case NORTH, SOUTH -> tangent >= box.minX - 1e-4 && tangent <= box.maxX + 1e-4;
+				case WEST, EAST -> tangent >= box.minZ - 1e-4 && tangent <= box.maxZ + 1e-4;
+				default -> false;
+			};
+			if (!tangentMatch) continue;
+
+			if (box.maxY > bestTop) {
+				bestTop = box.maxY;
+				bestBox = box;
+			}
+		}
+
+		if (bestBox == null) return null;
+
+		int edgeU;
+		int edgeV;
+		double colPlane;
+
+		switch (hDir) {
+			case NORTH -> {
+				edgeU = coord;
+				edgeV = Math.clamp((int) Math.floor(bestBox.minZ * 16.0), 0, 15);
+				colPlane = bestBox.minZ;
+			}
+			case SOUTH -> {
+				edgeU = coord;
+				edgeV = Math.clamp((int) Math.floor(bestBox.maxZ * 16.0 - 1e-4), 0, 15);
+				colPlane = bestBox.maxZ;
+			}
+			case WEST -> {
+				edgeU = Math.clamp((int) Math.floor(bestBox.minX * 16.0), 0, 15);
+				edgeV = coord;
+				colPlane = bestBox.minX;
+			}
+			case EAST -> {
+				edgeU = Math.clamp((int) Math.floor(bestBox.maxX * 16.0 - 1e-4), 0, 15);
+				edgeV = coord;
+				colPlane = bestBox.maxX;
+			}
+			default -> throw new IllegalArgumentException("invalid horizontal direction: " + hDir);
+		}
+
+		return new BlockEdge(edgeU, edgeV, bestBox.maxY, bestBox.minY, colPlane);
+	}
+
 	public static List<SurfaceCanvas> splitCanvas(BlockGetter level, BlockPos pos, BlockState state, int face, Canvas canvas) {
 		if (state == null || state.isAir()) {
 			float surfaceY = (float) planeFor(level, pos, state, face);
-			return List.of(new SurfaceCanvas(canvas, surfaceY));
+			float facePlane = PaintGeometry.defaultFacePlane(face, surfaceY);
+			return List.of(new SurfaceCanvas(canvas, facePlane, surfaceY));
 		}
 
 		BlockGetter bg = level != null ? level : EmptyBlockGetter.INSTANCE;
 		BlockPos bp = pos != null ? pos : BlockPos.ZERO;
 
-		if (state.isCollisionShapeFullBlock(bg, bp) || face == FaceAxes.DOWN) {
+		if (state.isCollisionShapeFullBlock(bg, bp)) {
 			float surfaceY = (float) planeFor(level, pos, state, face);
-			return List.of(new SurfaceCanvas(canvas, surfaceY));
+			float facePlane = PaintGeometry.defaultFacePlane(face, surfaceY);
+			return List.of(new SurfaceCanvas(canvas, facePlane, surfaceY));
 		}
 
 		int[] texels = canvas.texels();
-		Map<Float, int[]> planes = new LinkedHashMap<>(4);
+		Map<FacePlaneInfo, int[]> planes = new LinkedHashMap<>(4);
 
 		if (face == FaceAxes.UP) {
 			for (int pv = 0; pv < Canvas.SIZE; pv++) {
@@ -231,11 +303,32 @@ public final class PaintSurface {
 					}
 
 					float surfaceY = (float) (Math.round(top * 10000.0) / 10000.0);
-					planes.computeIfAbsent(surfaceY, k -> new int[Canvas.TEXELS])[idx] = col;
+					FacePlaneInfo key = new FacePlaneInfo(surfaceY, surfaceY);
+					planes.computeIfAbsent(key, k -> new int[Canvas.TEXELS])[idx] = col;
+				}
+			}
+		} else if (face == FaceAxes.DOWN) {
+			for (int pv = 0; pv < Canvas.SIZE; pv++) {
+				double z = 1.0 - (pv + 0.5) / (double) Canvas.SIZE;
+				for (int pu = 0; pu < Canvas.SIZE; pu++) {
+					int idx = pv * Canvas.SIZE + pu;
+					int col = texels[idx];
+					if (col == 0) {
+						continue;
+					}
+
+					double x = (pu + 0.5) / (double) Canvas.SIZE;
+					double bottom = surfaceBottomAt(bg, bp, state, x, z);
+					float surfaceY = (float) (Math.round(bottom * 10000.0) / 10000.0);
+					FacePlaneInfo key = new FacePlaneInfo(surfaceY, surfaceY);
+					planes.computeIfAbsent(key, k -> new int[Canvas.TEXELS])[idx] = col;
 				}
 			}
 		} else {
 			// Horizontal faces: NORTH, SOUTH, WEST, EAST
+			VoxelShape shape = state.getShape(bg, bp);
+			AABB bounds = shape.bounds();
+
 			for (int pv = 0; pv < Canvas.SIZE; pv++) {
 				for (int pu = 0; pu < Canvas.SIZE; pu++) {
 					int idx = pv * Canvas.SIZE + pu;
@@ -244,30 +337,58 @@ public final class PaintSurface {
 						continue;
 					}
 
-					double x = columnX(face, pu);
-					double z = columnZ(face, pu);
+					double u = (pu + 0.5) / (double) Canvas.SIZE;
+					double x = switch (face) {
+						case FaceAxes.NORTH -> 1.0 - u;
+						case FaceAxes.SOUTH -> u;
+						case FaceAxes.WEST -> bounds.minX + 0.01;
+						case FaceAxes.EAST -> bounds.maxX - 0.01;
+						default -> u;
+					};
+					double z = switch (face) {
+						case FaceAxes.NORTH -> bounds.minZ + 0.01;
+						case FaceAxes.SOUTH -> bounds.maxZ - 0.01;
+						case FaceAxes.WEST -> u;
+						case FaceAxes.EAST -> 1.0 - u;
+						default -> u;
+					};
+
 					double top = surfaceElevationAt(bg, bp, state, x, z);
 					if (top == NONE) {
 						continue;
 					}
 
 					float surfaceY = (float) (Math.round(top * 10000.0) / 10000.0);
-					planes.computeIfAbsent(surfaceY, k -> new int[Canvas.TEXELS])[idx] = col;
+					double plane = switch (face) {
+						case FaceAxes.NORTH -> bounds.minZ;
+						case FaceAxes.SOUTH -> bounds.maxZ;
+						case FaceAxes.WEST -> bounds.minX;
+						case FaceAxes.EAST -> bounds.maxX;
+						default -> 0.0;
+					};
+					float facePlane = (float) (Math.round(plane * 10000.0) / 10000.0);
+					FacePlaneInfo key = new FacePlaneInfo(facePlane, surfaceY);
+					planes.computeIfAbsent(key, k -> new int[Canvas.TEXELS])[idx] = col;
 				}
 			}
 		}
 
 		if (planes.isEmpty()) {
 			float surfaceY = (float) planeFor(level, pos, state, face);
-			return List.of(new SurfaceCanvas(canvas, surfaceY));
+			float facePlane = PaintGeometry.defaultFacePlane(face, surfaceY);
+			return List.of(new SurfaceCanvas(canvas, facePlane, surfaceY));
 		}
 
-		List<Map.Entry<Float, int[]>> sorted = new ArrayList<>(planes.entrySet());
-		sorted.sort((a, b) -> Float.compare(b.getKey(), a.getKey()));
+		List<Map.Entry<FacePlaneInfo, int[]>> sorted = new ArrayList<>(planes.entrySet());
+		sorted.sort((a, b) -> Float.compare(b.getKey().surfaceY(), a.getKey().surfaceY()));
 
 		List<SurfaceCanvas> result = new ArrayList<>(sorted.size());
-		for (Map.Entry<Float, int[]> entry : sorted) {
-			result.add(new SurfaceCanvas(new Canvas(entry.getValue(), canvas.fadeStartTimeMs(), canvas.nextErodeTimeMs()), entry.getKey()));
+		for (Map.Entry<FacePlaneInfo, int[]> entry : sorted) {
+			result.add(new SurfaceCanvas(
+				new Canvas(entry.getValue(), canvas.fadeStartTimeMs(), canvas.nextErodeTimeMs()),
+				entry.getKey().facePlane(),
+				entry.getKey().surfaceY()
+			));
 		}
 
 		return result;

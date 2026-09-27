@@ -183,4 +183,52 @@ class PaintSurfaceTest {
 		assertEquals(0.5, PaintSurface.surfaceElevationAt(level, pos, stair, 0.5, 0.75));
 		assertEquals(0.0, PaintSurface.surfaceBottomAt(level, pos, stair, 0.5, 0.75));
 	}
+
+	@Test
+	void testChestFindEdgeAndSplitCanvas() {
+		BlockGetter level = net.minecraft.world.level.EmptyBlockGetter.INSTANCE;
+		BlockPos pos = BlockPos.ZERO;
+		BlockState chest = Blocks.CHEST.defaultBlockState();
+
+		// Chest North edge: minZ is 1/16 -> edgeV = 1, colPlane = 0.0625, colTop = 0.875
+		PaintSurface.BlockEdge northEdge = PaintSurface.findEdge(level, pos, chest, Direction.NORTH, 7);
+		org.junit.jupiter.api.Assertions.assertNotNull(northEdge);
+		assertEquals(7, northEdge.edgeU());
+		assertEquals(1, northEdge.edgeV());
+		assertEquals(0.875, northEdge.colTop(), 1e-4);
+		assertEquals(0.0625, northEdge.colPlane(), 1e-4);
+
+		// Chest South edge: maxZ is 15/16 -> edgeV = 14, colPlane = 0.9375
+		PaintSurface.BlockEdge southEdge = PaintSurface.findEdge(level, pos, chest, Direction.SOUTH, 7);
+		org.junit.jupiter.api.Assertions.assertNotNull(southEdge);
+		assertEquals(7, southEdge.edgeU());
+		assertEquals(14, southEdge.edgeV());
+		assertEquals(0.9375, southEdge.colPlane(), 1e-4);
+
+		// Chest West edge: minX is 1/16 -> edgeU = 1, colPlane = 0.0625
+		PaintSurface.BlockEdge westEdge = PaintSurface.findEdge(level, pos, chest, Direction.WEST, 7);
+		org.junit.jupiter.api.Assertions.assertNotNull(westEdge);
+		assertEquals(1, westEdge.edgeU());
+		assertEquals(7, westEdge.edgeV());
+		assertEquals(0.0625, westEdge.colPlane(), 1e-4);
+
+		// Chest East edge: maxX is 15/16 -> edgeU = 14, colPlane = 0.9375
+		PaintSurface.BlockEdge eastEdge = PaintSurface.findEdge(level, pos, chest, Direction.EAST, 7);
+		org.junit.jupiter.api.Assertions.assertNotNull(eastEdge);
+		assertEquals(14, eastEdge.edgeU());
+		assertEquals(7, eastEdge.edgeV());
+		assertEquals(0.9375, eastEdge.colPlane(), 1e-4);
+
+		// Outside chest footprint (coord = 0): findEdge returns null
+		org.junit.jupiter.api.Assertions.assertNull(PaintSurface.findEdge(level, pos, chest, Direction.NORTH, 0));
+
+		// splitCanvas on chest North face:
+		int[] texels = new int[com.drinfonty.redfx.canvas.Canvas.TEXELS];
+		texels[0 * 16 + 7] = 0xFFFF0000;
+		var split = PaintSurface.splitCanvas(level, pos, chest, com.drinfonty.redfx.canvas.FaceAxes.NORTH,
+			new com.drinfonty.redfx.canvas.Canvas(texels, 1000L, 1200L));
+		assertEquals(1, split.size());
+		assertEquals(0.875F, split.get(0).surfaceY(), 1e-4F);
+		assertEquals(0.0625F, split.get(0).facePlane(), 1e-4F);
+	}
 }
