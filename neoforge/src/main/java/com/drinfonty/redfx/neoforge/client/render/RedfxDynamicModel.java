@@ -44,7 +44,7 @@ public class RedfxDynamicModel extends DelegateBakedModel implements IDynamicBak
 	private static final Map<CacheKey, List<BakedQuad>> CACHE = new ConcurrentHashMap<>();
 	private static final int MAX_CACHED_CANVASES = 8192;
 
-	private record CacheKey(Canvas canvas, int face, float surfaceY, boolean seeThrough, @Nullable RenderType renderType) {
+	private record CacheKey(Canvas canvas, int face, float facePlane, float surfaceY, boolean seeThrough, @Nullable RenderType renderType) {
 	}
 
 	public RedfxDynamicModel(BakedModel wrapped) {
@@ -117,8 +117,8 @@ public class RedfxDynamicModel extends DelegateBakedModel implements IDynamicBak
 
 			for (PaintSurface.SurfaceCanvas sc : PaintSurface.splitCanvas(null, data.pos, state, face, canvas)) {
 				List<BakedQuad> faceQuads = CACHE.computeIfAbsent(
-					new CacheKey(sc.canvas(), currentFace, sc.surfaceY(), data.seeThrough, renderType),
-					key -> build(key.canvas(), key.face(), key.surfaceY(), key.seeThrough(), key.renderType()));
+					new CacheKey(sc.canvas(), currentFace, sc.facePlane(), sc.surfaceY(), data.seeThrough, renderType),
+					key -> build(key.canvas(), key.face(), key.facePlane(), key.surfaceY(), key.seeThrough(), key.renderType()));
 
 				if (quads == null) {
 					quads = new ArrayList<>(base.size() + faceQuads.size() * 2);
@@ -136,7 +136,7 @@ public class RedfxDynamicModel extends DelegateBakedModel implements IDynamicBak
 		return quads != null ? quads : base;
 	}
 
-	private static List<BakedQuad> build(Canvas canvas, int face, float surfaceY, boolean seeThrough, @Nullable RenderType renderType) {
+	private static List<BakedQuad> build(Canvas canvas, int face, float facePlane, float surfaceY, boolean seeThrough, @Nullable RenderType renderType) {
 		Direction direction = Direction.from3DDataValue(face);
 		List<PaintQuad> rectangles = CanvasMesher.mesh(canvas.texels(), face);
 		List<BakedQuad> quads = new ArrayList<>(rectangles.size() * (seeThrough ? 2 : 1));
@@ -151,7 +151,7 @@ public class RedfxDynamicModel extends DelegateBakedModel implements IDynamicBak
 				continue;
 			}
 
-			PaintGeometry.corners(rectangle, corners, surfaceY);
+			PaintGeometry.corners(rectangle, corners, facePlane, surfaceY);
 			quads.add(bake(corners, direction, rectangle.argb(), false));
 
 			if (seeThrough) {

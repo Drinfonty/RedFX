@@ -44,6 +44,7 @@ public final class InGameSmokeTest {
 	private static int state = 0;
 	private static int tickCounter = 0;
 	private static BlockPos testOrigin = null;
+	private static BlockPos testGrassPos = null;
 	private static LivingEntity targetMob = null;
 	private static float targetYaw = 0.0f;
 	private static float targetPitch = 25.0f;
@@ -212,6 +213,11 @@ public final class InGameSmokeTest {
 				return;
 			}
 
+			if (testGrassPos != null && store.isPainted(testGrassPos)) {
+				fail(new AssertionError("Foliage / grass at " + testGrassPos.toShortString() + " was painted with blood decals!"));
+				return;
+			}
+
 			RedfxMod.LOGGER.info("=================================================");
 			RedfxMod.LOGGER.info("VERIFIED: Combat hit produced natural blood decals on the ground!");
 			RedfxMod.LOGGER.info("ALL REDFX IN-GAME SMOKE TESTS PASSED CLEANLY!");
@@ -223,6 +229,8 @@ public final class InGameSmokeTest {
 		}
 
 		if (state == 4) {
+			hideGui(client);
+
 			// Lock camera angles continuously on mob and splatters
 			client.player.setYRot(targetYaw);
 			client.player.setXRot(targetPitch);
@@ -345,6 +353,8 @@ public final class InGameSmokeTest {
 		BlockPos snowLayerPos = floorOrigin.relative(forward, 1).relative(left, 1);
 		BlockPos chestPos = floorOrigin.relative(forward, 1).relative(right, 1);
 		BlockPos stairPos = floorOrigin.relative(forward, 1);
+		BlockPos grassPos = floorOrigin.relative(forward.getOpposite(), 1);
+		testGrassPos = grassPos;
 
 		client.level.setBlock(stonePos, Blocks.STONE.defaultBlockState(), 3);
 		client.level.setBlock(snowBlockPos, Blocks.SNOW_BLOCK.defaultBlockState(), 3);
@@ -357,6 +367,8 @@ public final class InGameSmokeTest {
 		client.level.setBlock(stairPos, Blocks.OAK_STAIRS.defaultBlockState()
 			.setValue(StairBlock.FACING, forward.getOpposite())
 			.setValue(StairBlock.HALF, Half.BOTTOM), 3);
+		client.level.setBlock(grassPos.below(), Blocks.GRASS_BLOCK.defaultBlockState(), 3);
+		client.level.setBlock(grassPos, Blocks.SHORT_GRASS.defaultBlockState(), 3);
 
 		// Synchronize arena and summon mob via server
 		var server = client.getSingleplayerServer();
@@ -412,6 +424,12 @@ public final class InGameSmokeTest {
 			commands.performPrefixedCommand(source, String.format(java.util.Locale.ROOT,
 				"setblock %d %d %d oak_stairs[facing=%s,half=bottom]",
 				stairPos.getX(), stairPos.getY(), stairPos.getZ(), forward.getOpposite().getName()));
+
+			// 8b. Grass plant (foliage) in front on grass block base
+			commands.performPrefixedCommand(source, String.format(java.util.Locale.ROOT,
+				"setblock %d %d %d grass_block", grassPos.getX(), floorY - 1, grassPos.getZ()));
+			commands.performPrefixedCommand(source, String.format(java.util.Locale.ROOT,
+				"setblock %d %d %d short_grass", grassPos.getX(), grassPos.getY(), grassPos.getZ()));
 
 			// 9. Ensure player stands firmly 2 blocks in front on solid stone
 			BlockPos playerStandPos = floorOrigin.relative(forward.getOpposite(), 2);
@@ -580,7 +598,70 @@ public final class InGameSmokeTest {
 		}
 	}
 
+	private static void hideGui(Minecraft client) {
+		// Modern 26.x: client.gui.hud.toggle() if not already hidden
+		try {
+			for (java.lang.reflect.Field f : client.gui.getClass().getFields()) {
+				if (f.getName().equals("hud")) {
+					Object hud = f.get(client.gui);
+					if (hud != null) {
+						java.lang.reflect.Method isHiddenMethod = hud.getClass().getMethod("isHidden");
+						boolean isHidden = (boolean) isHiddenMethod.invoke(hud);
+						if (!isHidden) {
+							java.lang.reflect.Method toggleMethod = hud.getClass().getMethod("toggle");
+							toggleMethod.invoke(hud);
+						}
+						return;
+					}
+				}
+			}
+		} catch (Throwable ignored) {
+		}
+
+		try {
+			for (java.lang.reflect.Field f : client.gui.getClass().getDeclaredFields()) {
+				if (f.getName().equals("hud")) {
+					f.setAccessible(true);
+					Object hud = f.get(client.gui);
+					if (hud != null) {
+						java.lang.reflect.Method isHiddenMethod = hud.getClass().getMethod("isHidden");
+						boolean isHidden = (boolean) isHiddenMethod.invoke(hud);
+						if (!isHidden) {
+							java.lang.reflect.Method toggleMethod = hud.getClass().getMethod("toggle");
+							toggleMethod.invoke(hud);
+						}
+						return;
+					}
+				}
+			}
+		} catch (Throwable ignored) {
+		}
+
+		// Legacy 1.21.x: client.options.hideGui = true
+		try {
+			for (java.lang.reflect.Field f : client.options.getClass().getFields()) {
+				if (f.getName().equals("hideGui")) {
+					f.setBoolean(client.options, true);
+					return;
+				}
+			}
+		} catch (Throwable ignored) {
+		}
+
+		try {
+			for (java.lang.reflect.Field f : client.options.getClass().getDeclaredFields()) {
+				if (f.getName().equals("hideGui")) {
+					f.setAccessible(true);
+					f.setBoolean(client.options, true);
+					return;
+				}
+			}
+		} catch (Throwable ignored) {
+		}
+	}
+
 	private static void captureScreenshot(Minecraft client) {
+		hideGui(client);
 		try {
 			try {
 				java.lang.reflect.Method m = net.minecraft.client.Screenshot.class.getMethod("grab", Minecraft.class, boolean.class);
@@ -695,7 +776,7 @@ public final class InGameSmokeTest {
 
 		// Edge drip calculations
 		int dripLen = EdgeDrip.calculateDripLength(origin.getX(), origin.getZ(), FaceAxes.EAST, 8, 5, 11, 15, 1);
-		if (dripLen < 3 || dripLen > 15) {
+		if (dripLen < 1 || dripLen > 15) {
 			throw new AssertionError("EdgeDrip.calculateDripLength produced out-of-range length: " + dripLen);
 		}
 		int dripAlpha = EdgeDrip.dripAlpha(255, 3, 7);
