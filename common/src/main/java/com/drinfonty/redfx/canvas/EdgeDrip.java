@@ -76,26 +76,60 @@ public final class EdgeDrip {
 	}
 
 	/**
-	 * Computes the teardrop bead drip length (4..8 pixels) down a vertical face for column {@code uSide}.
+	 * Computes the teardrop bead drip length down a vertical face for column {@code uSide}.
+	 * Provides high variety across short trickles, medium beads, long drips, up to the full block height.
 	 */
 	public static int calculateDripLength(int blockX, int blockZ, int sideFace, int uSide,
 		int clusterStart, int clusterEnd, int maxAllowedLength, int splatIndex) {
+		if (maxAllowedLength <= 1) {
+			return Math.max(0, maxAllowedLength);
+		}
+
 		int hash = Math.abs((blockX * 3127 + blockZ * 739 + sideFace * 101 + uSide * 37) ^ (splatIndex * 19));
+		int category = hash % 100;
 
-		// Teardrop bead drip length: 4..8 pixels long
-		int beadLen = 4 + (hash % 5);
+		int len;
+		if (category < 25) {
+			// ~25% reach the base: full allowed length
+			len = maxAllowedLength;
+		} else if (category < 50) {
+			// ~25% short drips: 2..max(2, round(0.35 * maxAllowedLength))
+			int maxShort = Math.max(2, Math.min(maxAllowedLength, Math.round(maxAllowedLength * 0.35f)));
+			int span = Math.max(1, maxShort - 2 + 1);
+			len = 2 + ((hash / 100) % span);
+		} else if (category < 80) {
+			// ~30% medium drips: ~35% to ~70% of maxAllowedLength
+			int minMed = Math.max(2, Math.round(maxAllowedLength * 0.35f));
+			int maxMed = Math.max(minMed, Math.min(maxAllowedLength, Math.round(maxAllowedLength * 0.70f)));
+			int span = Math.max(1, maxMed - minMed + 1);
+			len = minMed + ((hash / 100) % span);
+		} else {
+			// ~20% long drips: ~70% to maxAllowedLength
+			int minLong = Math.max(2, Math.round(maxAllowedLength * 0.70f));
+			int span = Math.max(1, maxAllowedLength - minLong + 1);
+			len = minLong + ((hash / 100) % span);
+		}
 
-		return Math.max(0, Math.min(maxAllowedLength, beadLen));
+		return Math.max(1, Math.min(maxAllowedLength, len));
 	}
 
 	/**
-	 * Computes the step delay in milliseconds for a bead of length {@code beadLen}.
-	 * Longer (faster) beads advance more rapidly; shorter beads advance more slowly.
+	 * Computes the step delay in milliseconds for a bead of length {@code beadLen} working backward from length.
+	 * Total drip duration is paced naturally (~1.4s to 2.2s), resulting in lower step delay (faster pixel rate)
+	 * for longer drips and higher step delay (slower pixel rate) for shorter drips.
+	 */
+	public static long beadStepDelayMs(int beadLen, float configFactor, int hash) {
+		int totalDurationMs = 1400 + Math.abs(hash % 800); // 1400ms to 2200ms
+		float stepDelay = (float) totalDurationMs / (float) Math.max(1, beadLen);
+		float clampedDelay = Math.max(75.0f, Math.min(350.0f, stepDelay));
+		return Math.max(40L, Math.round(clampedDelay * configFactor));
+	}
+
+	/**
+	 * Overload for backward-compatibility with default hash derived from bead length.
 	 */
 	public static long beadStepDelayMs(int beadLen, float configFactor) {
-		// Base delay: 70ms for len 8, up to 210ms for len 4
-		int baseDelay = 70 + Math.max(0, 8 - beadLen) * 35;
-		return Math.max(40L, Math.round(baseDelay * configFactor));
+		return beadStepDelayMs(beadLen, configFactor, beadLen * 31);
 	}
 
 	/**
