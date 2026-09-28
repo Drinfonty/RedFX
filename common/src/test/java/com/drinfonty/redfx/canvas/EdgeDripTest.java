@@ -200,8 +200,8 @@ class EdgeDripTest {
 				}
 			}
 		}
-		assertTrue(sidePainted >= 5, "Should paint teardrop bead pixels on side face");
-		assertTrue(maxV >= 4 && maxV <= 8, "Teardrop beads should extend 4 to 8 pixels down the face");
+		assertTrue(sidePainted >= 3, "Should paint teardrop bead pixels on side face");
+		assertTrue(maxV >= 2 && maxV <= 15, "Teardrop beads should extend down the face: " + maxV);
 	}
 
 	@Test
@@ -230,11 +230,25 @@ class EdgeDripTest {
 	}
 
 	@Test
-	void calculateDripLengthExtendsFourToEightPixels() {
-		for (int u = 0; u < 16; u++) {
-			int len = EdgeDrip.calculateDripLength(10, -5, FaceAxes.NORTH, u, 0, 15, 15, 1);
-			assertTrue(len >= 4 && len <= 8, "Bead drip length must be between 4 and 8 pixels: " + len);
+	void calculateDripLengthProvidesVariedLengthsUpToFullBlock() {
+		boolean foundShort = false;
+		boolean foundMedium = false;
+		boolean foundLong = false;
+		boolean foundFull = false;
+
+		for (int u = 0; u < 64; u++) {
+			int len = EdgeDrip.calculateDripLength(10 + u, -5, FaceAxes.NORTH, u % 16, 0, 15, 15, 1);
+			assertTrue(len >= 1 && len <= 15, "Bead drip length must be between 1 and 15: " + len);
+			if (len <= 5) foundShort = true;
+			else if (len <= 10) foundMedium = true;
+			else if (len < 15) foundLong = true;
+			else foundFull = true;
 		}
+
+		assertTrue(foundShort, "Should include short drips");
+		assertTrue(foundMedium, "Should include medium drips");
+		assertTrue(foundLong, "Should include long drips");
+		assertTrue(foundFull, "Should include full-length drips that reach the base");
 	}
 
 	@Test
@@ -290,5 +304,28 @@ class EdgeDripTest {
 		assertEquals("dirt:1", painted.get(3));
 		assertEquals("dirt:2", painted.get(4));
 		assertEquals("dirt:3", painted.get(5));
+	}
+
+	@Test
+	void stairEdgeDripOnLowerStepDoesNotExceedHalfBlock() {
+		int localTexels = 8;
+		int maxDropTexels = 8;
+		int dripLen = EdgeDrip.calculateDripLength(0, 0, FaceAxes.NORTH, 5, 4, 6, maxDropTexels - 1, 1);
+		assertTrue(dripLen <= 7, "dripLen must not exceed maxDropTexels - 1");
+
+		for (int step = 0; step <= dripLen; step++) {
+			assertTrue(step < localTexels, "All steps fit on stair lower step without overflowing");
+		}
+	}
+
+	@Test
+	void stepDelayPacingPacesTrickleNaturally() {
+		for (int len = 1; len <= 16; len++) {
+			long delay = EdgeDrip.beadStepDelayMs(len, 1.0f);
+			assertTrue(delay >= 40L && delay <= 350L, "Step delay must be bounded: " + delay + " for len " + len);
+			long totalDuration = delay * len;
+			assertTrue(totalDuration >= 350L && totalDuration <= 3000L,
+				"Total drip duration must feel natural (0.35s - 3s): " + totalDuration + "ms for len " + len);
+		}
 	}
 }
