@@ -19,7 +19,7 @@ public class RedfxConfig {
     public float particleSizeScale = 1.0f; // Range: 0.5 to 2.0
     public float splatSizeScale = 1.0f; // Range: 0.5 to 2.0
     public float colorSaturation = 1.0f; // Range: 0.0 to 2.0
-    public boolean translucentEdges = true; // Translucent gradient falloff on splatter edges
+    public boolean translucentEdges = false; // Translucent gradient falloff on splatter edges
     public boolean dripOverEdges = true; // Wrap and drip splatters over block edges into open air
     public boolean wallDripping = true; // Splatters on vertical walls form natural dripping rivulets running down the block
     public boolean gradualSplatter = true; // Splatters blossom outward gradually (core -> sub-perimeter -> edge)
@@ -148,7 +148,7 @@ public class RedfxConfig {
         this.particleSizeScale = 1.0f;
         this.splatSizeScale = 1.0f;
         this.colorSaturation = 1.0f;
-        this.translucentEdges = true;
+        this.translucentEdges = false;
         this.dripOverEdges = true;
         this.wallDripping = true;
         this.gradualSplatter = true;
