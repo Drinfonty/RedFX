@@ -138,7 +138,6 @@ public class RedfxDynamicModel extends DelegateBlockStateModel implements Dynami
 
 		quad.setColor(argb);
 		quad.setTintIndex(-1);
-		quad.setShade(true);
 
 		return quad.toBakedQuad();
 	}
