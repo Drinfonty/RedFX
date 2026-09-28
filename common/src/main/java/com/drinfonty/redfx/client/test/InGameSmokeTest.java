@@ -348,12 +348,12 @@ public final class InGameSmokeTest {
 
 		// Set up blocks on client
 		BlockPos stonePos = floorOrigin;
-		BlockPos snowBlockPos = floorOrigin.relative(left, 1);
+		BlockPos snowBlockPos = floorOrigin.relative(forward, 1).relative(left, 1);
 		BlockPos slabPos = floorOrigin.relative(right, 1);
-		BlockPos snowLayerPos = floorOrigin.relative(forward, 1).relative(left, 1);
+		BlockPos snowLayerPos = floorOrigin.relative(forward.getOpposite(), 1);
 		BlockPos chestPos = floorOrigin.relative(forward, 1).relative(right, 1);
 		BlockPos stairPos = floorOrigin.relative(forward, 1);
-		BlockPos grassPos = floorOrigin.relative(forward.getOpposite(), 1);
+		BlockPos grassPos = floorOrigin.relative(left, 1);
 		testGrassPos = grassPos;
 
 		client.level.setBlock(stonePos, Blocks.STONE.defaultBlockState(), 3);
@@ -404,15 +404,15 @@ public final class InGameSmokeTest {
 			commands.performPrefixedCommand(source, String.format(java.util.Locale.ROOT,
 				"setblock %d %d %d stone", stonePos.getX(), stonePos.getY(), stonePos.getZ()));
 
-			// 4. Snow block (full block)
+			// 4. Snow block (top left)
 			commands.performPrefixedCommand(source, String.format(java.util.Locale.ROOT,
 				"setblock %d %d %d snow_block", snowBlockPos.getX(), snowBlockPos.getY(), snowBlockPos.getZ()));
 
-			// 5. Smooth stone slab (half block)
+			// 5. Smooth stone slab (half block on right)
 			commands.performPrefixedCommand(source, String.format(java.util.Locale.ROOT,
 				"setblock %d %d %d smooth_stone_slab[type=bottom]", slabPos.getX(), slabPos.getY(), slabPos.getZ()));
 
-			// 6. Snow layer (partial block, 3 layers)
+			// 6. Snow layer (partial block, 3 layers in front)
 			commands.performPrefixedCommand(source, String.format(java.util.Locale.ROOT,
 				"setblock %d %d %d snow[layers=3]", snowLayerPos.getX(), snowLayerPos.getY(), snowLayerPos.getZ()));
 
@@ -425,7 +425,7 @@ public final class InGameSmokeTest {
 				"setblock %d %d %d oak_stairs[facing=%s,half=bottom]",
 				stairPos.getX(), stairPos.getY(), stairPos.getZ(), forward.getOpposite().getName()));
 
-			// 8b. Grass plant (foliage) in front on grass block base
+			// 8b. Grass plant (foliage on left on grass block base)
 			commands.performPrefixedCommand(source, String.format(java.util.Locale.ROOT,
 				"setblock %d %d %d grass_block", grassPos.getX(), floorY - 1, grassPos.getZ()));
 			commands.performPrefixedCommand(source, String.format(java.util.Locale.ROOT,
