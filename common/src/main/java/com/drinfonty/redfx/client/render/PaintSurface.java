@@ -12,6 +12,21 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.EmptyBlockGetter;
+import net.minecraft.world.level.block.AzaleaBlock;
+import net.minecraft.world.level.block.BambooSaplingBlock;
+import net.minecraft.world.level.block.BambooStalkBlock;
+import net.minecraft.world.level.block.BigDripleafBlock;
+import net.minecraft.world.level.block.BigDripleafStemBlock;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.BushBlock;
+import net.minecraft.world.level.block.CactusBlock;
+import net.minecraft.world.level.block.GrowingPlantBlock;
+import net.minecraft.world.level.block.HangingRootsBlock;
+import net.minecraft.world.level.block.LeavesBlock;
+import net.minecraft.world.level.block.SnowLayerBlock;
+import net.minecraft.world.level.block.SporeBlossomBlock;
+import net.minecraft.world.level.block.SugarCaneBlock;
+import net.minecraft.world.level.block.VineBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.shapes.VoxelShape;
@@ -39,8 +54,38 @@ public final class PaintSurface {
 	private PaintSurface() {
 	}
 
-	public static double topOf(BlockGetter level, BlockPos pos, BlockState state) {
+	public static boolean isIgnored(BlockState state) {
 		if (state == null || state.isAir()) {
+			return true;
+		}
+		Block block = state.getBlock();
+		return block instanceof BushBlock
+			|| block instanceof AzaleaBlock
+			|| block instanceof LeavesBlock
+			|| block instanceof VineBlock
+			|| block instanceof SugarCaneBlock
+			|| block instanceof BambooStalkBlock
+			|| block instanceof BambooSaplingBlock
+			|| block instanceof GrowingPlantBlock
+			|| block instanceof HangingRootsBlock
+			|| block instanceof BigDripleafBlock
+			|| block instanceof BigDripleafStemBlock
+			|| block instanceof SporeBlossomBlock
+			|| block instanceof CactusBlock
+			|| isVegetation(block);
+	}
+
+	private static boolean isVegetation(Block block) {
+		for (Class<?> c = block.getClass(); c != null && c != Object.class; c = c.getSuperclass()) {
+			if ("VegetationBlock".equals(c.getSimpleName())) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	public static double topOf(BlockGetter level, BlockPos pos, BlockState state) {
+		if (state == null || state.isAir() || isIgnored(state)) {
 			return NONE;
 		}
 
@@ -65,8 +110,7 @@ public final class PaintSurface {
 		VoxelShape collision = state.getCollisionShape(bg, bp);
 		if (collision.isEmpty()) {
 			// If it has no collision, it's only paintable if it's a flat ground cover (like snow layers).
-			// Plants, flowers, and torches have narrow horizontal bounds (< 0.8).
-			if (bounds.maxX - bounds.minX < 0.8 || bounds.maxZ - bounds.minZ < 0.8) {
+			if (!(state.getBlock() instanceof SnowLayerBlock)) {
 				return NONE;
 			}
 		}
@@ -268,10 +312,8 @@ public final class PaintSurface {
 	}
 
 	public static List<SurfaceCanvas> splitCanvas(BlockGetter level, BlockPos pos, BlockState state, int face, Canvas canvas) {
-		if (state == null || state.isAir()) {
-			float surfaceY = (float) planeFor(level, pos, state, face);
-			float facePlane = PaintGeometry.defaultFacePlane(face, surfaceY);
-			return List.of(new SurfaceCanvas(canvas, facePlane, surfaceY));
+		if (state == null || state.isAir() || isIgnored(state)) {
+			return List.of();
 		}
 
 		BlockGetter bg = level != null ? level : EmptyBlockGetter.INSTANCE;
