@@ -33,17 +33,11 @@ import com.drinfonty.redfx.config.RedfxConfig;
 
 public class BloodParticle extends TerrainParticle {
     private final int splatIndex; // Picks one of 5 splat patterns (1 to 5)
-    private final boolean isDripDrop;
 
     public BloodParticle(ClientLevel level, double x, double y, double z, double vx, double vy, double vz, BlockState state) {
-        this(level, x, y, z, vx, vy, vz, state, false);
-    }
-
-    public BloodParticle(ClientLevel level, double x, double y, double z, double vx, double vy, double vz, BlockState state, boolean isDripDrop) {
         super(level, x, y, z, vx, vy, vz, state);
-        this.isDripDrop = isDripDrop;
 
-        this.lifetime = isDripDrop ? 60 : 40; // max fall time before despawning
+        this.lifetime = 40; // max fall time before despawning
         this.gravity = 1.0F;
         this.friction = 0.98F;
         this.hasPhysics = true;
@@ -55,18 +49,6 @@ public class BloodParticle extends TerrainParticle {
 
         float sizeScale = 0.8F + this.random.nextFloat() * 1.0F;
         this.quadSize *= sizeScale * RedfxConfig.get().particleSizeScale * 0.8F;
-
-        if (isDripDrop) {
-            this.quadSize *= 0.40F; // Small falling droplet bead
-        }
-    }
-
-    public static BloodParticle createDripDrop(ClientLevel level, double x, double y, double z, float r, float g, float b) {
-        BloodParticle drop = new BloodParticle(
-            level, x, y, z, 0.0, -0.02, 0.0, Blocks.REDSTONE_BLOCK.defaultBlockState(), true
-        );
-        drop.setColor(r, g, b);
-        return drop;
     }
 
     private BlockPos getAttachedBlockPos(Direction dir) {
@@ -165,11 +147,7 @@ public class BloodParticle extends TerrainParticle {
             if (targetState.isAir() || !targetState.getFluidState().isEmpty()) {
                 hitDirection = null;
             } else {
-                if (this.isDripDrop) {
-                    stampSmallDripSplatter(targetBlock, hitDirection);
-                } else {
-                    stampToCanvas(targetBlock, hitDirection);
-                }
+                stampToCanvas(targetBlock, hitDirection);
 
                 if (RedfxConfig.get().enableSplatDust) {
                     try {
@@ -195,52 +173,6 @@ public class BloodParticle extends TerrainParticle {
                 this.remove();
             }
         }
-    }
-
-    private void stampSmallDripSplatter(BlockPos targetBlock, Direction hitDirection) {
-        BlockState targetState = this.level.getBlockState(targetBlock);
-        if (targetState.isAir() || !targetState.getFluidState().isEmpty()) {
-            return;
-        }
-        if (hitDirection == Direction.UP && PaintSurface.topOf(this.level, targetBlock, targetState) == PaintSurface.NONE) {
-            return;
-        }
-
-        int face = hitDirection.get3DDataValue();
-        double lx = Math.max(0.0, Math.min(1.0, this.x - targetBlock.getX()));
-        double ly = Math.max(0.0, Math.min(1.0, this.y - targetBlock.getY()));
-        double lz = Math.max(0.0, Math.min(1.0, this.z - targetBlock.getZ()));
-
-        int centerU = FaceAxes.texel(FaceAxes.u(face, lx, ly, lz));
-        int centerV = FaceAxes.texel(FaceAxes.v(face, lx, ly, lz));
-
-        int argb = PaintColor.fromRgb(this.rCol, this.gCol, this.bCol);
-        int baseLifetimeSec = RedfxConfig.get().particleLifetimeSeconds;
-        long expirationMs = baseLifetimeSec > 0 ? System.currentTimeMillis() + (long) baseLifetimeSec * 1000L : 0L;
-
-        List<ClientCanvasStore.PendingTexel> smallSplat = new ArrayList<>();
-        smallSplat.add(new ClientCanvasStore.PendingTexel(
-            targetBlock, face, centerU, centerV, argb, expirationMs
-        ));
-
-        int[][] offsets = { {1, 0}, {-1, 0}, {0, 1}, {0, -1} };
-        int splatHash = Math.abs(this.random.nextInt());
-        int fadeAlpha = (int) (((argb >>> 24) & 0xFF) * 0.75f);
-        int fadeCol = (fadeAlpha << 24) | (argb & 0xFFFFFF);
-
-        for (int i = 0; i < 4; i++) {
-            if (((splatHash >> i) & 1) == 0) {
-                int nu = centerU + offsets[i][0];
-                int nv = centerV + offsets[i][1];
-                if (nu >= 0 && nu < Canvas.SIZE && nv >= 0 && nv < Canvas.SIZE) {
-                    smallSplat.add(new ClientCanvasStore.PendingTexel(
-                        targetBlock, face, nu, nv, fadeCol, expirationMs
-                    ));
-                }
-            }
-        }
-
-        ClientCanvasStore.get().applyTexels(smallSplat);
     }
 
     private void stampToCanvas(BlockPos targetBlock, Direction hitDirection) {
@@ -643,6 +575,10 @@ public class BloodParticle extends TerrainParticle {
 
                                             ClientCanvasStore.get().scheduleStage(arrivalTime, smallSplat);
 
+                                            final float dripR = ((rgb >> 16) & 0xFF) / 255.0f;
+                                            final float dripG = ((rgb >> 8) & 0xFF) / 255.0f;
+                                            final float dripB = (rgb & 0xFF) / 255.0f;
+
                                             if (RedfxConfig.get().enableSplatDust) {
                                                 final double splatFloorY = floorElevation;
                                                 ClientCanvasStore.get().scheduleAction(arrivalTime, () -> {
@@ -653,7 +589,7 @@ public class BloodParticle extends TerrainParticle {
                                                             frontX, splatFloorY + 0.02, frontZ, 0.0, 0.01, 0.0
                                                         );
                                                         if (dust instanceof SingleQuadParticle sqp) {
-                                                            sqp.setColor(this.rCol, this.gCol, this.bCol);
+                                                            sqp.setColor(dripR, dripG, dripB);
                                                         }
                                                         if (dust != null) {
                                                             Minecraft.getInstance().particleEngine.add(dust);
@@ -666,19 +602,19 @@ public class BloodParticle extends TerrainParticle {
                                             final double dropSpawnX = frontX;
                                             final double dropSpawnY = dripBaseY - 0.02;
                                             final double dropSpawnZ = frontZ;
-                                            final float r = this.rCol;
-                                            final float g = this.gCol;
-                                            final float b = this.bCol;
+                                            final float dropR = ((rgb >> 16) & 0xFF) / 255.0f;
+                                            final float dropG = ((rgb >> 8) & 0xFF) / 255.0f;
+                                            final float dropB = (rgb & 0xFF) / 255.0f;
 
                                             ClientCanvasStore.get().scheduleAction(arrivalTime, () -> {
                                                 try {
                                                     Minecraft mc = Minecraft.getInstance();
                                                     if (mc.level == null) return;
-                                                    BloodParticle drop = BloodParticle.createDripDrop(
-                                                        mc.level, dropSpawnX, dropSpawnY, dropSpawnZ, r, g, b
+                                                    Particle drop = mc.particleEngine.createParticle(
+                                                        ParticleTypes.FALLING_WATER, dropSpawnX, dropSpawnY, dropSpawnZ, 0.0, 0.0, 0.0
                                                     );
-                                                    if (drop != null) {
-                                                        mc.particleEngine.add(drop);
+                                                    if (drop instanceof SingleQuadParticle sqp) {
+                                                        sqp.setColor(dropR, dropG, dropB);
                                                     }
                                                 } catch (Throwable ignored) {
                                                 }
