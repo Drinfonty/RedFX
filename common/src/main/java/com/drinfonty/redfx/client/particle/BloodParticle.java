@@ -20,6 +20,7 @@ import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.tags.FluidTags;
+import net.minecraft.util.RandomSource;
 
 import com.drinfonty.redfx.canvas.BloodSplatter;
 import com.drinfonty.redfx.canvas.Canvas;
@@ -51,26 +52,72 @@ public class BloodParticle extends TerrainParticle {
         this.quadSize *= sizeScale * RedfxConfig.get().particleSizeScale * 0.8F;
     }
 
-    private BlockPos getAttachedBlockPos(Direction dir) {
+    public static BlockPos getAttachedBlockPos(ClientLevel level, double x, double y, double z, Direction dir) {
         return switch (dir) {
             case UP -> {
-                BlockPos below = BlockPos.containing(this.x, this.y - 0.2, this.z);
+                BlockPos below = BlockPos.containing(x, y - 0.2, z);
                 BlockPos above = below.above();
-                BlockState aboveState = this.level.getBlockState(above);
+                BlockState aboveState = level.getBlockState(above);
                 if (!aboveState.isAir() && aboveState.getFluidState().isEmpty()) {
-                    double top = PaintSurface.topOf(this.level, above, aboveState);
+                    double top = PaintSurface.topOf(level, above, aboveState);
                     if (top != PaintSurface.NONE && top < 1.0) {
                         yield above;
                     }
                 }
                 yield below;
             }
-            case DOWN -> BlockPos.containing(this.x, this.y + 0.2, this.z);
-            case WEST -> BlockPos.containing(this.x + 0.2, this.y, this.z);
-            case EAST -> BlockPos.containing(this.x - 0.2, this.y, this.z);
-            case NORTH -> BlockPos.containing(this.x, this.y, this.z + 0.2);
-            case SOUTH -> BlockPos.containing(this.x, this.y, this.z - 0.2);
+            case DOWN -> BlockPos.containing(x, y + 0.2, z);
+            case WEST -> BlockPos.containing(x + 0.2, y, z);
+            case EAST -> BlockPos.containing(x - 0.2, y, z);
+            case NORTH -> BlockPos.containing(x, y, z + 0.2);
+            case SOUTH -> BlockPos.containing(x, y, z - 0.2);
         };
+    }
+
+    public static void spawnSplatDust(ClientLevel level, double x, double y, double z,
+                                       float rCol, float gCol, float bCol, RandomSource random) {
+        if (!RedfxConfig.get().enableSplatDust) return;
+        try {
+            BlockState dustState = Blocks.SNOW_BLOCK.defaultBlockState();
+            double dustVx = (random.nextDouble() - 0.5) * 0.04;
+            double dustVy = 0.02 + random.nextDouble() * 0.03;
+            double dustVz = (random.nextDouble() - 0.5) * 0.04;
+
+            Particle dustParticle = Minecraft.getInstance().particleEngine.createParticle(
+                new BlockParticleOption(ParticleTypes.FALLING_DUST, dustState),
+                x, y, z, dustVx, dustVy, dustVz
+            );
+            if (dustParticle instanceof SingleQuadParticle sqp) {
+                sqp.setColor(rCol, gCol, bCol);
+            }
+            if (dustParticle != null) {
+                Minecraft.getInstance().particleEngine.add(dustParticle);
+            }
+        } catch (Throwable ignored) {
+        }
+    }
+
+    public static void handleLanding(ClientLevel level, double x, double y, double z,
+                                      float rCol, float gCol, float bCol, RandomSource random) {
+        if (level == null) return;
+        BlockPos currentPos = BlockPos.containing(x, y, z);
+        if (level.getFluidState(currentPos).is(FluidTags.WATER)) {
+            return;
+        }
+
+        Direction hitDirection = Direction.UP;
+        BlockPos targetBlock = getAttachedBlockPos(level, x, y, z, hitDirection);
+        BlockState targetState = level.getBlockState(targetBlock);
+        if (targetState.isAir() || !targetState.getFluidState().isEmpty()) {
+            return;
+        }
+
+        int splatIndex = 1 + random.nextInt(5);
+        stampToCanvas(level, x, y, z, rCol, gCol, bCol, splatIndex, random, targetBlock, hitDirection);
+
+        if (RedfxConfig.get().enableSplatDust) {
+            spawnSplatDust(level, x, y, z, rCol, gCol, bCol, random);
+        }
     }
 
     @Override
@@ -142,32 +189,15 @@ public class BloodParticle extends TerrainParticle {
         }
 
         if (hitDirection != null) {
-            BlockPos targetBlock = getAttachedBlockPos(hitDirection);
+            BlockPos targetBlock = getAttachedBlockPos(this.level, this.x, this.y, this.z, hitDirection);
             BlockState targetState = this.level.getBlockState(targetBlock);
             if (targetState.isAir() || !targetState.getFluidState().isEmpty()) {
                 hitDirection = null;
             } else {
-                stampToCanvas(targetBlock, hitDirection);
+                stampToCanvas(this.level, this.x, this.y, this.z, this.rCol, this.gCol, this.bCol, this.splatIndex, this.random, targetBlock, hitDirection);
 
                 if (RedfxConfig.get().enableSplatDust) {
-                    try {
-                        BlockState dustState = Blocks.SNOW_BLOCK.defaultBlockState();
-                        double dustVx = (this.random.nextDouble() - 0.5) * 0.04;
-                        double dustVy = 0.02 + this.random.nextDouble() * 0.03;
-                        double dustVz = (this.random.nextDouble() - 0.5) * 0.04;
-                        
-                        Particle dustParticle = Minecraft.getInstance().particleEngine.createParticle(
-                            new BlockParticleOption(ParticleTypes.FALLING_DUST, dustState),
-                            this.x, this.y, this.z, dustVx, dustVy, dustVz
-                        );
-                        if (dustParticle instanceof SingleQuadParticle sqp) {
-                            sqp.setColor(this.rCol, this.gCol, this.bCol);
-                        }
-                        if (dustParticle != null) {
-                            Minecraft.getInstance().particleEngine.add(dustParticle);
-                        }
-                    } catch (Exception e) {
-                    }
+                    spawnSplatDust(this.level, this.x, this.y, this.z, this.rCol, this.gCol, this.bCol, this.random);
                 }
 
                 this.remove();
@@ -175,11 +205,14 @@ public class BloodParticle extends TerrainParticle {
         }
     }
 
-    private void stampToCanvas(BlockPos targetBlock, Direction hitDirection) {
+    public static void stampToCanvas(ClientLevel level, double x, double y, double z,
+                                     float rCol, float gCol, float bCol,
+                                     int splatIndex, RandomSource random,
+                                     BlockPos targetBlock, Direction hitDirection) {
         int face = hitDirection.get3DDataValue();
-        double lx = this.x - targetBlock.getX();
-        double ly = this.y - targetBlock.getY();
-        double lz = this.z - targetBlock.getZ();
+        double lx = x - targetBlock.getX();
+        double ly = y - targetBlock.getY();
+        double lz = z - targetBlock.getZ();
 
         lx = Math.max(0.0, Math.min(1.0, lx));
         ly = Math.max(0.0, Math.min(1.0, ly));
@@ -191,13 +224,13 @@ public class BloodParticle extends TerrainParticle {
         int centerU = FaceAxes.texel(uCoord);
         int centerV = FaceAxes.texel(vCoord);
 
-        int argb = PaintColor.fromRgb(this.rCol, this.gCol, this.bCol);
+        int argb = PaintColor.fromRgb(rCol, gCol, bCol);
 
         int baseLifetimeSec = RedfxConfig.get().particleLifetimeSeconds;
         int variance = (int) (baseLifetimeSec * 0.25F);
         int finalSec = baseLifetimeSec;
         if (variance > 0) {
-            finalSec += this.random.nextInt(variance * 2) - variance;
+            finalSec += random.nextInt(variance * 2) - variance;
         }
         finalSec = Math.max(1, finalSec);
         long expirationMs = System.currentTimeMillis() + (finalSec * 1000L);
@@ -229,10 +262,10 @@ public class BloodParticle extends TerrainParticle {
         if (face == Direction.UP.get3DDataValue()) {
             Set<BlockPos> solidTopBlocks = new HashSet<>();
             Map<BlockPos, Double> blockElevations = new HashMap<>();
-            SurfaceInfo targetSurface = resolveTopSurfaceInfo(targetBlock);
+            SurfaceInfo targetSurface = resolveTopSurfaceInfo(level, targetBlock);
             double targetElevation = targetSurface != null ? targetSurface.elevation() : (double) (targetBlock.getY() + 1.0);
 
-            BloodSplatter.stampGlobal(globalCenterU, globalCenterV, argb, this.splatIndex, scale, (gu, gv, col, stage) -> {
+            BloodSplatter.stampGlobal(globalCenterU, globalCenterV, argb, splatIndex, scale, (gu, gv, col, stage) -> {
                 int bu = FaceStroke.blockOfU(face, gu);
                 int bv = FaceStroke.blockOfV(face, gv);
                 int uTexel = gu - FaceStroke.encodeU(face, bu, 0);
@@ -246,7 +279,7 @@ public class BloodParticle extends TerrainParticle {
                 int wy = normal;
                 int wz = bv;
                 BlockPos colPos = new BlockPos(wx, wy, wz);
-                SurfaceInfo surfaceInfo = resolveTopSurfaceInfo(colPos);
+                SurfaceInfo surfaceInfo = resolveTopSurfaceInfo(level, colPos);
 
                 if (surfaceInfo != null) {
                     // Only stamp on top faces that are roughly level with the impact surface
@@ -275,33 +308,33 @@ public class BloodParticle extends TerrainParticle {
                     if (topTexels == null) continue;
 
                     double myElevation = blockElevations.computeIfAbsent(bPos, p -> {
-                        SurfaceInfo si = resolveTopSurfaceInfo(p);
+                        SurfaceInfo si = resolveTopSurfaceInfo(level, p);
                         return si != null ? si.elevation() : (double) (p.getY() + 1.0);
                     });
 
-                    BlockState bState = this.level.getBlockState(bPos);
-                    double localTop = PaintSurface.topOf(this.level, bPos, bState);
+                    BlockState bState = level.getBlockState(bPos);
+                    double localTop = PaintSurface.topOf(level, bPos, bState);
                     if (localTop == PaintSurface.NONE) {
                         localTop = 1.0;
                     }
                     int localTexels = Math.max(1, (int) Math.round(localTop * 16.0));
 
                     BlockPos belowPos = bPos.below();
-                    BlockState belowState = this.level.getBlockState(belowPos);
+                    BlockState belowState = level.getBlockState(belowPos);
 
                     for (Direction hDir : horizontalDirs) {
-                        boolean sidePaintable = bState.isFaceSturdy(this.level, bPos, hDir)
-                            || bState.isCollisionShapeFullBlock(this.level, bPos)
+                        boolean sidePaintable = bState.isFaceSturdy(level, bPos, hDir)
+                            || bState.isCollisionShapeFullBlock(level, bPos)
                             || (localTop != PaintSurface.NONE);
                         if (!sidePaintable) continue;
 
-                        boolean belowPaintable = belowState.isFaceSturdy(this.level, belowPos, hDir)
-                            || belowState.isCollisionShapeFullBlock(this.level, belowPos);
+                        boolean belowPaintable = belowState.isFaceSturdy(level, belowPos, hDir)
+                            || belowState.isCollisionShapeFullBlock(level, belowPos);
 
                         BlockPos neighborPos = bPos.relative(hDir);
-                        SurfaceInfo neighborInfo = resolveTopSurfaceInfo(neighborPos);
+                        SurfaceInfo neighborInfo = resolveTopSurfaceInfo(level, neighborPos);
 
-                        if (neighborInfo != null && myElevation - neighborInfo.elevation() < 0.05 && bState.isCollisionShapeFullBlock(this.level, bPos)) {
+                        if (neighborInfo != null && myElevation - neighborInfo.elevation() < 0.05 && bState.isCollisionShapeFullBlock(level, bPos)) {
                             // Neighbor is at same height or higher; no exposed vertical drop
                             continue;
                         }
@@ -314,7 +347,7 @@ public class BloodParticle extends TerrainParticle {
                         PaintSurface.BlockEdge[] columnEdges = new PaintSurface.BlockEdge[Canvas.SIZE];
 
                         for (int coord = 0; coord < Canvas.SIZE; coord++) {
-                            PaintSurface.BlockEdge edge = PaintSurface.findEdge(this.level, bPos, bState, hDir, coord);
+                            PaintSurface.BlockEdge edge = PaintSurface.findEdge(level, bPos, bState, hDir, coord);
                             if (edge == null) continue;
 
                             int edgeCol = topTexels[edge.edgeV() * Canvas.SIZE + edge.edgeU()];
@@ -375,7 +408,7 @@ public class BloodParticle extends TerrainParticle {
                                 int cEnd = coord - 1;
 
                                 int[] beadColumns = EdgeDrip.selectBeadColumns(
-                                    cStart, cEnd, bPos.getX(), bPos.getZ(), sideFace, this.splatIndex
+                                    cStart, cEnd, bPos.getX(), bPos.getZ(), sideFace, splatIndex
                                 );
 
                                 for (int c : beadColumns) {
@@ -401,7 +434,7 @@ public class BloodParticle extends TerrainParticle {
 
                                     boolean isInternalStep = false;
                                     if (inFrontX >= 0.0 && inFrontX <= 1.0 && inFrontZ >= 0.0 && inFrontZ <= 1.0) {
-                                        double internalFloor = PaintSurface.surfaceElevationAt(this.level, bPos, bState, inFrontX, inFrontZ);
+                                        double internalFloor = PaintSurface.surfaceElevationAt(level, bPos, bState, inFrontX, inFrontZ);
                                         if (internalFloor != PaintSurface.NONE && internalFloor < colTop - 0.05) {
                                             isInternalStep = true;
                                             colBottom = internalFloor;
@@ -429,7 +462,7 @@ public class BloodParticle extends TerrainParticle {
                                             default -> (c + 0.5) / 16.0;
                                         };
 
-                                        double neighborElevation = PaintSurface.elevationAt(this.level, neighborPos, neighborX, neighborZ);
+                                        double neighborElevation = PaintSurface.elevationAt(level, neighborPos, neighborX, neighborZ);
 
                                         if (neighborElevation != PaintSurface.NONE) {
                                             double drop = colElevation - neighborElevation;
@@ -457,10 +490,10 @@ public class BloodParticle extends TerrainParticle {
                                     int maxAllowedStep = Math.max(1, colMaxDropTexels - 1);
                                     int dripLen = EdgeDrip.calculateDripLength(
                                         bPos.getX(), bPos.getZ(), sideFace, uSide,
-                                        cStart, cEnd, maxAllowedStep, this.splatIndex
+                                        cStart, cEnd, maxAllowedStep, splatIndex
                                     );
 
-                                    int beadHash = Math.abs((bPos.getX() * 3127 + bPos.getZ() * 739 + sideFace * 101 + uSide * 37) ^ (this.splatIndex * 19));
+                                    int beadHash = Math.abs((bPos.getX() * 3127 + bPos.getZ() * 739 + sideFace * 101 + uSide * 37) ^ (splatIndex * 19));
                                     long stepDelayMs = EdgeDrip.beadStepDelayMs(dripLen, configFactor, beadHash);
                                     long beadStartMs = nowMs + 2 * baseDelayMs + (beadHash % 35);
 
@@ -522,16 +555,16 @@ public class BloodParticle extends TerrainParticle {
                                             checkState = bState;
                                         } else {
                                             checkPos = BlockPos.containing(frontX, dripBaseY - 0.05, frontZ);
-                                            checkState = this.level.getBlockState(checkPos);
+                                            checkState = level.getBlockState(checkPos);
                                         }
 
                                         double floorElevation = PaintSurface.elevationAt(
-                                            this.level, checkPos, frontX - checkPos.getX(), frontZ - checkPos.getZ()
+                                            level, checkPos, frontX - checkPos.getX(), frontZ - checkPos.getZ()
                                         );
 
                                         boolean touchesBlock = floorElevation != PaintSurface.NONE
                                             && Math.abs(floorElevation - dripBaseY) < 0.15
-                                            && PaintSurface.topOf(this.level, checkPos, checkState) != PaintSurface.NONE;
+                                            && PaintSurface.topOf(level, checkPos, checkState) != PaintSurface.NONE;
 
                                         long arrivalTime = beadStartMs + (long) dripLen * stepDelayMs;
 
@@ -616,6 +649,9 @@ public class BloodParticle extends TerrainParticle {
                                                     if (drop instanceof SingleQuadParticle sqp) {
                                                         sqp.setColor(dropR, dropG, dropB);
                                                     }
+                                                    if (drop instanceof BloodDripAccessor bda) {
+                                                        bda.redfx$setBloodDrip(dropR, dropG, dropB);
+                                                    }
                                                 } catch (Throwable ignored) {
                                                 }
                                             });
@@ -657,9 +693,9 @@ public class BloodParticle extends TerrainParticle {
                     int wz = FaceStroke.worldZ(face, bu, bv, normal);
                     bPos = new BlockPos(wx, wy, wz);
 
-                    BlockState bs = this.level.getBlockState(bPos);
+                    BlockState bs = level.getBlockState(bPos);
                     if (bs.isAir() || !bs.getFluidState().isEmpty()
-                        || !bs.isFaceSturdy(this.level, bPos, hitDirection) || !bs.isCollisionShapeFullBlock(this.level, bPos)) {
+                        || !bs.isFaceSturdy(level, bPos, hitDirection) || !bs.isCollisionShapeFullBlock(level, bPos)) {
                         invalidBlocks.add(blockKey);
                         return;
                     }
@@ -671,7 +707,7 @@ public class BloodParticle extends TerrainParticle {
             };
 
             if (isVerticalWall && RedfxConfig.get().wallDripping) {
-                BloodSplatter.stampWallDripGlobal(globalCenterU, globalCenterV, argb, this.splatIndex, scale, wallWriter);
+                BloodSplatter.stampWallDripGlobal(globalCenterU, globalCenterV, argb, splatIndex, scale, wallWriter);
                 int maxStage = wallStageTexels.keySet().stream().max(Integer::compareTo).orElse(2);
                 int beadLen = Math.max(1, maxStage - 2);
                 long stepDelayMs = EdgeDrip.beadStepDelayMs(beadLen, configFactor);
@@ -693,7 +729,7 @@ public class BloodParticle extends TerrainParticle {
                     }
                 }
             } else {
-                BloodSplatter.stampGlobal(globalCenterU, globalCenterV, argb, this.splatIndex, scale, wallWriter);
+                BloodSplatter.stampGlobal(globalCenterU, globalCenterV, argb, splatIndex, scale, wallWriter);
                 for (Map.Entry<Integer, List<ClientCanvasStore.PendingTexel>> entry : wallStageTexels.entrySet()) {
                     int stage = entry.getKey();
                     long execTime = stage == 0 ? nowMs : nowMs + (long) stage * baseDelayMs;
@@ -729,26 +765,26 @@ public class BloodParticle extends TerrainParticle {
     private record SurfaceInfo(BlockPos blockPos, double elevation) {
     }
 
-    private SurfaceInfo resolveTopSurfaceInfo(BlockPos colPos) {
+    private static SurfaceInfo resolveTopSurfaceInfo(ClientLevel level, BlockPos colPos) {
         BlockPos abovePos = colPos.above();
-        BlockState aboveState = this.level.getBlockState(abovePos);
+        BlockState aboveState = level.getBlockState(abovePos);
         if (!aboveState.isAir() && aboveState.getFluidState().isEmpty()) {
-            double top = PaintSurface.topOf(this.level, abovePos, aboveState);
+            double top = PaintSurface.topOf(level, abovePos, aboveState);
             if (top != PaintSurface.NONE && top < 1.0) {
                 return new SurfaceInfo(abovePos, abovePos.getY() + top);
             }
         }
-        BlockState bs = this.level.getBlockState(colPos);
+        BlockState bs = level.getBlockState(colPos);
         if (!bs.isAir() && bs.getFluidState().isEmpty()) {
-            double top = PaintSurface.topOf(this.level, colPos, bs);
+            double top = PaintSurface.topOf(level, colPos, bs);
             if (top != PaintSurface.NONE) {
                 return new SurfaceInfo(colPos, colPos.getY() + top);
             }
         }
         BlockPos belowPos = colPos.below();
-        BlockState belowState = this.level.getBlockState(belowPos);
+        BlockState belowState = level.getBlockState(belowPos);
         if (!belowState.isAir() && belowState.getFluidState().isEmpty()) {
-            double top = PaintSurface.topOf(this.level, belowPos, belowState);
+            double top = PaintSurface.topOf(level, belowPos, belowState);
             if (top != PaintSurface.NONE) {
                 return new SurfaceInfo(belowPos, belowPos.getY() + top);
             }
@@ -756,7 +792,7 @@ public class BloodParticle extends TerrainParticle {
         return null;
     }
 
-    private void paintTexel(Map<CanvasTarget, int[]> modifiedCanvases, ClientCanvasStore store,
+    private static void paintTexel(Map<CanvasTarget, int[]> modifiedCanvases, ClientCanvasStore store,
         BlockPos pos, int face, int u, int v, int col) {
         if (u < 0 || u >= Canvas.SIZE || v < 0 || v >= Canvas.SIZE) {
             return;
