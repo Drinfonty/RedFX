@@ -514,17 +514,9 @@ public class BloodParticle extends TerrainParticle {
                                                 // Neighbor is at same height or higher; no exposed vertical drop
                                                 continue;
                                             }
-                                            if (drop <= colHeight) {
-                                                colExposedHeight = drop;
-                                            } else {
-                                                colExposedHeight = belowPaintable
-                                                    ? Math.min(drop, colElevation - (double) belowPos.getY())
-                                                    : colHeight;
-                                            }
+                                            colExposedHeight = Math.min(drop, colHeight);
                                         } else {
-                                            colExposedHeight = belowPaintable
-                                                ? (colElevation - (double) belowPos.getY())
-                                                : (colElevation - (double) bPos.getY());
+                                            colExposedHeight = colHeight;
                                         }
                                     }
 
@@ -662,7 +654,7 @@ public class BloodParticle extends TerrainParticle {
                                                     spawnSplash(level, frontX, splatFloorY + 0.02, frontZ, dripR, dripG, dripB, level.getRandom());
                                                 });
                                             }
-                                        } else {
+                                        } else if (!belowPaintable && !isInternalStep) {
                                             final double dropSpawnX = frontX;
                                             final double dropSpawnY = dripBaseY - 0.02;
                                             final double dropSpawnZ = frontZ;
