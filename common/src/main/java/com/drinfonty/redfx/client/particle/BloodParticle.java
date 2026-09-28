@@ -17,7 +17,6 @@ import net.minecraft.core.Direction;
 import net.minecraft.client.particle.Particle;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.world.level.block.AbstractChestBlock;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.tags.FluidTags;
@@ -37,8 +36,8 @@ public class BloodParticle extends TerrainParticle {
 
     public BloodParticle(ClientLevel level, double x, double y, double z, double vx, double vy, double vz, BlockState state) {
         super(level, x, y, z, vx, vy, vz, state);
-        
-        this.lifetime = 40; // max 2s flying in air before despawning if it doesn't hit anything
+
+        this.lifetime = 40; // max fall time before despawning
         this.gravity = 1.0F;
         this.friction = 0.98F;
         this.hasPhysics = true;
@@ -251,7 +250,7 @@ public class BloodParticle extends TerrainParticle {
 
                 if (surfaceInfo != null) {
                     // Only stamp on top faces that are roughly level with the impact surface
-                    if (Math.abs(surfaceInfo.elevation() - targetElevation) < 0.45) {
+                    if (surfaceInfo.blockPos().equals(targetBlock) || Math.abs(surfaceInfo.elevation() - targetElevation) < 0.45) {
                         paintTexel(modifiedCanvases, store, surfaceInfo.blockPos(), Direction.UP.get3DDataValue(), uTexel, vTexel, col);
                         solidTopBlocks.add(surfaceInfo.blockPos());
                         blockElevations.put(surfaceInfo.blockPos(), surfaceInfo.elevation());
@@ -293,7 +292,7 @@ public class BloodParticle extends TerrainParticle {
                     for (Direction hDir : horizontalDirs) {
                         boolean sidePaintable = bState.isFaceSturdy(this.level, bPos, hDir)
                             || bState.isCollisionShapeFullBlock(this.level, bPos)
-                            || (localTop != PaintSurface.NONE && !(bState.getBlock() instanceof AbstractChestBlock));
+                            || (localTop != PaintSurface.NONE);
                         if (!sidePaintable) continue;
 
                         boolean belowPaintable = belowState.isFaceSturdy(this.level, belowPos, hDir)
@@ -302,109 +301,58 @@ public class BloodParticle extends TerrainParticle {
                         BlockPos neighborPos = bPos.relative(hDir);
                         SurfaceInfo neighborInfo = resolveTopSurfaceInfo(neighborPos);
 
-                        double exposedHeight;
-                        if (neighborInfo != null) {
-                            double drop = myElevation - neighborInfo.elevation();
-                            if (drop < 0.05) {
-                                // Neighbor is at same height or higher; no exposed vertical drop
-                                continue;
-                            }
-                            if (drop <= localTop) {
-                                exposedHeight = drop;
-                            } else {
-                                exposedHeight = belowPaintable
-                                    ? Math.min(drop, myElevation - (double) belowPos.getY())
-                                    : localTop;
-                            }
-                        } else {
-                            // Neighbor column is air/cliff!
-                            exposedHeight = belowPaintable
-                                ? (myElevation - (double) belowPos.getY())
-                                : (myElevation - (double) bPos.getY());
+                        if (neighborInfo != null && myElevation - neighborInfo.elevation() < 0.05 && bState.isCollisionShapeFullBlock(this.level, bPos)) {
+                            // Neighbor is at same height or higher; no exposed vertical drop
+                            continue;
                         }
-
-                        int maxDropTexels = Math.min(Canvas.SIZE, (int) Math.round(exposedHeight * 16.0));
-                        if (maxDropTexels <= 0) continue;
 
                         int sideFace = hDir.get3DDataValue();
 
                         // Identify columns along this edge that have blood, and connect them to the edge
                         boolean[] hasBlood = new boolean[Canvas.SIZE];
                         int[] rimColors = new int[Canvas.SIZE];
+                        PaintSurface.BlockEdge[] columnEdges = new PaintSurface.BlockEdge[Canvas.SIZE];
 
                         for (int coord = 0; coord < Canvas.SIZE; coord++) {
-                            int edgeCol = switch (hDir) {
-                                case NORTH -> topTexels[0 * Canvas.SIZE + coord];
-                                case SOUTH -> topTexels[15 * Canvas.SIZE + coord];
-                                case WEST -> topTexels[coord * Canvas.SIZE + 0];
-                                case EAST -> topTexels[coord * Canvas.SIZE + 15];
-                                default -> 0;
-                            };
+                            PaintSurface.BlockEdge edge = PaintSurface.findEdge(this.level, bPos, bState, hDir, coord);
+                            if (edge == null) continue;
+
+                            int edgeCol = topTexels[edge.edgeV() * Canvas.SIZE + edge.edgeU()];
 
                             // If outer edge pixel is empty, check up to 2 pixels inward (splash near edge)
                             if (edgeCol == 0) {
-                                int inward1 = switch (hDir) {
-                                    case NORTH -> topTexels[1 * Canvas.SIZE + coord];
-                                    case SOUTH -> topTexels[14 * Canvas.SIZE + coord];
-                                    case WEST -> topTexels[coord * Canvas.SIZE + 1];
-                                    case EAST -> topTexels[coord * Canvas.SIZE + 14];
-                                    default -> 0;
-                                };
-                                if (inward1 != 0) {
-                                    edgeCol = inward1;
-                                    switch (hDir) {
-                                        case NORTH -> {
-                                            topTexels[0 * Canvas.SIZE + coord] = inward1;
-                                            addTexel.accept(new ClientCanvasStore.PendingTexel(bPos, Direction.UP.get3DDataValue(), coord, 0, inward1, expirationMs), nowMs + 2 * baseDelayMs);
-                                        }
-                                        case SOUTH -> {
-                                            topTexels[15 * Canvas.SIZE + coord] = inward1;
-                                            addTexel.accept(new ClientCanvasStore.PendingTexel(bPos, Direction.UP.get3DDataValue(), coord, 15, inward1, expirationMs), nowMs + 2 * baseDelayMs);
-                                        }
-                                        case WEST -> {
-                                            topTexels[coord * Canvas.SIZE + 0] = inward1;
-                                            addTexel.accept(new ClientCanvasStore.PendingTexel(bPos, Direction.UP.get3DDataValue(), 0, coord, inward1, expirationMs), nowMs + 2 * baseDelayMs);
-                                        }
-                                        case EAST -> {
-                                            topTexels[coord * Canvas.SIZE + 15] = inward1;
-                                            addTexel.accept(new ClientCanvasStore.PendingTexel(bPos, Direction.UP.get3DDataValue(), 15, coord, inward1, expirationMs), nowMs + 2 * baseDelayMs);
-                                        }
-                                    }
-                                } else {
-                                    int inward2 = switch (hDir) {
-                                        case NORTH -> topTexels[2 * Canvas.SIZE + coord];
-                                        case SOUTH -> topTexels[13 * Canvas.SIZE + coord];
-                                        case WEST -> topTexels[coord * Canvas.SIZE + 2];
-                                        case EAST -> topTexels[coord * Canvas.SIZE + 13];
-                                        default -> 0;
-                                    };
-                                    if (inward2 != 0) {
-                                        edgeCol = inward2;
-                                        long bridgeTime = nowMs + 2 * baseDelayMs;
+                                int inU1 = edge.edgeU();
+                                int inV1 = edge.edgeV();
+                                switch (hDir) {
+                                    case NORTH -> inV1 += 1;
+                                    case SOUTH -> inV1 -= 1;
+                                    case WEST -> inU1 += 1;
+                                    case EAST -> inU1 -= 1;
+                                }
+                                if (inU1 >= 0 && inU1 < Canvas.SIZE && inV1 >= 0 && inV1 < Canvas.SIZE) {
+                                    int inward1 = topTexels[inV1 * Canvas.SIZE + inU1];
+                                    if (inward1 != 0) {
+                                        edgeCol = inward1;
+                                        topTexels[edge.edgeV() * Canvas.SIZE + edge.edgeU()] = inward1;
+                                        addTexel.accept(new ClientCanvasStore.PendingTexel(bPos, Direction.UP.get3DDataValue(), edge.edgeU(), edge.edgeV(), inward1, expirationMs), nowMs + 2 * baseDelayMs);
+                                    } else {
+                                        int inU2 = inU1;
+                                        int inV2 = inV1;
                                         switch (hDir) {
-                                            case NORTH -> {
-                                                topTexels[1 * Canvas.SIZE + coord] = inward2;
-                                                topTexels[0 * Canvas.SIZE + coord] = inward2;
-                                                addTexel.accept(new ClientCanvasStore.PendingTexel(bPos, Direction.UP.get3DDataValue(), coord, 1, inward2, expirationMs), bridgeTime);
-                                                addTexel.accept(new ClientCanvasStore.PendingTexel(bPos, Direction.UP.get3DDataValue(), coord, 0, inward2, expirationMs), bridgeTime);
-                                            }
-                                            case SOUTH -> {
-                                                topTexels[14 * Canvas.SIZE + coord] = inward2;
-                                                topTexels[15 * Canvas.SIZE + coord] = inward2;
-                                                addTexel.accept(new ClientCanvasStore.PendingTexel(bPos, Direction.UP.get3DDataValue(), coord, 14, inward2, expirationMs), bridgeTime);
-                                                addTexel.accept(new ClientCanvasStore.PendingTexel(bPos, Direction.UP.get3DDataValue(), coord, 15, inward2, expirationMs), bridgeTime);
-                                            }
-                                            case WEST -> {
-                                                topTexels[coord * Canvas.SIZE + 1] = inward2;
-                                                topTexels[coord * Canvas.SIZE + 0] = inward2;
-                                                addTexel.accept(new ClientCanvasStore.PendingTexel(bPos, Direction.UP.get3DDataValue(), 1, coord, inward2, expirationMs), bridgeTime);
-                                                addTexel.accept(new ClientCanvasStore.PendingTexel(bPos, Direction.UP.get3DDataValue(), 0, coord, inward2, expirationMs), bridgeTime);
-                                            }
-                                            case EAST -> {
-                                                topTexels[coord * Canvas.SIZE + 14] = inward2;
-                                                topTexels[coord * Canvas.SIZE + 15] = inward2;
-                                                addTexel.accept(new ClientCanvasStore.PendingTexel(bPos, Direction.UP.get3DDataValue(), 14, coord, inward2, expirationMs), bridgeTime);
-                                                addTexel.accept(new ClientCanvasStore.PendingTexel(bPos, Direction.UP.get3DDataValue(), 15, coord, inward2, expirationMs), bridgeTime);
+                                            case NORTH -> inV2 += 1;
+                                            case SOUTH -> inV2 -= 1;
+                                            case WEST -> inU2 += 1;
+                                            case EAST -> inU2 -= 1;
+                                        }
+                                        if (inU2 >= 0 && inU2 < Canvas.SIZE && inV2 >= 0 && inV2 < Canvas.SIZE) {
+                                            int inward2 = topTexels[inV2 * Canvas.SIZE + inU2];
+                                            if (inward2 != 0) {
+                                                edgeCol = inward2;
+                                                long bridgeTime = nowMs + 2 * baseDelayMs;
+                                                topTexels[inV1 * Canvas.SIZE + inU1] = inward2;
+                                                topTexels[edge.edgeV() * Canvas.SIZE + edge.edgeU()] = inward2;
+                                                addTexel.accept(new ClientCanvasStore.PendingTexel(bPos, Direction.UP.get3DDataValue(), inU1, inV1, inward2, expirationMs), bridgeTime);
+                                                addTexel.accept(new ClientCanvasStore.PendingTexel(bPos, Direction.UP.get3DDataValue(), edge.edgeU(), edge.edgeV(), inward2, expirationMs), bridgeTime);
                                             }
                                         }
                                     }
@@ -414,6 +362,7 @@ public class BloodParticle extends TerrainParticle {
                             if (edgeCol != 0) {
                                 hasBlood[coord] = true;
                                 rimColors[coord] = edgeCol;
+                                columnEdges[coord] = edge;
                             }
                         }
 
@@ -430,36 +379,100 @@ public class BloodParticle extends TerrainParticle {
                                 );
 
                                 for (int c : beadColumns) {
+                                    PaintSurface.BlockEdge edge = columnEdges[c];
+                                    if (edge == null) continue;
+
                                     int col = rimColors[c];
                                     int baseAlpha = (col >>> 24);
                                     int rgb = col & 0xFFFFFF;
 
-                                    int uSide = switch (hDir) {
-                                        case NORTH -> EdgeDrip.sideU(sideFace, c, 0);
-                                        case SOUTH -> EdgeDrip.sideU(sideFace, c, 15);
-                                        case WEST -> EdgeDrip.sideU(sideFace, 0, c);
-                                        case EAST -> EdgeDrip.sideU(sideFace, 15, c);
-                                        default -> 0;
-                                    };
+                                    int uSide = EdgeDrip.sideU(sideFace, edge.edgeU(), edge.edgeV());
+                                    double colTop = edge.colTop();
+                                    double colBottom = edge.colBottom();
+                                    double colPlane = edge.colPlane();
 
+                                    double forwardOffset = switch (hDir) {
+                                        case NORTH, WEST -> -0.0625;
+                                        case SOUTH, EAST -> 0.0625;
+                                        default -> 0.0;
+                                    };
+                                    double inFrontX = (hDir == Direction.WEST || hDir == Direction.EAST) ? colPlane + forwardOffset : (c + 0.5) / 16.0;
+                                    double inFrontZ = (hDir == Direction.NORTH || hDir == Direction.SOUTH) ? colPlane + forwardOffset : (c + 0.5) / 16.0;
+
+                                    boolean isInternalStep = false;
+                                    if (inFrontX >= 0.0 && inFrontX <= 1.0 && inFrontZ >= 0.0 && inFrontZ <= 1.0) {
+                                        double internalFloor = PaintSurface.surfaceElevationAt(this.level, bPos, bState, inFrontX, inFrontZ);
+                                        if (internalFloor != PaintSurface.NONE && internalFloor < colTop - 0.05) {
+                                            isInternalStep = true;
+                                            colBottom = internalFloor;
+                                        }
+                                    }
+
+                                    double colHeight = Math.max(0.0, colTop - colBottom);
+                                    double colElevation = (double) bPos.getY() + colTop;
+                                    int colLocalTexels = Math.max(1, (int) Math.round(colHeight * 16.0));
+
+                                    double colExposedHeight;
+                                    if (isInternalStep) {
+                                        colExposedHeight = colHeight;
+                                    } else {
+                                        double neighborX = switch (hDir) {
+                                            case NORTH, SOUTH -> (c + 0.5) / 16.0;
+                                            case WEST -> 0.96875;
+                                            case EAST -> 0.03125;
+                                            default -> (c + 0.5) / 16.0;
+                                        };
+                                        double neighborZ = switch (hDir) {
+                                            case NORTH -> 0.96875;
+                                            case SOUTH -> 0.03125;
+                                            case WEST, EAST -> (c + 0.5) / 16.0;
+                                            default -> (c + 0.5) / 16.0;
+                                        };
+
+                                        double neighborElevation = PaintSurface.elevationAt(this.level, neighborPos, neighborX, neighborZ);
+
+                                        if (neighborElevation != PaintSurface.NONE) {
+                                            double drop = colElevation - neighborElevation;
+                                            if (drop < 0.05) {
+                                                // Neighbor is at same height or higher; no exposed vertical drop
+                                                continue;
+                                            }
+                                            if (drop <= colHeight) {
+                                                colExposedHeight = drop;
+                                            } else {
+                                                colExposedHeight = belowPaintable
+                                                    ? Math.min(drop, colElevation - (double) belowPos.getY())
+                                                    : colHeight;
+                                            }
+                                        } else {
+                                            colExposedHeight = belowPaintable
+                                                ? (colElevation - (double) belowPos.getY())
+                                                : (colElevation - (double) bPos.getY());
+                                        }
+                                    }
+
+                                    int colMaxDropTexels = Math.min(Canvas.SIZE, (int) Math.round(colExposedHeight * 16.0));
+                                    if (colMaxDropTexels <= 0) continue;
+
+                                    int maxAllowedStep = Math.max(1, colMaxDropTexels - 1);
                                     int dripLen = EdgeDrip.calculateDripLength(
                                         bPos.getX(), bPos.getZ(), sideFace, uSide,
-                                        cStart, cEnd, maxDropTexels - 1, this.splatIndex
+                                        cStart, cEnd, maxAllowedStep, this.splatIndex
                                     );
 
-                                    long stepDelayMs = EdgeDrip.beadStepDelayMs(dripLen, configFactor);
                                     int beadHash = Math.abs((bPos.getX() * 3127 + bPos.getZ() * 739 + sideFace * 101 + uSide * 37) ^ (this.splatIndex * 19));
+                                    long stepDelayMs = EdgeDrip.beadStepDelayMs(dripLen, configFactor, beadHash);
                                     long beadStartMs = nowMs + 2 * baseDelayMs + (beadHash % 35);
 
                                     for (int step = 0; step <= dripLen; step++) {
                                         BlockPos beadBlock;
                                         int vTexel;
-                                        if (step < localTexels) {
+                                        if (step < colLocalTexels) {
                                             beadBlock = bPos;
                                             vTexel = step;
-                                        } else if (belowPaintable) {
+                                        } else if (belowPaintable && !isInternalStep) {
                                             beadBlock = belowPos;
-                                            vTexel = step - localTexels;
+                                            vTexel = step - colLocalTexels;
                                         } else {
                                             break;
                                         }
@@ -474,6 +487,139 @@ public class BloodParticle extends TerrainParticle {
                                         );
                                         long execTime = beadStartMs + (long) step * stepDelayMs;
                                         addTexel.accept(pt, execTime);
+                                    }
+
+                                    if (dripLen == maxAllowedStep) {
+                                        double dripBaseY = colElevation - colExposedHeight;
+                                        double worldX = bPos.getX();
+                                        double worldZ = bPos.getZ();
+                                        switch (hDir) {
+                                            case NORTH -> {
+                                                worldZ += colPlane;
+                                                worldX += (15 - uSide + 0.5) / 16.0;
+                                            }
+                                            case SOUTH -> {
+                                                worldZ += colPlane;
+                                                worldX += (uSide + 0.5) / 16.0;
+                                            }
+                                            case WEST -> {
+                                                worldX += colPlane;
+                                                worldZ += (uSide + 0.5) / 16.0;
+                                            }
+                                            case EAST -> {
+                                                worldX += colPlane;
+                                                worldZ += (15 - uSide + 0.5) / 16.0;
+                                            }
+                                        }
+
+                                        double frontX = worldX + hDir.getStepX() * 0.04;
+                                        double frontZ = worldZ + hDir.getStepZ() * 0.04;
+
+                                        BlockPos checkPos;
+                                        BlockState checkState;
+                                        if (isInternalStep) {
+                                            checkPos = bPos;
+                                            checkState = bState;
+                                        } else {
+                                            checkPos = BlockPos.containing(frontX, dripBaseY - 0.05, frontZ);
+                                            checkState = this.level.getBlockState(checkPos);
+                                        }
+
+                                        double floorElevation = PaintSurface.elevationAt(
+                                            this.level, checkPos, frontX - checkPos.getX(), frontZ - checkPos.getZ()
+                                        );
+
+                                        boolean touchesBlock = floorElevation != PaintSurface.NONE
+                                            && Math.abs(floorElevation - dripBaseY) < 0.15
+                                            && PaintSurface.topOf(this.level, checkPos, checkState) != PaintSurface.NONE;
+
+                                        long arrivalTime = beadStartMs + (long) dripLen * stepDelayMs;
+
+                                        if (touchesBlock) {
+                                            double relX = Math.max(0.0, Math.min(1.0, frontX - checkPos.getX()));
+                                            double relZ = Math.max(0.0, Math.min(1.0, frontZ - checkPos.getZ()));
+                                            int landU = FaceAxes.texel(FaceAxes.u(Direction.UP.get3DDataValue(), relX, 0, relZ));
+                                            int landV = FaceAxes.texel(FaceAxes.v(Direction.UP.get3DDataValue(), relX, 0, relZ));
+
+                                            List<ClientCanvasStore.PendingTexel> smallSplat = new ArrayList<>();
+                                            int splatAlpha = Math.min(255, Math.max(220, baseAlpha));
+                                            int splatColor = (splatAlpha << 24) | rgb;
+                                            int fadeColor = ((int) (splatAlpha * 0.75f) << 24) | rgb;
+
+                                            smallSplat.add(new ClientCanvasStore.PendingTexel(
+                                                checkPos, Direction.UP.get3DDataValue(), landU, landV, splatColor, expirationMs
+                                            ));
+
+                                            int[][] offsets = { {1, 0}, {-1, 0}, {0, 1}, {0, -1} };
+                                            int splatHash = Math.abs(beadHash ^ 0x5DEECE66);
+                                            for (int i = 0; i < 4; i++) {
+                                                if (((splatHash >> i) & 1) == 0 || (splatHash % 3 == 0)) {
+                                                    int nu = landU + offsets[i][0];
+                                                    int nv = landV + offsets[i][1];
+                                                    if (nu >= 0 && nu < Canvas.SIZE && nv >= 0 && nv < Canvas.SIZE) {
+                                                        smallSplat.add(new ClientCanvasStore.PendingTexel(
+                                                            checkPos, Direction.UP.get3DDataValue(), nu, nv, fadeColor, expirationMs
+                                                        ));
+                                                    }
+                                                }
+                                            }
+                                            int diagIdx = splatHash % 4;
+                                            int[][] diags = { {1, 1}, {-1, 1}, {1, -1}, {-1, -1} };
+                                            int du = landU + diags[diagIdx][0];
+                                            int dv = landV + diags[diagIdx][1];
+                                            if (du >= 0 && du < Canvas.SIZE && dv >= 0 && dv < Canvas.SIZE) {
+                                                smallSplat.add(new ClientCanvasStore.PendingTexel(
+                                                    checkPos, Direction.UP.get3DDataValue(), du, dv, fadeColor, expirationMs
+                                                ));
+                                            }
+
+                                            ClientCanvasStore.get().scheduleStage(arrivalTime, smallSplat);
+
+                                            final float dripR = ((rgb >> 16) & 0xFF) / 255.0f;
+                                            final float dripG = ((rgb >> 8) & 0xFF) / 255.0f;
+                                            final float dripB = (rgb & 0xFF) / 255.0f;
+
+                                            if (RedfxConfig.get().enableSplatDust) {
+                                                final double splatFloorY = floorElevation;
+                                                ClientCanvasStore.get().scheduleAction(arrivalTime, () -> {
+                                                    try {
+                                                        BlockState dustState = Blocks.SNOW_BLOCK.defaultBlockState();
+                                                        Particle dust = Minecraft.getInstance().particleEngine.createParticle(
+                                                            new BlockParticleOption(ParticleTypes.FALLING_DUST, dustState),
+                                                            frontX, splatFloorY + 0.02, frontZ, 0.0, 0.01, 0.0
+                                                        );
+                                                        if (dust instanceof SingleQuadParticle sqp) {
+                                                            sqp.setColor(dripR, dripG, dripB);
+                                                        }
+                                                        if (dust != null) {
+                                                            Minecraft.getInstance().particleEngine.add(dust);
+                                                        }
+                                                    } catch (Throwable ignored) {
+                                                    }
+                                                });
+                                            }
+                                        } else {
+                                            final double dropSpawnX = frontX;
+                                            final double dropSpawnY = dripBaseY - 0.02;
+                                            final double dropSpawnZ = frontZ;
+                                            final float dropR = ((rgb >> 16) & 0xFF) / 255.0f;
+                                            final float dropG = ((rgb >> 8) & 0xFF) / 255.0f;
+                                            final float dropB = (rgb & 0xFF) / 255.0f;
+
+                                            ClientCanvasStore.get().scheduleAction(arrivalTime, () -> {
+                                                try {
+                                                    Minecraft mc = Minecraft.getInstance();
+                                                    if (mc.level == null) return;
+                                                    Particle drop = mc.particleEngine.createParticle(
+                                                        ParticleTypes.FALLING_WATER, dropSpawnX, dropSpawnY, dropSpawnZ, 0.0, 0.0, 0.0
+                                                    );
+                                                    if (drop instanceof SingleQuadParticle sqp) {
+                                                        sqp.setColor(dropR, dropG, dropB);
+                                                    }
+                                                } catch (Throwable ignored) {
+                                                }
+                                            });
+                                        }
                                     }
                                 }
                                 cStart = -1;

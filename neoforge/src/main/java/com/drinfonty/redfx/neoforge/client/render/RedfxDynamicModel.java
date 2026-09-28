@@ -36,7 +36,7 @@ public class RedfxDynamicModel extends DelegateBlockStateModel implements Dynami
 	private static final Map<CacheKey, List<BakedQuad>> CACHE = new ConcurrentHashMap<>();
 	private static final int MAX_CACHED_CANVASES = 8192;
 
-	private record CacheKey(Canvas canvas, int face, float surfaceY, boolean seeThrough) {
+	private record CacheKey(Canvas canvas, int face, float facePlane, float surfaceY, boolean seeThrough) {
 	}
 
 	public RedfxDynamicModel(BlockStateModel wrapped) {
@@ -74,8 +74,8 @@ public class RedfxDynamicModel extends DelegateBlockStateModel implements Dynami
 
 			for (PaintSurface.SurfaceCanvas sc : PaintSurface.splitCanvas(level, pos, state, face, canvas)) {
 				List<BakedQuad> faceQuads = CACHE.computeIfAbsent(
-					new CacheKey(sc.canvas(), currentFace, sc.surfaceY(), seeThrough),
-					key -> build(key.canvas(), key.face(), key.surfaceY(), key.seeThrough()));
+					new CacheKey(sc.canvas(), currentFace, sc.facePlane(), sc.surfaceY(), seeThrough),
+					key -> build(key.canvas(), key.face(), key.facePlane(), key.surfaceY(), key.seeThrough()));
 
 				if (quads == null) {
 					quads = new ArrayList<>(faceQuads.size() * 2);
@@ -94,14 +94,14 @@ public class RedfxDynamicModel extends DelegateBlockStateModel implements Dynami
 		}
 	}
 
-	private static List<BakedQuad> build(Canvas canvas, int face, float surfaceY, boolean seeThrough) {
+	private static List<BakedQuad> build(Canvas canvas, int face, float facePlane, float surfaceY, boolean seeThrough) {
 		Direction direction = Direction.from3DDataValue(face);
 		List<PaintQuad> rectangles = CanvasMesher.mesh(canvas.texels(), face);
 		List<BakedQuad> quads = new ArrayList<>(rectangles.size() * (seeThrough ? 2 : 1));
 		float[] corners = new float[12];
 
 		for (PaintQuad rectangle : rectangles) {
-			PaintGeometry.corners(rectangle, corners, surfaceY);
+			PaintGeometry.corners(rectangle, corners, facePlane, surfaceY);
 			quads.add(bake(corners, direction, rectangle.argb(), false));
 
 			if (seeThrough) {

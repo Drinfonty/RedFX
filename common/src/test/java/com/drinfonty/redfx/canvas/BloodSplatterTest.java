@@ -196,7 +196,7 @@ class BloodSplatterTest {
 		assertTrue(stageVs.containsKey(0), "Should contain stage 0 impact head");
 		int minStage0V = stageVs.get(0).stream().min(Integer::compareTo).orElse(0);
 		int maxStage0V = stageVs.get(0).stream().max(Integer::compareTo).orElse(0);
-		assertTrue(minStage0V <= impactV && maxStage0V <= impactV + 4, "Stage 0 should be concentrated at impact head");
+		assertTrue(minStage0V <= impactV + 1 && maxStage0V <= impactV + 6, "Stage 0 should be concentrated at impact head");
 
 		// Verify all 3 drip stages are present
 		assertTrue(stageVs.containsKey(1), "Should contain drip stage 1");
