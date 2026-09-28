@@ -90,8 +90,49 @@ public class BloodParticle extends TerrainParticle {
             if (dustParticle instanceof SingleQuadParticle sqp) {
                 sqp.setColor(rCol, gCol, bCol);
             }
-            if (dustParticle != null) {
-                Minecraft.getInstance().particleEngine.add(dustParticle);
+        } catch (Throwable ignored) {
+        }
+    }
+
+    public static class BloodDripSplash extends TerrainParticle {
+        public BloodDripSplash(ClientLevel level, double x, double y, double z,
+                               double vx, double vy, double vz, BlockState state) {
+            super(level, x, y, z, vx, vy, vz, state);
+            this.gravity = 0.7F;
+            this.friction = 0.96F;
+            this.lifetime = 6 + this.random.nextInt(4);
+            this.hasPhysics = true;
+            float scale = RedfxConfig.get().particleSizeScale;
+            this.quadSize = (0.014F + this.random.nextFloat() * 0.008F) * scale;
+        }
+
+        @Override
+        public void tick() {
+            super.tick();
+            if (this.onGround) {
+                this.remove();
+            }
+        }
+    }
+
+    public static void spawnSplash(ClientLevel level, double x, double y, double z,
+                                   float rCol, float gCol, float bCol, RandomSource random) {
+        if (!RedfxConfig.get().enableSplatDust) return;
+        try {
+            Minecraft mc = Minecraft.getInstance();
+            if (mc.level == null) return;
+            BlockState state = Blocks.SNOW_BLOCK.defaultBlockState();
+            int count = 1 + random.nextInt(2);
+            double spawnY = y + 0.02;
+            for (int i = 0; i < count; i++) {
+                double angle = random.nextDouble() * Math.PI * 2.0;
+                double speed = 0.02 + random.nextDouble() * 0.03;
+                double vx = Math.cos(angle) * speed;
+                double vy = 0.07 + random.nextDouble() * 0.05;
+                double vz = Math.sin(angle) * speed;
+                BloodDripSplash splash = new BloodDripSplash(level, x, spawnY, z, vx, vy, vz, state);
+                splash.setColor(rCol, gCol, bCol);
+                mc.particleEngine.add(splash);
             }
         } catch (Throwable ignored) {
         }
@@ -116,7 +157,7 @@ public class BloodParticle extends TerrainParticle {
         stampToCanvas(level, x, y, z, rCol, gCol, bCol, splatIndex, random, targetBlock, hitDirection);
 
         if (RedfxConfig.get().enableSplatDust) {
-            spawnSplatDust(level, x, y, z, rCol, gCol, bCol, random);
+            spawnSplash(level, x, y, z, rCol, gCol, bCol, random);
         }
     }
 
@@ -615,20 +656,7 @@ public class BloodParticle extends TerrainParticle {
                                             if (RedfxConfig.get().enableSplatDust) {
                                                 final double splatFloorY = floorElevation;
                                                 ClientCanvasStore.get().scheduleAction(arrivalTime, () -> {
-                                                    try {
-                                                        BlockState dustState = Blocks.SNOW_BLOCK.defaultBlockState();
-                                                        Particle dust = Minecraft.getInstance().particleEngine.createParticle(
-                                                            new BlockParticleOption(ParticleTypes.FALLING_DUST, dustState),
-                                                            frontX, splatFloorY + 0.02, frontZ, 0.0, 0.01, 0.0
-                                                        );
-                                                        if (dust instanceof SingleQuadParticle sqp) {
-                                                            sqp.setColor(dripR, dripG, dripB);
-                                                        }
-                                                        if (dust != null) {
-                                                            Minecraft.getInstance().particleEngine.add(dust);
-                                                        }
-                                                    } catch (Throwable ignored) {
-                                                    }
+                                                    spawnSplash(level, frontX, splatFloorY + 0.02, frontZ, dripR, dripG, dripB, level.getRandom());
                                                 });
                                             }
                                         } else {
