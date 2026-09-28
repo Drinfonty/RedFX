@@ -65,4 +65,44 @@ class PaintGeometryTest {
 		assertEquals(0.0F, corners[1], 1e-5F); // bottom-left Y
 		assertEquals(0.0F, corners[4], 1e-5F); // bottom-right Y
 	}
+
+	@Test
+	void insetFaceQuadPositionsAtFacePlane() {
+		// Chest North face with facePlane = 1/16 = 0.0625F, surfaceY = 14/16 = 0.875F
+		float facePlane = 0.0625F;
+		float surfaceY = 0.875F;
+		PaintQuad chestNorthQuad = new PaintQuad(FaceAxes.NORTH, 1, 0, 15, 14, 0xFF000000);
+		float[] corners = new float[12];
+		PaintGeometry.corners(chestNorthQuad, corners, facePlane, surfaceY);
+
+		// Z coordinate on North face should be facePlane - D = 0.0625F - D
+		assertEquals(facePlane - D, corners[2], 1e-5F);
+		assertEquals(facePlane - D, corners[5], 1e-5F);
+		assertEquals(facePlane - D, corners[8], 1e-5F);
+		assertEquals(facePlane - D, corners[11], 1e-5F);
+
+		// Top edge Y should be surfaceY + D = 0.875F + D
+		assertEquals(surfaceY + D, corners[7], 1e-5F);
+		assertEquals(surfaceY + D, corners[10], 1e-5F);
+	}
+
+	@Test
+	void internalStepRiserPositionsAtFacePlane() {
+		// Stair step riser at facePlane = 0.5F, surfaceY = 1.0F
+		float facePlane = 0.5F;
+		float surfaceY = 1.0F;
+		PaintQuad riserQuad = new PaintQuad(FaceAxes.NORTH, 0, 0, 16, 8, 0xFF000000);
+		float[] corners = new float[12];
+		PaintGeometry.corners(riserQuad, corners, facePlane, surfaceY);
+
+		// Z coordinate on North riser should be facePlane - D = 0.5F - D
+		assertEquals(facePlane - D, corners[2], 1e-5F);
+		assertEquals(facePlane - D, corners[5], 1e-5F);
+		assertEquals(facePlane - D, corners[8], 1e-5F);
+		assertEquals(facePlane - D, corners[11], 1e-5F);
+
+		// Bottom edge Y should be surfaceY - 8/16 = 1.0F - 0.5F = 0.5F
+		assertEquals(0.5F, corners[1], 1e-5F);
+		assertEquals(0.5F, corners[4], 1e-5F);
+	}
 }
