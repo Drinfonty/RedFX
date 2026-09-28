@@ -58,11 +58,14 @@ public class BloodParticle extends TerrainParticle {
                 BlockPos below = BlockPos.containing(x, y - 0.2, z);
                 BlockPos above = below.above();
                 BlockState aboveState = level.getBlockState(above);
-                if (!aboveState.isAir() && aboveState.getFluidState().isEmpty()) {
+                if (!aboveState.isAir() && aboveState.getFluidState().isEmpty() && !PaintSurface.isIgnored(aboveState)) {
                     double top = PaintSurface.topOf(level, above, aboveState);
                     if (top != PaintSurface.NONE && top < 1.0) {
                         yield above;
                     }
+                }
+                for (int i = 0; i < 3 && PaintSurface.isIgnored(level.getBlockState(below)); i++) {
+                    below = below.below();
                 }
                 yield below;
             }
@@ -149,7 +152,7 @@ public class BloodParticle extends TerrainParticle {
         Direction hitDirection = Direction.UP;
         BlockPos targetBlock = getAttachedBlockPos(level, x, y, z, hitDirection);
         BlockState targetState = level.getBlockState(targetBlock);
-        if (targetState.isAir() || !targetState.getFluidState().isEmpty()) {
+        if (targetState.isAir() || !targetState.getFluidState().isEmpty() || PaintSurface.isIgnored(targetState)) {
             return;
         }
 
@@ -232,7 +235,7 @@ public class BloodParticle extends TerrainParticle {
         if (hitDirection != null) {
             BlockPos targetBlock = getAttachedBlockPos(this.level, this.x, this.y, this.z, hitDirection);
             BlockState targetState = this.level.getBlockState(targetBlock);
-            if (targetState.isAir() || !targetState.getFluidState().isEmpty()) {
+            if (targetState.isAir() || !targetState.getFluidState().isEmpty() || PaintSurface.isIgnored(targetState)) {
                 hitDirection = null;
             } else {
                 stampToCanvas(this.level, this.x, this.y, this.z, this.rCol, this.gCol, this.bCol, this.splatIndex, this.random, targetBlock, hitDirection);
@@ -722,7 +725,7 @@ public class BloodParticle extends TerrainParticle {
                     bPos = new BlockPos(wx, wy, wz);
 
                     BlockState bs = level.getBlockState(bPos);
-                    if (bs.isAir() || !bs.getFluidState().isEmpty()
+                    if (bs.isAir() || !bs.getFluidState().isEmpty() || PaintSurface.isIgnored(bs)
                         || !bs.isFaceSturdy(level, bPos, hitDirection) || !bs.isCollisionShapeFullBlock(level, bPos)) {
                         invalidBlocks.add(blockKey);
                         return;
@@ -796,14 +799,14 @@ public class BloodParticle extends TerrainParticle {
     private static SurfaceInfo resolveTopSurfaceInfo(ClientLevel level, BlockPos colPos) {
         BlockPos abovePos = colPos.above();
         BlockState aboveState = level.getBlockState(abovePos);
-        if (!aboveState.isAir() && aboveState.getFluidState().isEmpty()) {
+        if (!aboveState.isAir() && aboveState.getFluidState().isEmpty() && !PaintSurface.isIgnored(aboveState)) {
             double top = PaintSurface.topOf(level, abovePos, aboveState);
             if (top != PaintSurface.NONE && top < 1.0) {
                 return new SurfaceInfo(abovePos, abovePos.getY() + top);
             }
         }
         BlockState bs = level.getBlockState(colPos);
-        if (!bs.isAir() && bs.getFluidState().isEmpty()) {
+        if (!bs.isAir() && bs.getFluidState().isEmpty() && !PaintSurface.isIgnored(bs)) {
             double top = PaintSurface.topOf(level, colPos, bs);
             if (top != PaintSurface.NONE) {
                 return new SurfaceInfo(colPos, colPos.getY() + top);
@@ -811,7 +814,7 @@ public class BloodParticle extends TerrainParticle {
         }
         BlockPos belowPos = colPos.below();
         BlockState belowState = level.getBlockState(belowPos);
-        if (!belowState.isAir() && belowState.getFluidState().isEmpty()) {
+        if (!belowState.isAir() && belowState.getFluidState().isEmpty() && !PaintSurface.isIgnored(belowState)) {
             double top = PaintSurface.topOf(level, belowPos, belowState);
             if (top != PaintSurface.NONE) {
                 return new SurfaceInfo(belowPos, belowPos.getY() + top);
