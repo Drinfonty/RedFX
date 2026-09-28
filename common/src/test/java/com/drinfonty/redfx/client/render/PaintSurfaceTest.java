@@ -65,10 +65,33 @@ class PaintSurfaceTest {
 		// Stairs should return 1.0
 		assertEquals(1.0, PaintSurface.topOf(level, pos, Blocks.OAK_STAIRS.defaultBlockState()));
 
-		// Foliage / plants / short grass should return NONE (-1.0)
+		// Snow layer (layer 1) -> 0.125
+		BlockState snow = Blocks.SNOW.defaultBlockState();
+		assertEquals(0.125, PaintSurface.topOf(level, pos, snow));
+
+		// Foliage / bushes / grass / plants should return NONE (-1.0) and be ignored
 		assertEquals(PaintSurface.NONE, PaintSurface.topOf(level, pos, Blocks.SHORT_GRASS.defaultBlockState()));
-		assertEquals(PaintSurface.NONE, PaintSurface.topOf(level, pos, Blocks.DANDELION.defaultBlockState()));
+		assertEquals(PaintSurface.NONE, PaintSurface.topOf(level, pos, Blocks.TALL_GRASS.defaultBlockState()));
 		assertEquals(PaintSurface.NONE, PaintSurface.topOf(level, pos, Blocks.FERN.defaultBlockState()));
+		assertEquals(PaintSurface.NONE, PaintSurface.topOf(level, pos, Blocks.LARGE_FERN.defaultBlockState()));
+		assertEquals(PaintSurface.NONE, PaintSurface.topOf(level, pos, Blocks.DEAD_BUSH.defaultBlockState()));
+		assertEquals(PaintSurface.NONE, PaintSurface.topOf(level, pos, Blocks.DANDELION.defaultBlockState()));
+		assertEquals(PaintSurface.NONE, PaintSurface.topOf(level, pos, Blocks.POPPY.defaultBlockState()));
+		assertEquals(PaintSurface.NONE, PaintSurface.topOf(level, pos, Blocks.ROSE_BUSH.defaultBlockState()));
+		assertEquals(PaintSurface.NONE, PaintSurface.topOf(level, pos, Blocks.AZALEA.defaultBlockState()));
+		assertEquals(PaintSurface.NONE, PaintSurface.topOf(level, pos, Blocks.FLOWERING_AZALEA.defaultBlockState()));
+		assertEquals(PaintSurface.NONE, PaintSurface.topOf(level, pos, Blocks.OAK_SAPLING.defaultBlockState()));
+		assertEquals(PaintSurface.NONE, PaintSurface.topOf(level, pos, Blocks.OAK_LEAVES.defaultBlockState()));
+		assertEquals(PaintSurface.NONE, PaintSurface.topOf(level, pos, Blocks.VINE.defaultBlockState()));
+		assertEquals(PaintSurface.NONE, PaintSurface.topOf(level, pos, Blocks.SUGAR_CANE.defaultBlockState()));
+		assertEquals(PaintSurface.NONE, PaintSurface.topOf(level, pos, Blocks.BAMBOO.defaultBlockState()));
+		assertEquals(PaintSurface.NONE, PaintSurface.topOf(level, pos, Blocks.WHEAT.defaultBlockState()));
+
+		for (int age = 0; age <= 3; age++) {
+			BlockState bush = Blocks.SWEET_BERRY_BUSH.defaultBlockState().setValue(net.minecraft.world.level.block.SweetBerryBushBlock.AGE, age);
+			assertEquals(PaintSurface.NONE, PaintSurface.topOf(level, pos, bush));
+			org.junit.jupiter.api.Assertions.assertTrue(PaintSurface.isIgnored(bush));
+		}
 	}
 
 	@Test
