@@ -773,6 +773,12 @@ public final class InGameSmokeTest {
 		if (PaintSurface.topOf(client.level, origin, Blocks.SHORT_GRASS.defaultBlockState()) != PaintSurface.NONE) {
 			throw new AssertionError("Short grass should not have a top paint surface!");
 		}
+		if (PaintSurface.topOf(client.level, origin, Blocks.TALL_GRASS.defaultBlockState()) != PaintSurface.NONE) {
+			throw new AssertionError("Tall grass should not have a top paint surface!");
+		}
+		if (PaintSurface.topOf(client.level, origin, Blocks.SWEET_BERRY_BUSH.defaultBlockState()) != PaintSurface.NONE) {
+			throw new AssertionError("Sweet berry bush should not have a top paint surface!");
+		}
 
 		// Edge drip calculations
 		int dripLen = EdgeDrip.calculateDripLength(origin.getX(), origin.getZ(), FaceAxes.EAST, 8, 5, 11, 15, 1);
