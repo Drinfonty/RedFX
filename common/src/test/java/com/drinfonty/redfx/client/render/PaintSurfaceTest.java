@@ -254,4 +254,45 @@ class PaintSurfaceTest {
 		assertEquals(0.875F, split.get(0).surfaceY(), 1e-4F);
 		assertEquals(0.0625F, split.get(0).facePlane(), 1e-4F);
 	}
+
+	@Test
+	void testAnvilFenceDoorSideSplitCanvas() {
+		BlockGetter level = net.minecraft.world.level.EmptyBlockGetter.INSTANCE;
+		BlockPos pos = BlockPos.ZERO;
+
+		// 1. Fence (Oak Fence post from 0.375 to 0.625)
+		BlockState fence = Blocks.OAK_FENCE.defaultBlockState();
+		int[] fenceTexels = new int[com.drinfonty.redfx.canvas.Canvas.TEXELS];
+		fenceTexels[7 * 16 + 7] = 0xFFFF0000; // pu=7 is inside fence post (7.5/16 = 0.46875)
+		var fenceSplit = PaintSurface.splitCanvas(level, pos, fence, com.drinfonty.redfx.canvas.FaceAxes.WEST,
+			new com.drinfonty.redfx.canvas.Canvas(fenceTexels, 1000L, 1200L));
+		assertEquals(1, fenceSplit.size());
+		assertEquals(1.0F, fenceSplit.get(0).surfaceY());
+		assertEquals(0.375F, fenceSplit.get(0).facePlane(), 1e-4F);
+
+		// Outside fence post footprint (pu = 1 -> 1.5/16 = 0.09375 < 0.375)
+		int[] outsideTexels = new int[com.drinfonty.redfx.canvas.Canvas.TEXELS];
+		outsideTexels[7 * 16 + 1] = 0xFFFF0000;
+		var outsideSplit = PaintSurface.splitCanvas(level, pos, fence, com.drinfonty.redfx.canvas.FaceAxes.WEST,
+			new com.drinfonty.redfx.canvas.Canvas(outsideTexels, 1000L, 1200L));
+		org.junit.jupiter.api.Assertions.assertTrue(outsideSplit.isEmpty());
+
+		// 2. Anvil (default state faces NORTH, so NORTH face is the tip/horn at z=0 with top=1.0)
+		BlockState anvil = Blocks.ANVIL.defaultBlockState();
+		int[] anvilTexels = new int[com.drinfonty.redfx.canvas.Canvas.TEXELS];
+		anvilTexels[2 * 16 + 7] = 0xFFFF0000; // near top of anvil
+		var anvilSplit = PaintSurface.splitCanvas(level, pos, anvil, com.drinfonty.redfx.canvas.FaceAxes.NORTH,
+			new com.drinfonty.redfx.canvas.Canvas(anvilTexels, 1000L, 1200L));
+		assertEquals(1, anvilSplit.size());
+		assertEquals(1.0F, anvilSplit.get(0).surfaceY());
+
+		// 3. Door
+		BlockState door = Blocks.OAK_DOOR.defaultBlockState();
+		int[] doorTexels = new int[com.drinfonty.redfx.canvas.Canvas.TEXELS];
+		doorTexels[7 * 16 + 7] = 0xFFFF0000;
+		var doorSplit = PaintSurface.splitCanvas(level, pos, door, com.drinfonty.redfx.canvas.FaceAxes.SOUTH,
+			new com.drinfonty.redfx.canvas.Canvas(doorTexels, 1000L, 1200L));
+		assertEquals(1, doorSplit.size());
+		assertEquals(1.0F, doorSplit.get(0).surfaceY());
+	}
 }
