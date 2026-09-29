@@ -789,5 +789,24 @@ public final class InGameSmokeTest {
 		if (dripAlpha < 100 || dripAlpha > 255) {
 			throw new AssertionError("EdgeDrip.dripAlpha produced invalid alpha: " + dripAlpha);
 		}
+
+		// Verify BloodParticle has translucent layer on modern Minecraft
+		try {
+			com.drinfonty.redfx.client.particle.BloodParticle testBlood = new com.drinfonty.redfx.client.particle.BloodParticle(
+				client.level, origin.getX(), origin.getY(), origin.getZ(),
+				0.0, 0.0, 0.0, Blocks.STONE.defaultBlockState()
+			);
+			Class<?> layerClass = Class.forName("net.minecraft.client.particle.SingleQuadParticle$Layer");
+			java.lang.reflect.Method getLayerMethod = testBlood.getClass().getMethod("getLayer");
+			Object layer = getLayerMethod.invoke(testBlood);
+			Object translucentTerrain = layerClass.getField("TRANSLUCENT_TERRAIN").get(null);
+			if (layer != translucentTerrain) {
+				throw new AssertionError("BloodParticle layer is not TRANSLUCENT_TERRAIN: " + layer);
+			}
+		} catch (ClassNotFoundException ignored) {
+			// Older Minecraft version without SingleQuadParticle$Layer
+		} catch (Exception e) {
+			throw new RuntimeException("Failed checking BloodParticle layer", e);
+		}
 	}
 }

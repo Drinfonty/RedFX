@@ -214,15 +214,27 @@ public class RedfxConfigScreen extends Screen {
         ).bounds(rightX, startY + 150, colWidth, buttonHeight).build();
         this.addRenderableWidget(gradualToggle);
 
-        // Button: Cycle Bloom Delay
-        Button delayToggle = Button.builder(
-            getSplatterDelayButtonMessage(config),
-            btn -> {
-                config.splatterGrowthDelayTicks = (config.splatterGrowthDelayTicks % 3) + 1;
-                btn.setMessage(getSplatterDelayButtonMessage(config));
+        // Slider for Blood Opacity (10% to 100%)
+        AbstractSliderButton opacitySlider = new AbstractSliderButton(
+            leftX, startY + 175, colWidth, buttonHeight,
+            Component.empty(),
+            (double) (config.bloodOpacity - 0.1f) / 0.9f
+        ) {
+            {
+                this.updateMessage();
             }
-        ).bounds(leftX, startY + 175, colWidth, buttonHeight).build();
-        this.addRenderableWidget(delayToggle);
+
+            @Override
+            protected void updateMessage() {
+                this.setMessage(Component.literal("Opacity: " + Math.round(config.bloodOpacity * 100.0f) + "%"));
+            }
+
+            @Override
+            protected void applyValue() {
+                config.bloodOpacity = 0.1f + (float) (this.value * 0.9f);
+            }
+        };
+        this.addRenderableWidget(opacitySlider);
 
         // Button: Entity Blood Colors
         Button entityColorsButton = Button.builder(
@@ -264,9 +276,6 @@ public class RedfxConfigScreen extends Screen {
         return Component.literal("Bloom: " + (config.gradualSplatter ? "ON" : "OFF"));
     }
 
-    private Component getSplatterDelayButtonMessage(RedfxConfig config) {
-        return Component.literal("Delay: " + config.splatterGrowthDelayTicks + "t (" + (config.splatterGrowthDelayTicks * 50) + "ms)");
-    }
 
     private Component getSoftEdgesButtonMessage(RedfxConfig config) {
         return Component.literal("Soft Edges: " + (config.translucentEdges ? "ON" : "OFF"));
