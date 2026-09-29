@@ -143,10 +143,14 @@ public class LivingEntityMixin {
                     sqp.setColor(particleR, particleG, particleB);
                     sqp.setLifetime(RedfxConfig.get().particleLifetimeSeconds * 4);
                 }
+                if (p instanceof com.drinfonty.redfx.client.particle.ParticleAlphaAccessor paa) {
+                    paa.redfx$setAlpha(RedfxConfig.get().bloodOpacity);
+                }
             } else {
                 // Spawn our custom sliding/sticking BloodParticle and apply custom tint
                 BloodParticle blood = new BloodParticle(clientLevel, px, py, pz, vx, vy, vz, blockState);
                 blood.setColor(particleR, particleG, particleB);
+                blood.setAlpha(RedfxConfig.get().bloodOpacity);
                 Minecraft.getInstance().particleEngine.add(blood);
             }
         }
