@@ -35,8 +35,40 @@ import com.drinfonty.redfx.config.RedfxConfig;
 public class BloodParticle extends TerrainParticle {
     private final int splatIndex; // Picks one of 5 splat patterns (1 to 5)
 
+    private static long TERRAIN_LAYER_OFFSET = -1L;
+    private static Object TRANSLUCENT_TERRAIN_LAYER = null;
+    private static Object THE_UNSAFE = null;
+
+    static {
+        try {
+            Class<?> layerClass = Class.forName("net.minecraft.client.particle.SingleQuadParticle$Layer");
+            for (java.lang.reflect.Field f : TerrainParticle.class.getDeclaredFields()) {
+                if (f.getType().equals(layerClass)) {
+                    java.lang.reflect.Field uf = sun.misc.Unsafe.class.getDeclaredField("theUnsafe");
+                    uf.setAccessible(true);
+                    sun.misc.Unsafe unsafe = (sun.misc.Unsafe) uf.get(null);
+                    THE_UNSAFE = unsafe;
+                    TERRAIN_LAYER_OFFSET = unsafe.objectFieldOffset(f);
+                    TRANSLUCENT_TERRAIN_LAYER = layerClass.getField("TRANSLUCENT_TERRAIN").get(null);
+                    break;
+                }
+            }
+        } catch (Throwable ignored) {
+        }
+    }
+
+    private static void enableTranslucentTerrain(TerrainParticle particle) {
+        if (THE_UNSAFE != null && TERRAIN_LAYER_OFFSET != -1L && TRANSLUCENT_TERRAIN_LAYER != null) {
+            try {
+                ((sun.misc.Unsafe) THE_UNSAFE).putObject(particle, TERRAIN_LAYER_OFFSET, TRANSLUCENT_TERRAIN_LAYER);
+            } catch (Throwable ignored) {
+            }
+        }
+    }
+
     public BloodParticle(ClientLevel level, double x, double y, double z, double vx, double vy, double vz, BlockState state) {
         super(level, x, y, z, vx, vy, vz, state);
+        enableTranslucentTerrain(this);
 
         this.lifetime = 40; // max fall time before despawning
         this.gravity = 1.0F;
@@ -50,6 +82,12 @@ public class BloodParticle extends TerrainParticle {
 
         float sizeScale = 0.8F + this.random.nextFloat() * 1.0F;
         this.quadSize *= sizeScale * RedfxConfig.get().particleSizeScale * 0.8F;
+        this.alpha = RedfxConfig.get().bloodOpacity;
+    }
+
+    @Override
+    public void setAlpha(float alpha) {
+        super.setAlpha(alpha);
     }
 
     public static BlockPos getAttachedBlockPos(ClientLevel level, double x, double y, double z, Direction dir) {
@@ -101,12 +139,14 @@ public class BloodParticle extends TerrainParticle {
         public BloodDripSplash(ClientLevel level, double x, double y, double z,
                                double vx, double vy, double vz, BlockState state) {
             super(level, x, y, z, vx, vy, vz, state);
+            enableTranslucentTerrain(this);
             this.gravity = 0.7F;
             this.friction = 0.96F;
             this.lifetime = 6 + this.random.nextInt(4);
             this.hasPhysics = true;
             float scale = RedfxConfig.get().particleSizeScale;
             this.quadSize = (0.014F + this.random.nextFloat() * 0.008F) * scale;
+            this.alpha = RedfxConfig.get().bloodOpacity;
         }
 
         @Override
@@ -184,7 +224,7 @@ public class BloodParticle extends TerrainParticle {
             
             this.lifetime = Math.min(this.lifetime, this.age + 15);
             if (this.lifetime > this.age) {
-                this.alpha = (float)(this.lifetime - this.age) / 15.0f;
+                this.alpha = ((float)(this.lifetime - this.age) / 15.0f) * RedfxConfig.get().bloodOpacity;
             } else {
                 this.alpha = 0.0f;
             }
@@ -268,7 +308,7 @@ public class BloodParticle extends TerrainParticle {
         int centerU = FaceAxes.texel(uCoord);
         int centerV = FaceAxes.texel(vCoord);
 
-        int argb = PaintColor.fromRgb(rCol, gCol, bCol);
+        int argb = PaintColor.fromRgb(rCol, gCol, bCol, RedfxConfig.get().bloodOpacity);
 
         int baseLifetimeSec = RedfxConfig.get().particleLifetimeSeconds;
         int variance = (int) (baseLifetimeSec * 0.25F);
@@ -461,6 +501,7 @@ public class BloodParticle extends TerrainParticle {
 
                                     int col = rimColors[c];
                                     int baseAlpha = (col >>> 24);
+                                    if (baseAlpha == 0) baseAlpha = Math.max(10, Math.min(255, (int) (RedfxConfig.get().bloodOpacity * 255.0f)));
                                     int rgb = col & 0xFFFFFF;
 
                                     int uSide = EdgeDrip.sideU(sideFace, edge.edgeU(), edge.edgeV());
@@ -604,7 +645,7 @@ public class BloodParticle extends TerrainParticle {
 
                                         int dripAlpha = RedfxConfig.get().translucentEdges
                                             ? EdgeDrip.dripAlpha(baseAlpha, step, dripLen)
-                                            : 255;
+                                            : baseAlpha;
                                         int dripCol = (dripAlpha << 24) | rgb;
 
                                         ClientCanvasStore.PendingTexel pt = new ClientCanvasStore.PendingTexel(
@@ -624,7 +665,7 @@ public class BloodParticle extends TerrainParticle {
                                             int landV = FaceAxes.texel(FaceAxes.v(Direction.UP.get3DDataValue(), relX, 0, relZ));
 
                                             List<ClientCanvasStore.PendingTexel> smallSplat = new ArrayList<>();
-                                            int splatAlpha = Math.min(255, Math.max(220, baseAlpha));
+                                            int splatAlpha = Math.min(255, Math.max(10, baseAlpha));
                                             int splatColor = (splatAlpha << 24) | rgb;
                                             int fadeColor = ((int) (splatAlpha * 0.75f) << 24) | rgb;
 
@@ -686,6 +727,9 @@ public class BloodParticle extends TerrainParticle {
                                                     );
                                                     if (drop instanceof SingleQuadParticle sqp) {
                                                         sqp.setColor(dropR, dropG, dropB);
+                                                    }
+                                                    if (drop instanceof ParticleAlphaAccessor paa) {
+                                                        paa.redfx$setAlpha(RedfxConfig.get().bloodOpacity);
                                                     }
                                                     if (drop instanceof BloodDripAccessor bda) {
                                                         bda.redfx$setBloodDrip(dropR, dropG, dropB);

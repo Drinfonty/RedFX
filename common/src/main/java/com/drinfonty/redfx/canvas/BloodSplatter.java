@@ -124,6 +124,8 @@ public final class BloodSplatter {
 		}
 
 		int rgb = argb & 0xFFFFFF;
+		int baseAlpha = (argb >>> 24);
+		if (baseAlpha == 0) baseAlpha = 255;
 		boolean enableTranslucent = com.drinfonty.redfx.config.RedfxConfig.get().translucentEdges;
 
 		// Distance-to-boundary analysis of existing splat pixels:
@@ -185,13 +187,13 @@ public final class BloodSplatter {
 
 			int alpha;
 			if (!enableTranslucent) {
-				alpha = 255;
+				alpha = baseAlpha;
 			} else if (stage == 0) {
-				// Deep core: 100% opaque
-				alpha = 255;
+				// Deep core: 100% of base opacity
+				alpha = baseAlpha;
 			} else if (stage == 1) {
 				// Inner transition edge (1 step inward from perimeter): ~76% opacity
-				alpha = 195;
+				alpha = (int) Math.round(baseAlpha * (195.0 / 255.0));
 			} else {
 				// Outermost edge: progressively more transparent farther out
 				int cardinalNeighbors = 0;
@@ -201,13 +203,13 @@ public final class BloodSplatter {
 				if (points.contains(new TexelPos(p.u, p.v + 1))) cardinalNeighbors++;
 
 				if (!hasInterior && cardinalNeighbors >= 3) {
-					alpha = 220;
+					alpha = (int) Math.round(baseAlpha * (220.0 / 255.0));
 				} else if (cardinalNeighbors <= 1) {
-					alpha = 95;
+					alpha = (int) Math.round(baseAlpha * (95.0 / 255.0));
 				} else if (cardinalNeighbors == 2) {
-					alpha = 120;
+					alpha = (int) Math.round(baseAlpha * (120.0 / 255.0));
 				} else {
-					alpha = 145;
+					alpha = (int) Math.round(baseAlpha * (145.0 / 255.0));
 				}
 			}
 
@@ -242,6 +244,8 @@ public final class BloodSplatter {
 		java.util.Random rand = new java.util.Random(seed);
 
 		int rgb = argb & 0xFFFFFF;
+		int baseAlpha = (argb >>> 24);
+		if (baseAlpha == 0) baseAlpha = 255;
 		boolean enableTranslucent = com.drinfonty.redfx.config.RedfxConfig.get().translucentEdges;
 
 		// 1. Stamp the full organic blood splatter on the wall
@@ -280,13 +284,13 @@ public final class BloodSplatter {
 				int v = startV + step;
 				int alpha;
 				if (!enableTranslucent) {
-					alpha = 255;
+					alpha = baseAlpha;
 				} else if (step == beadLen) {
-					alpha = 250; // Teardrop bead at tip
+					alpha = (int) Math.round(baseAlpha * (250.0 / 255.0)); // Teardrop bead at tip
 				} else if (step == 1) {
-					alpha = 230;
+					alpha = (int) Math.round(baseAlpha * (230.0 / 255.0));
 				} else {
-					alpha = 195; // Slender stream
+					alpha = (int) Math.round(baseAlpha * (195.0 / 255.0)); // Slender stream
 				}
 				writer.setTexel(dripU, v, (alpha << 24) | rgb, 2 + step);
 			}
