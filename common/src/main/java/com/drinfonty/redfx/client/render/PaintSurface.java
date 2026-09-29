@@ -416,9 +416,7 @@ public final class PaintSurface {
 		}
 
 		if (planes.isEmpty()) {
-			float surfaceY = (float) planeFor(level, pos, state, face);
-			float facePlane = PaintGeometry.defaultFacePlane(face, surfaceY);
-			return List.of(new SurfaceCanvas(canvas, facePlane, surfaceY));
+			return List.of();
 		}
 
 		List<Map.Entry<FacePlaneInfo, int[]>> sorted = new ArrayList<>(planes.entrySet());
