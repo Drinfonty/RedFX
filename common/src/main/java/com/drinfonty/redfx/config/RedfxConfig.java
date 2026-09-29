@@ -19,6 +19,7 @@ public class RedfxConfig {
     public float particleSizeScale = 1.0f; // Range: 0.5 to 2.0
     public float splatSizeScale = 1.0f; // Range: 0.5 to 2.0
     public float colorSaturation = 1.0f; // Range: 0.0 to 2.0
+    public float bloodOpacity = 1.0f; // Range: 0.1 to 1.0 (10% to 100%)
     public boolean translucentEdges = false; // Translucent gradient falloff on splatter edges
     public boolean dripOverEdges = true; // Wrap and drip splatters over block edges into open air
     public boolean wallDripping = true; // Splatters on vertical walls form natural dripping rivulets running down the block
@@ -74,6 +75,7 @@ public class RedfxConfig {
                     if (obj.has("particleSizeScale")) config.particleSizeScale = obj.get("particleSizeScale").getAsFloat();
                     if (obj.has("splatSizeScale")) config.splatSizeScale = obj.get("splatSizeScale").getAsFloat();
                     if (obj.has("colorSaturation")) config.colorSaturation = obj.get("colorSaturation").getAsFloat();
+                    if (obj.has("bloodOpacity")) config.bloodOpacity = obj.get("bloodOpacity").getAsFloat();
                     if (obj.has("translucentEdges")) config.translucentEdges = obj.get("translucentEdges").getAsBoolean();
                     if (obj.has("dripOverEdges")) config.dripOverEdges = obj.get("dripOverEdges").getAsBoolean();
                     if (obj.has("wallDripping")) config.wallDripping = obj.get("wallDripping").getAsBoolean();
@@ -116,6 +118,9 @@ public class RedfxConfig {
         if (config.colorSaturation < 0.0f) {
             config.colorSaturation = 1.0f;
         }
+        if (config.bloodOpacity < 0.1f || config.bloodOpacity > 1.0f) {
+            config.bloodOpacity = Math.max(0.1f, Math.min(1.0f, config.bloodOpacity));
+        }
         if (config.splatterGrowthDelayTicks <= 0) {
             config.splatterGrowthDelayTicks = 2;
         }
@@ -148,6 +153,7 @@ public class RedfxConfig {
         this.particleSizeScale = 1.0f;
         this.splatSizeScale = 1.0f;
         this.colorSaturation = 1.0f;
+        this.bloodOpacity = 1.0f;
         this.translucentEdges = false;
         this.dripOverEdges = true;
         this.wallDripping = true;
