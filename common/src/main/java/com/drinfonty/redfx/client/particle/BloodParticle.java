@@ -91,6 +91,14 @@ public class BloodParticle extends TerrainParticle {
     }
 
     public static BlockPos getAttachedBlockPos(ClientLevel level, double x, double y, double z, Direction dir) {
+        BlockPos current = BlockPos.containing(x, y, z);
+        BlockState currentState = level.getBlockState(current);
+        if (!currentState.isAir() && currentState.getFluidState().isEmpty()
+            && !PaintSurface.isIgnored(currentState)
+            && !currentState.getCollisionShape(level, current).isEmpty()) {
+            return current;
+        }
+
         return switch (dir) {
             case UP -> {
                 BlockPos below = BlockPos.containing(x, y - 0.2, z);
@@ -413,7 +421,8 @@ public class BloodParticle extends TerrainParticle {
                         if (!sidePaintable) continue;
 
                         boolean belowPaintable = belowState.isFaceSturdy(level, belowPos, hDir)
-                            || belowState.isCollisionShapeFullBlock(level, belowPos);
+                            || belowState.isCollisionShapeFullBlock(level, belowPos)
+                            || !belowState.getCollisionShape(level, belowPos).isEmpty();
 
                         BlockPos neighborPos = bPos.relative(hDir);
                         SurfaceInfo neighborInfo = resolveTopSurfaceInfo(level, neighborPos);
@@ -777,7 +786,7 @@ public class BloodParticle extends TerrainParticle {
 
                     BlockState bs = level.getBlockState(bPos);
                     if (bs.isAir() || !bs.getFluidState().isEmpty() || PaintSurface.isIgnored(bs)
-                        || !bs.isFaceSturdy(level, bPos, hitDirection) || !bs.isCollisionShapeFullBlock(level, bPos)) {
+                        || bs.getCollisionShape(level, bPos).isEmpty()) {
                         invalidBlocks.add(blockKey);
                         return;
                     }
