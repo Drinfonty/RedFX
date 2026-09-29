@@ -530,6 +530,62 @@ public class BloodParticle extends TerrainParticle {
                                     );
 
                                     int beadHash = Math.abs((bPos.getX() * 3127 + bPos.getZ() * 739 + sideFace * 101 + uSide * 37) ^ (splatIndex * 19));
+                                    boolean reachedBorder = (dripLen == maxAllowedStep);
+                                    boolean touchesBlock = false;
+                                    double frontX = 0.0, frontZ = 0.0, dripBaseY = 0.0, floorElevation = 0.0;
+                                    BlockPos checkPos = null;
+
+                                    if (reachedBorder) {
+                                        dripBaseY = colElevation - colExposedHeight;
+                                        double worldX = bPos.getX();
+                                        double worldZ = bPos.getZ();
+                                        switch (hDir) {
+                                            case NORTH -> {
+                                                worldZ += colPlane;
+                                                worldX += (15 - uSide + 0.5) / 16.0;
+                                            }
+                                            case SOUTH -> {
+                                                worldZ += colPlane;
+                                                worldX += (uSide + 0.5) / 16.0;
+                                            }
+                                            case WEST -> {
+                                                worldX += colPlane;
+                                                worldZ += (uSide + 0.5) / 16.0;
+                                            }
+                                            case EAST -> {
+                                                worldX += colPlane;
+                                                worldZ += (15 - uSide + 0.5) / 16.0;
+                                            }
+                                        }
+
+                                        frontX = worldX + hDir.getStepX() * 0.04;
+                                        frontZ = worldZ + hDir.getStepZ() * 0.04;
+
+                                        BlockState checkState;
+                                        if (isInternalStep) {
+                                            checkPos = bPos;
+                                            checkState = bState;
+                                        } else {
+                                            checkPos = BlockPos.containing(frontX, dripBaseY - 0.05, frontZ);
+                                            checkState = level.getBlockState(checkPos);
+                                        }
+
+                                        floorElevation = PaintSurface.elevationAt(
+                                            level, checkPos, frontX - checkPos.getX(), frontZ - checkPos.getZ()
+                                        );
+
+                                        touchesBlock = floorElevation != PaintSurface.NONE
+                                            && Math.abs(floorElevation - dripBaseY) < 0.15
+                                            && PaintSurface.topOf(level, checkPos, checkState) != PaintSurface.NONE;
+
+                                        if (!touchesBlock && belowPaintable && !isInternalStep) {
+                                            // Two blocks stacked on top of each other with continuous exposed wall:
+                                            // Extend the drip into the next block by a random amount between 0 and 3 pixels.
+                                            int extra = Math.abs((beadHash / 13) % 4);
+                                            dripLen += extra;
+                                        }
+                                    }
+
                                     long stepDelayMs = EdgeDrip.beadStepDelayMs(dripLen, configFactor, beadHash);
                                     long beadStartMs = nowMs + 2 * baseDelayMs + (beadHash % 35);
 
@@ -558,53 +614,10 @@ public class BloodParticle extends TerrainParticle {
                                         addTexel.accept(pt, execTime);
                                     }
 
-                                    if (dripLen == maxAllowedStep) {
-                                        double dripBaseY = colElevation - colExposedHeight;
-                                        double worldX = bPos.getX();
-                                        double worldZ = bPos.getZ();
-                                        switch (hDir) {
-                                            case NORTH -> {
-                                                worldZ += colPlane;
-                                                worldX += (15 - uSide + 0.5) / 16.0;
-                                            }
-                                            case SOUTH -> {
-                                                worldZ += colPlane;
-                                                worldX += (uSide + 0.5) / 16.0;
-                                            }
-                                            case WEST -> {
-                                                worldX += colPlane;
-                                                worldZ += (uSide + 0.5) / 16.0;
-                                            }
-                                            case EAST -> {
-                                                worldX += colPlane;
-                                                worldZ += (15 - uSide + 0.5) / 16.0;
-                                            }
-                                        }
-
-                                        double frontX = worldX + hDir.getStepX() * 0.04;
-                                        double frontZ = worldZ + hDir.getStepZ() * 0.04;
-
-                                        BlockPos checkPos;
-                                        BlockState checkState;
-                                        if (isInternalStep) {
-                                            checkPos = bPos;
-                                            checkState = bState;
-                                        } else {
-                                            checkPos = BlockPos.containing(frontX, dripBaseY - 0.05, frontZ);
-                                            checkState = level.getBlockState(checkPos);
-                                        }
-
-                                        double floorElevation = PaintSurface.elevationAt(
-                                            level, checkPos, frontX - checkPos.getX(), frontZ - checkPos.getZ()
-                                        );
-
-                                        boolean touchesBlock = floorElevation != PaintSurface.NONE
-                                            && Math.abs(floorElevation - dripBaseY) < 0.15
-                                            && PaintSurface.topOf(level, checkPos, checkState) != PaintSurface.NONE;
-
+                                    if (reachedBorder) {
                                         long arrivalTime = beadStartMs + (long) dripLen * stepDelayMs;
 
-                                        if (touchesBlock) {
+                                        if (touchesBlock && checkPos != null) {
                                             double relX = Math.max(0.0, Math.min(1.0, frontX - checkPos.getX()));
                                             double relZ = Math.max(0.0, Math.min(1.0, frontZ - checkPos.getZ()));
                                             int landU = FaceAxes.texel(FaceAxes.u(Direction.UP.get3DDataValue(), relX, 0, relZ));
@@ -650,8 +663,10 @@ public class BloodParticle extends TerrainParticle {
 
                                             if (RedfxConfig.get().enableSplatDust) {
                                                 final double splatFloorY = floorElevation;
+                                                final double sx = frontX;
+                                                final double sz = frontZ;
                                                 ClientCanvasStore.get().scheduleAction(arrivalTime, () -> {
-                                                    spawnSplash(level, frontX, splatFloorY + 0.02, frontZ, dripR, dripG, dripB, level.getRandom());
+                                                    spawnSplash(level, sx, splatFloorY + 0.02, sz, dripR, dripG, dripB, level.getRandom());
                                                 });
                                             }
                                         } else if (!belowPaintable && !isInternalStep) {
