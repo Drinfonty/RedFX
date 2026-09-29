@@ -21,10 +21,15 @@ public final class PaintColor {
 		return isPainted(texel) ? texel : EMPTY;
 	}
 
-	public static int fromRgb(float r, float g, float b) {
+	public static int fromRgb(float r, float g, float b, float opacity) {
+		int a = Math.max(10, Math.min(255, (int) (opacity * 255.0f)));
 		int ir = Math.max(0, Math.min(255, (int) (r * 255.0f)));
 		int ig = Math.max(0, Math.min(255, (int) (g * 255.0f)));
 		int ib = Math.max(0, Math.min(255, (int) (b * 255.0f)));
-		return 0xFF000000 | (ir << 16) | (ig << 8) | ib;
+		return (a << 24) | (ir << 16) | (ig << 8) | ib;
+	}
+
+	public static int fromRgb(float r, float g, float b) {
+		return fromRgb(r, g, b, 1.0f);
 	}
 }
