@@ -144,7 +144,7 @@ public final class EdgeDrip {
 			case 2 -> 0.45f;
 			default -> 0.25f;
 		};
-		return Math.max(60, (int) (baseAlpha * factor));
+		return Math.max(10, (int) (baseAlpha * factor));
 	}
 
 	/**
@@ -153,14 +153,14 @@ public final class EdgeDrip {
 	 */
 	public static int dripAlpha(int baseAlpha, int step, int totalLength) {
 		if (step <= 0) {
-			return Math.max(220, baseAlpha);
+			return Math.max(10, Math.min(255, baseAlpha));
 		}
 		if (step >= totalLength) {
 			// Teardrop bead at the tip: concentrated, rich droplet
-			return Math.min(255, Math.max(245, baseAlpha));
+			return Math.max(10, Math.min(255, (int) (baseAlpha * 0.96f)));
 		}
 		// Slender stream connecting top edge to bead tip
-		return Math.max(160, (int) (Math.max(190, baseAlpha) * 0.80f));
+		return Math.max(10, Math.min(255, (int) (baseAlpha * 0.80f)));
 	}
 }
 
