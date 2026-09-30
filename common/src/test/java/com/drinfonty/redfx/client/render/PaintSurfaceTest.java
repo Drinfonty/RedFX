@@ -277,14 +277,76 @@ class PaintSurfaceTest {
 			new com.drinfonty.redfx.canvas.Canvas(outsideTexels, 1000L, 1200L));
 		org.junit.jupiter.api.Assertions.assertTrue(outsideSplit.isEmpty());
 
-		// 2. Anvil (default state faces NORTH, so NORTH face is the tip/horn at z=0 with top=1.0)
+		// 2. Anvil
+		// Default anvil faces NORTH (short edges: NORTH/SOUTH, long edges: WEST/EAST)
 		BlockState anvil = Blocks.ANVIL.defaultBlockState();
-		int[] anvilTexels = new int[com.drinfonty.redfx.canvas.Canvas.TEXELS];
-		anvilTexels[2 * 16 + 7] = 0xFFFF0000; // near top of anvil
-		var anvilSplit = PaintSurface.splitCanvas(level, pos, anvil, com.drinfonty.redfx.canvas.FaceAxes.NORTH,
-			new com.drinfonty.redfx.canvas.Canvas(anvilTexels, 1000L, 1200L));
-		assertEquals(1, anvilSplit.size());
-		assertEquals(1.0F, anvilSplit.get(0).surfaceY());
+		// Short edge (NORTH face):
+		int[] northAnvilTexels = new int[com.drinfonty.redfx.canvas.Canvas.TEXELS];
+		northAnvilTexels[2 * 16 + 7] = 0xFFFF0000; // near top of anvil
+		var northAnvilSplit = PaintSurface.splitCanvas(level, pos, anvil, com.drinfonty.redfx.canvas.FaceAxes.NORTH,
+			new com.drinfonty.redfx.canvas.Canvas(northAnvilTexels, 1000L, 1200L));
+		assertEquals(1, northAnvilSplit.size());
+		assertEquals(1.0F, northAnvilSplit.get(0).surfaceY());
+		assertEquals(0.0F, northAnvilSplit.get(0).facePlane(), 1e-4F);
+
+		// Short edge (SOUTH face):
+		int[] southAnvilTexels = new int[com.drinfonty.redfx.canvas.Canvas.TEXELS];
+		southAnvilTexels[2 * 16 + 7] = 0xFFFF0000;
+		var southAnvilSplit = PaintSurface.splitCanvas(level, pos, anvil, com.drinfonty.redfx.canvas.FaceAxes.SOUTH,
+			new com.drinfonty.redfx.canvas.Canvas(southAnvilTexels, 1000L, 1200L));
+		assertEquals(1, southAnvilSplit.size());
+		assertEquals(1.0F, southAnvilSplit.get(0).surfaceY());
+		assertEquals(1.0F, southAnvilSplit.get(0).facePlane(), 1e-4F);
+
+		// Long edge (WEST face):
+		int[] westAnvilTexels = new int[com.drinfonty.redfx.canvas.Canvas.TEXELS];
+		westAnvilTexels[2 * 16 + 7] = 0xFFFF0000; // near top of anvil
+		var westAnvilSplit = PaintSurface.splitCanvas(level, pos, anvil, com.drinfonty.redfx.canvas.FaceAxes.WEST,
+			new com.drinfonty.redfx.canvas.Canvas(westAnvilTexels, 1000L, 1200L));
+		assertEquals(1, westAnvilSplit.size());
+		assertEquals(1.0F, westAnvilSplit.get(0).surfaceY());
+		assertEquals(0.1875F, westAnvilSplit.get(0).facePlane(), 1e-4F);
+
+		// Long edge (EAST face):
+		int[] eastAnvilTexels = new int[com.drinfonty.redfx.canvas.Canvas.TEXELS];
+		eastAnvilTexels[2 * 16 + 7] = 0xFFFF0000;
+		var eastAnvilSplit = PaintSurface.splitCanvas(level, pos, anvil, com.drinfonty.redfx.canvas.FaceAxes.EAST,
+			new com.drinfonty.redfx.canvas.Canvas(eastAnvilTexels, 1000L, 1200L));
+		assertEquals(1, eastAnvilSplit.size());
+		assertEquals(1.0F, eastAnvilSplit.get(0).surfaceY());
+		assertEquals(0.8125F, eastAnvilSplit.get(0).facePlane(), 1e-4F);
+
+		// Anvil facing EAST (short edges: WEST/EAST, long edges: NORTH/SOUTH)
+		BlockState eastAnvil = Blocks.ANVIL.defaultBlockState()
+			.setValue(net.minecraft.world.level.block.AnvilBlock.FACING, Direction.EAST);
+
+		// Long edge (NORTH face):
+		var eastAnvilNorthSplit = PaintSurface.splitCanvas(level, pos, eastAnvil, com.drinfonty.redfx.canvas.FaceAxes.NORTH,
+			new com.drinfonty.redfx.canvas.Canvas(northAnvilTexels, 1000L, 1200L));
+		assertEquals(1, eastAnvilNorthSplit.size());
+		assertEquals(1.0F, eastAnvilNorthSplit.get(0).surfaceY());
+		assertEquals(0.1875F, eastAnvilNorthSplit.get(0).facePlane(), 1e-4F);
+
+		// Long edge (SOUTH face):
+		var eastAnvilSouthSplit = PaintSurface.splitCanvas(level, pos, eastAnvil, com.drinfonty.redfx.canvas.FaceAxes.SOUTH,
+			new com.drinfonty.redfx.canvas.Canvas(southAnvilTexels, 1000L, 1200L));
+		assertEquals(1, eastAnvilSouthSplit.size());
+		assertEquals(1.0F, eastAnvilSouthSplit.get(0).surfaceY());
+		assertEquals(0.8125F, eastAnvilSouthSplit.get(0).facePlane(), 1e-4F);
+
+		// Short edge (WEST face):
+		var eastAnvilWestSplit = PaintSurface.splitCanvas(level, pos, eastAnvil, com.drinfonty.redfx.canvas.FaceAxes.WEST,
+			new com.drinfonty.redfx.canvas.Canvas(westAnvilTexels, 1000L, 1200L));
+		assertEquals(1, eastAnvilWestSplit.size());
+		assertEquals(1.0F, eastAnvilWestSplit.get(0).surfaceY());
+		assertEquals(0.0F, eastAnvilWestSplit.get(0).facePlane(), 1e-4F);
+
+		// Short edge (EAST face):
+		var eastAnvilEastSplit = PaintSurface.splitCanvas(level, pos, eastAnvil, com.drinfonty.redfx.canvas.FaceAxes.EAST,
+			new com.drinfonty.redfx.canvas.Canvas(eastAnvilTexels, 1000L, 1200L));
+		assertEquals(1, eastAnvilEastSplit.size());
+		assertEquals(1.0F, eastAnvilEastSplit.get(0).surfaceY());
+		assertEquals(1.0F, eastAnvilEastSplit.get(0).facePlane(), 1e-4F);
 
 		// 3. Door
 		BlockState door = Blocks.OAK_DOOR.defaultBlockState();
