@@ -23,6 +23,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.AnvilBlock;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.SlabBlock;
@@ -351,6 +352,7 @@ public final class InGameSmokeTest {
 		BlockPos snowBlockPos = floorOrigin.relative(forward, 1).relative(left, 1);
 		BlockPos slabPos = floorOrigin.relative(right, 1);
 		BlockPos snowLayerPos = floorOrigin.relative(forward.getOpposite(), 1);
+		BlockPos anvilPos = snowLayerPos.relative(right, 1);
 		BlockPos chestPos = floorOrigin.relative(forward, 1).relative(right, 1);
 		BlockPos stairPos = floorOrigin.relative(forward, 1);
 		BlockPos grassPos = floorOrigin.relative(left, 1);
@@ -362,6 +364,8 @@ public final class InGameSmokeTest {
 			.setValue(SlabBlock.TYPE, SlabType.BOTTOM), 3);
 		client.level.setBlock(snowLayerPos, Blocks.SNOW.defaultBlockState()
 			.setValue(SnowLayerBlock.LAYERS, 3), 3);
+		client.level.setBlock(anvilPos, Blocks.ANVIL.defaultBlockState()
+			.setValue(AnvilBlock.FACING, forward.getOpposite()), 3);
 		client.level.setBlock(chestPos, Blocks.CHEST.defaultBlockState()
 			.setValue(ChestBlock.FACING, forward.getOpposite()), 3);
 		client.level.setBlock(stairPos, Blocks.OAK_STAIRS.defaultBlockState()
@@ -415,6 +419,10 @@ public final class InGameSmokeTest {
 			// 6. Snow layer (partial block, 3 layers in front)
 			commands.performPrefixedCommand(source, String.format(java.util.Locale.ROOT,
 				"setblock %d %d %d snow[layers=3]", snowLayerPos.getX(), snowLayerPos.getY(), snowLayerPos.getZ()));
+
+			// 6b. Anvil (on right side of snow layers)
+			commands.performPrefixedCommand(source, String.format(java.util.Locale.ROOT,
+				"setblock %d %d %d anvil[facing=%s]", anvilPos.getX(), anvilPos.getY(), anvilPos.getZ(), forward.getOpposite().getName()));
 
 			// 7. Chest (facing player)
 			commands.performPrefixedCommand(source, String.format(java.util.Locale.ROOT,
