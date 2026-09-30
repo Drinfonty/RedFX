@@ -741,6 +741,16 @@ public final class InGameSmokeTest {
 			throw new AssertionError("Expected lower stair step Y=0.5, got " + split.get(1).surfaceY());
 		}
 
+		// Anvil long edge split verification
+		BlockState anvilState = Blocks.ANVIL.defaultBlockState();
+		int[] anvilTexels = new int[Canvas.TEXELS];
+		anvilTexels[2 * 16 + 7] = red;
+		Canvas anvilCanvas = new Canvas(anvilTexels, System.currentTimeMillis() + 60000L);
+		List<PaintSurface.SurfaceCanvas> anvilSplit = PaintSurface.splitCanvas(client.level, origin, anvilState, FaceAxes.WEST, anvilCanvas);
+		if (anvilSplit.size() != 1 || Math.abs(anvilSplit.get(0).surfaceY() - 1.0F) > 0.001F || Math.abs(anvilSplit.get(0).facePlane() - 0.1875F) > 0.001F) {
+			throw new AssertionError("Expected anvil long edge split Y=1.0 plane=0.1875, got " + (anvilSplit.isEmpty() ? "empty" : (anvilSplit.get(0).surfaceY() + ", " + anvilSplit.get(0).facePlane())));
+		}
+
 		// Corners projection
 		float[] corners = new float[12];
 		PaintGeometry.corners(stoneQuads.get(0), corners, 1.0F);
