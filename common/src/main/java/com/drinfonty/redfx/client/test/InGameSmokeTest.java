@@ -26,6 +26,7 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.AnvilBlock;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.ChestBlock;
+import net.minecraft.world.level.block.LecternBlock;
 import net.minecraft.world.level.block.SlabBlock;
 import net.minecraft.world.level.block.SnowLayerBlock;
 import net.minecraft.world.level.block.StairBlock;
@@ -353,6 +354,7 @@ public final class InGameSmokeTest {
 		BlockPos slabPos = floorOrigin.relative(right, 1);
 		BlockPos snowLayerPos = floorOrigin.relative(forward.getOpposite(), 1);
 		BlockPos anvilPos = snowLayerPos.relative(right, 1);
+		BlockPos lecternPos = snowLayerPos.relative(left, 1);
 		BlockPos chestPos = floorOrigin.relative(forward, 1).relative(right, 1);
 		BlockPos stairPos = floorOrigin.relative(forward, 1);
 		BlockPos grassPos = floorOrigin.relative(left, 1);
@@ -366,6 +368,8 @@ public final class InGameSmokeTest {
 			.setValue(SnowLayerBlock.LAYERS, 3), 3);
 		client.level.setBlock(anvilPos, Blocks.ANVIL.defaultBlockState()
 			.setValue(AnvilBlock.FACING, forward.getOpposite()), 3);
+		client.level.setBlock(lecternPos, Blocks.LECTERN.defaultBlockState()
+			.setValue(LecternBlock.FACING, forward.getOpposite()), 3);
 		client.level.setBlock(chestPos, Blocks.CHEST.defaultBlockState()
 			.setValue(ChestBlock.FACING, forward.getOpposite()), 3);
 		client.level.setBlock(stairPos, Blocks.OAK_STAIRS.defaultBlockState()
@@ -423,6 +427,10 @@ public final class InGameSmokeTest {
 			// 6b. Anvil (on right side of snow layers)
 			commands.performPrefixedCommand(source, String.format(java.util.Locale.ROOT,
 				"setblock %d %d %d anvil[facing=%s]", anvilPos.getX(), anvilPos.getY(), anvilPos.getZ(), forward.getOpposite().getName()));
+
+			// 6c. Lectern (on left side of snow layers)
+			commands.performPrefixedCommand(source, String.format(java.util.Locale.ROOT,
+				"setblock %d %d %d lectern[facing=%s]", lecternPos.getX(), lecternPos.getY(), lecternPos.getZ(), forward.getOpposite().getName()));
 
 			// 7. Chest (facing player)
 			commands.performPrefixedCommand(source, String.format(java.util.Locale.ROOT,
@@ -757,6 +765,19 @@ public final class InGameSmokeTest {
 		List<PaintSurface.SurfaceCanvas> anvilSplit = PaintSurface.splitCanvas(client.level, origin, anvilState, FaceAxes.WEST, anvilCanvas);
 		if (anvilSplit.size() != 1 || Math.abs(anvilSplit.get(0).surfaceY() - 1.0F) > 0.001F || Math.abs(anvilSplit.get(0).facePlane() - 0.1875F) > 0.001F) {
 			throw new AssertionError("Expected anvil long edge split Y=1.0 plane=0.1875, got " + (anvilSplit.isEmpty() ? "empty" : (anvilSplit.get(0).surfaceY() + ", " + anvilSplit.get(0).facePlane())));
+		}
+
+		// Lectern split verification (facing south: front face is south at plane=0.9375, top=0.875)
+		BlockState lecternState = Blocks.LECTERN.defaultBlockState().setValue(LecternBlock.FACING, Direction.SOUTH);
+		int[] lecternTexels = new int[Canvas.TEXELS];
+		lecternTexels[2 * 16 + 8] = red;
+		Canvas lecternCanvas = new Canvas(lecternTexels, System.currentTimeMillis() + 60000L);
+		List<PaintSurface.SurfaceCanvas> lecternSplit = PaintSurface.splitCanvas(client.level, origin, lecternState, FaceAxes.SOUTH, lecternCanvas);
+		if (lecternSplit.size() != 1 || Math.abs(lecternSplit.get(0).surfaceY() - 0.875F) > 0.001F || Math.abs(lecternSplit.get(0).facePlane() - 0.9375F) > 0.001F) {
+			throw new AssertionError("Expected lectern south face split Y=0.875 plane=0.9375, got " + (lecternSplit.isEmpty() ? "empty" : (lecternSplit.get(0).surfaceY() + ", " + lecternSplit.get(0).facePlane())));
+		}
+		if (Math.abs(PaintSurface.topOf(client.level, origin, lecternState) - 1.125) > 0.001) {
+			throw new AssertionError("Expected lectern topOf=1.125, got " + PaintSurface.topOf(client.level, origin, lecternState));
 		}
 
 		// Corners projection
