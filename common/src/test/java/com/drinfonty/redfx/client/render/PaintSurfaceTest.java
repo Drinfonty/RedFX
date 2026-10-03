@@ -13,6 +13,9 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.SlabBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.SlabType;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.shapes.VoxelShape;
+import com.drinfonty.redfx.canvas.Canvas;
 
 class PaintSurfaceTest {
 	@BeforeAll
@@ -92,6 +95,98 @@ class PaintSurfaceTest {
 			assertEquals(PaintSurface.NONE, PaintSurface.topOf(level, pos, bush));
 			org.junit.jupiter.api.Assertions.assertTrue(PaintSurface.isIgnored(bush));
 		}
+	}
+
+	@Test
+	void testLecternShape() {
+		BlockGetter level = net.minecraft.world.level.EmptyBlockGetter.INSTANCE;
+		BlockPos pos = BlockPos.ZERO;
+
+		// 1. topOf should return 1.125 for all horizontal facings
+		for (Direction facing : Direction.Plane.HORIZONTAL) {
+			BlockState lectern = Blocks.LECTERN.defaultBlockState().setValue(net.minecraft.world.level.block.LecternBlock.FACING, facing);
+			assertEquals(1.125, PaintSurface.topOf(level, pos, lectern), 1e-4);
+		}
+
+		// 2. Lectern facing SOUTH (front is SOUTH at plane=0.9375, top=0.875; back is NORTH at plane=0.125, top=1.125)
+		BlockState southLectern = Blocks.LECTERN.defaultBlockState().setValue(net.minecraft.world.level.block.LecternBlock.FACING, Direction.SOUTH);
+		int[] texels = new int[Canvas.TEXELS];
+		texels[2 * 16 + 8] = 0xFFFF0000;
+		Canvas canvas = new Canvas(texels, 1000L, 1200L);
+
+		// UP face
+		var upSplit = PaintSurface.splitCanvas(level, pos, southLectern, com.drinfonty.redfx.canvas.FaceAxes.UP, canvas);
+		assertEquals(1, upSplit.size());
+		assertEquals(1.125F, upSplit.get(0).surfaceY(), 1e-4F);
+
+		// SOUTH face (front lip)
+		var southSplit = PaintSurface.splitCanvas(level, pos, southLectern, com.drinfonty.redfx.canvas.FaceAxes.SOUTH, canvas);
+		assertEquals(1, southSplit.size());
+		assertEquals(0.875F, southSplit.get(0).surfaceY(), 1e-4F);
+		assertEquals(0.9375F, southSplit.get(0).facePlane(), 1e-4F);
+
+		// NORTH face (back)
+		var northSplit = PaintSurface.splitCanvas(level, pos, southLectern, com.drinfonty.redfx.canvas.FaceAxes.NORTH, canvas);
+		assertEquals(1, northSplit.size());
+		assertEquals(1.125F, northSplit.get(0).surfaceY(), 1e-4F);
+		assertEquals(0.125F, northSplit.get(0).facePlane(), 1e-4F);
+
+		// findEdge on southLectern
+		PaintSurface.BlockEdge southEdge = PaintSurface.findEdge(level, pos, southLectern, Direction.SOUTH, 8);
+		org.junit.jupiter.api.Assertions.assertNotNull(southEdge);
+		assertEquals(0.9375, southEdge.colPlane(), 1e-4);
+		assertEquals(0.875, southEdge.colTop(), 1e-4);
+
+		PaintSurface.BlockEdge northEdge = PaintSurface.findEdge(level, pos, southLectern, Direction.NORTH, 8);
+		org.junit.jupiter.api.Assertions.assertNotNull(northEdge);
+		assertEquals(0.125, northEdge.colPlane(), 1e-4);
+		assertEquals(1.125, northEdge.colTop(), 1e-4);
+
+		// 3. Lectern facing NORTH (front is NORTH at plane=0.0625, top=0.875; back is SOUTH at plane=0.875, top=1.125)
+		BlockState northLectern = Blocks.LECTERN.defaultBlockState().setValue(net.minecraft.world.level.block.LecternBlock.FACING, Direction.NORTH);
+		var northFaceSplit = PaintSurface.splitCanvas(level, pos, northLectern, com.drinfonty.redfx.canvas.FaceAxes.NORTH, canvas);
+		assertEquals(1, northFaceSplit.size());
+		assertEquals(0.875F, northFaceSplit.get(0).surfaceY(), 1e-4F);
+		assertEquals(0.0625F, northFaceSplit.get(0).facePlane(), 1e-4F);
+
+		var southFaceSplit = PaintSurface.splitCanvas(level, pos, northLectern, com.drinfonty.redfx.canvas.FaceAxes.SOUTH, canvas);
+		assertEquals(1, southFaceSplit.size());
+		assertEquals(1.125F, southFaceSplit.get(0).surfaceY(), 1e-4F);
+		assertEquals(0.875F, southFaceSplit.get(0).facePlane(), 1e-4F);
+
+		PaintSurface.BlockEdge northLecternNorthEdge = PaintSurface.findEdge(level, pos, northLectern, Direction.NORTH, 8);
+		org.junit.jupiter.api.Assertions.assertNotNull(northLecternNorthEdge);
+		assertEquals(0.0625, northLecternNorthEdge.colPlane(), 1e-4);
+		assertEquals(0.875, northLecternNorthEdge.colTop(), 1e-4);
+
+		PaintSurface.BlockEdge northLecternSouthEdge = PaintSurface.findEdge(level, pos, northLectern, Direction.SOUTH, 8);
+		org.junit.jupiter.api.Assertions.assertNotNull(northLecternSouthEdge);
+		assertEquals(0.875, northLecternSouthEdge.colPlane(), 1e-4);
+		assertEquals(1.125, northLecternSouthEdge.colTop(), 1e-4);
+
+		// 4. Lectern facing WEST (front is WEST at plane=0.0625, top=0.875; back is EAST at plane=0.875, top=1.125)
+		BlockState westLectern = Blocks.LECTERN.defaultBlockState().setValue(net.minecraft.world.level.block.LecternBlock.FACING, Direction.WEST);
+		var westFaceSplit = PaintSurface.splitCanvas(level, pos, westLectern, com.drinfonty.redfx.canvas.FaceAxes.WEST, canvas);
+		assertEquals(1, westFaceSplit.size());
+		assertEquals(0.875F, westFaceSplit.get(0).surfaceY(), 1e-4F);
+		assertEquals(0.0625F, westFaceSplit.get(0).facePlane(), 1e-4F);
+
+		var eastFaceSplit = PaintSurface.splitCanvas(level, pos, westLectern, com.drinfonty.redfx.canvas.FaceAxes.EAST, canvas);
+		assertEquals(1, eastFaceSplit.size());
+		assertEquals(1.125F, eastFaceSplit.get(0).surfaceY(), 1e-4F);
+		assertEquals(0.875F, eastFaceSplit.get(0).facePlane(), 1e-4F);
+
+		// 5. Lectern facing EAST (front is EAST at plane=0.9375, top=0.875; back is WEST at plane=0.125, top=1.125)
+		BlockState eastLectern = Blocks.LECTERN.defaultBlockState().setValue(net.minecraft.world.level.block.LecternBlock.FACING, Direction.EAST);
+		var eastLecternEastSplit = PaintSurface.splitCanvas(level, pos, eastLectern, com.drinfonty.redfx.canvas.FaceAxes.EAST, canvas);
+		assertEquals(1, eastLecternEastSplit.size());
+		assertEquals(0.875F, eastLecternEastSplit.get(0).surfaceY(), 1e-4F);
+		assertEquals(0.9375F, eastLecternEastSplit.get(0).facePlane(), 1e-4F);
+
+		var eastLecternWestSplit = PaintSurface.splitCanvas(level, pos, eastLectern, com.drinfonty.redfx.canvas.FaceAxes.WEST, canvas);
+		assertEquals(1, eastLecternWestSplit.size());
+		assertEquals(1.125F, eastLecternWestSplit.get(0).surfaceY(), 1e-4F);
+		assertEquals(0.125F, eastLecternWestSplit.get(0).facePlane(), 1e-4F);
 	}
 
 	@Test
