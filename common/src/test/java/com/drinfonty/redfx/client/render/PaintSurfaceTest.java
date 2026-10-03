@@ -2,6 +2,8 @@ package com.drinfonty.redfx.client.render;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.util.List;
+
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import net.minecraft.SharedConstants;
@@ -95,6 +97,86 @@ class PaintSurfaceTest {
 			assertEquals(PaintSurface.NONE, PaintSurface.topOf(level, pos, bush));
 			org.junit.jupiter.api.Assertions.assertTrue(PaintSurface.isIgnored(bush));
 		}
+	}
+
+	@Test
+	void testCavityAndLanternShapes() {
+		BlockGetter level = net.minecraft.world.level.EmptyBlockGetter.INSTANCE;
+		BlockPos pos = BlockPos.ZERO;
+
+		// 1. Lantern footprint & elevation
+		BlockState lantern = Blocks.LANTERN.defaultBlockState();
+		assertEquals(0.5625, PaintSurface.topOf(level, pos, lantern), 1e-4);
+		assertEquals(0.5625, PaintSurface.surfaceElevationAt(level, pos, lantern, 0.5, 0.5), 1e-4);
+		assertEquals(PaintSurface.NONE, PaintSurface.surfaceElevationAt(level, pos, lantern, 0.1, 0.1));
+
+		// 2. Stairs: findEdges for SOUTH should find riser (internal) and lower step (external)
+		BlockState stair = Blocks.OAK_STAIRS.defaultBlockState().setValue(net.minecraft.world.level.block.StairBlock.FACING, Direction.NORTH);
+		List<PaintSurface.BlockEdge> southEdges = PaintSurface.findEdges(level, pos, stair, Direction.SOUTH, 4);
+		assertEquals(2, southEdges.size());
+
+		PaintSurface.BlockEdge riserEdge = southEdges.stream().filter(PaintSurface.BlockEdge::isInternal).findFirst().orElseThrow();
+		assertEquals(0.5, riserEdge.colPlane(), 1e-4);
+		assertEquals(1.0, riserEdge.colTop(), 1e-4);
+		assertEquals(0.5, riserEdge.colBottom(), 1e-4);
+		assertEquals(7, riserEdge.edgeV());
+
+		PaintSurface.BlockEdge lowerStepEdge = southEdges.stream().filter(e -> !e.isInternal()).findFirst().orElseThrow();
+		assertEquals(1.0, lowerStepEdge.colPlane(), 1e-4);
+		assertEquals(0.5, lowerStepEdge.colTop(), 1e-4);
+		assertEquals(0.0, lowerStepEdge.colBottom(), 1e-4);
+		assertEquals(15, lowerStepEdge.edgeV());
+
+		// 3. Stairs splitCanvas:
+		// Upper step blood on topCanvas (v=4) -> SOUTH face decal lands on riser (plane=0.5, surfaceY=1.0)
+		int[] topRiserTexels = new int[Canvas.TEXELS];
+		topRiserTexels[4 * 16 + 4] = 0xFFFF0000;
+		Canvas topRiserCanvas = new Canvas(topRiserTexels, 1000L, 1200L);
+
+		int[] southDecalTexels = new int[Canvas.TEXELS];
+		southDecalTexels[2 * 16 + 4] = 0xFFFF0000;
+		Canvas southDecalCanvas = new Canvas(southDecalTexels, 1000L, 1200L);
+
+		var riserSplit = PaintSurface.splitCanvas(level, pos, stair, com.drinfonty.redfx.canvas.FaceAxes.SOUTH, southDecalCanvas, topRiserCanvas);
+		assertEquals(1, riserSplit.size());
+		assertEquals(0.5F, riserSplit.get(0).facePlane(), 1e-4F);
+		assertEquals(1.0F, riserSplit.get(0).surfaceY(), 1e-4F);
+
+		// Lower step blood on topCanvas (v=12) -> SOUTH face decal lands on outer lower step (plane=1.0, surfaceY=0.5)
+		int[] topLowerTexels = new int[Canvas.TEXELS];
+		topLowerTexels[12 * 16 + 4] = 0xFFFF0000;
+		Canvas topLowerCanvas = new Canvas(topLowerTexels, 1000L, 1200L);
+
+		var lowerSplit = PaintSurface.splitCanvas(level, pos, stair, com.drinfonty.redfx.canvas.FaceAxes.SOUTH, southDecalCanvas, topLowerCanvas);
+		assertEquals(1, lowerSplit.size());
+		assertEquals(1.0F, lowerSplit.get(0).facePlane(), 1e-4F);
+		assertEquals(0.5F, lowerSplit.get(0).surfaceY(), 1e-4F);
+
+		// 4. Composter: findEdges for SOUTH should find inner north rim (internal) and outer south rim (external)
+		BlockState composter = Blocks.COMPOSTER.defaultBlockState();
+		List<PaintSurface.BlockEdge> composterSouthEdges = PaintSurface.findEdges(level, pos, composter, Direction.SOUTH, 4);
+		assertEquals(2, composterSouthEdges.size());
+
+		PaintSurface.BlockEdge innerWallEdge = composterSouthEdges.stream().filter(PaintSurface.BlockEdge::isInternal).findFirst().orElseThrow();
+		assertEquals(0.125, innerWallEdge.colPlane(), 1e-4);
+		assertEquals(1.0, innerWallEdge.colTop(), 1e-4);
+		assertEquals(0.125, innerWallEdge.colBottom(), 1e-4);
+
+		PaintSurface.BlockEdge outerWallEdge = composterSouthEdges.stream().filter(e -> !e.isInternal()).findFirst().orElseThrow();
+		assertEquals(1.0, outerWallEdge.colPlane(), 1e-4);
+		assertEquals(1.0, outerWallEdge.colTop(), 1e-4);
+		assertEquals(0.125, outerWallEdge.colBottom(), 1e-4);
+
+		// 5. Composter splitCanvas:
+		// North rim blood on topCanvas (v=1) -> SOUTH face decal lands on inner north wall (plane=0.125, surfaceY=1.0)
+		int[] composterNorthRimTexels = new int[Canvas.TEXELS];
+		composterNorthRimTexels[1 * 16 + 4] = 0xFFFF0000;
+		Canvas composterTopCanvas = new Canvas(composterNorthRimTexels, 1000L, 1200L);
+
+		var innerSplit = PaintSurface.splitCanvas(level, pos, composter, com.drinfonty.redfx.canvas.FaceAxes.SOUTH, southDecalCanvas, composterTopCanvas);
+		assertEquals(1, innerSplit.size());
+		assertEquals(0.125F, innerSplit.get(0).facePlane(), 1e-4F);
+		assertEquals(1.0F, innerSplit.get(0).surfaceY(), 1e-4F);
 	}
 
 	@Test
