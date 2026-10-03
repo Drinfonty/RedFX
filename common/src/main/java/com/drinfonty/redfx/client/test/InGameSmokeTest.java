@@ -780,6 +780,28 @@ public final class InGameSmokeTest {
 			throw new AssertionError("Expected lectern topOf=1.125, got " + PaintSurface.topOf(client.level, origin, lecternState));
 		}
 
+		// Stair riser split verification
+		int[] stairRiserTopTexels = new int[Canvas.TEXELS];
+		stairRiserTopTexels[4 * 16 + 4] = red;
+		Canvas stairRiserTopCanvas = new Canvas(stairRiserTopTexels, System.currentTimeMillis() + 60000L);
+		int[] stairRiserSideTexels = new int[Canvas.TEXELS];
+		stairRiserSideTexels[2 * 16 + 4] = red;
+		Canvas stairRiserSideCanvas = new Canvas(stairRiserSideTexels, System.currentTimeMillis() + 60000L);
+		List<PaintSurface.SurfaceCanvas> riserSplit = PaintSurface.splitCanvas(client.level, origin, stairState, FaceAxes.SOUTH, stairRiserSideCanvas, stairRiserTopCanvas);
+		if (riserSplit.size() != 1 || Math.abs(riserSplit.get(0).surfaceY() - 1.0F) > 0.001F || Math.abs(riserSplit.get(0).facePlane() - 0.5F) > 0.001F) {
+			throw new AssertionError("Expected stair riser split Y=1.0 plane=0.5, got " + (riserSplit.isEmpty() ? "empty" : (riserSplit.get(0).surfaceY() + ", " + riserSplit.get(0).facePlane())));
+		}
+
+		// Composter inner cavity split verification
+		BlockState composterState = Blocks.COMPOSTER.defaultBlockState();
+		int[] composterTopTexels = new int[Canvas.TEXELS];
+		composterTopTexels[1 * 16 + 4] = red;
+		Canvas composterTopCanvas = new Canvas(composterTopTexels, System.currentTimeMillis() + 60000L);
+		List<PaintSurface.SurfaceCanvas> composterInnerSplit = PaintSurface.splitCanvas(client.level, origin, composterState, FaceAxes.SOUTH, stairRiserSideCanvas, composterTopCanvas);
+		if (composterInnerSplit.size() != 1 || Math.abs(composterInnerSplit.get(0).surfaceY() - 1.0F) > 0.001F || Math.abs(composterInnerSplit.get(0).facePlane() - 0.125F) > 0.001F) {
+			throw new AssertionError("Expected composter inner wall split Y=1.0 plane=0.125, got " + (composterInnerSplit.isEmpty() ? "empty" : (composterInnerSplit.get(0).surfaceY() + ", " + composterInnerSplit.get(0).facePlane())));
+		}
+
 		// Corners projection
 		float[] corners = new float[12];
 		PaintGeometry.corners(stoneQuads.get(0), corners, 1.0F);

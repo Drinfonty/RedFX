@@ -22,6 +22,7 @@ import net.minecraft.world.level.block.BushBlock;
 import net.minecraft.world.level.block.CactusBlock;
 import net.minecraft.world.level.block.GrowingPlantBlock;
 import net.minecraft.world.level.block.HangingRootsBlock;
+import com.drinfonty.redfx.client.ClientCanvasStore;
 import net.minecraft.world.level.block.LeavesBlock;
 import net.minecraft.world.level.block.SnowLayerBlock;
 import net.minecraft.world.level.block.SporeBlossomBlock;
@@ -48,7 +49,10 @@ public final class PaintSurface {
 	public record FacePlaneInfo(float facePlane, float surfaceY) {
 	}
 
-	public record BlockEdge(int edgeU, int edgeV, double colTop, double colBottom, double colPlane) {
+	public record BlockEdge(int edgeU, int edgeV, double colTop, double colBottom, double colPlane, boolean isInternal) {
+		public BlockEdge(int edgeU, int edgeV, double colTop, double colBottom, double colPlane) {
+			this(edgeU, edgeV, colTop, colBottom, colPlane, false);
+		}
 	}
 
 	private PaintSurface() {
@@ -250,14 +254,14 @@ public final class PaintSurface {
 		};
 	}
 
-	public static BlockEdge findEdge(BlockGetter level, BlockPos pos, BlockState state, Direction hDir, int coord) {
-		if (state == null || state.isAir()) return null;
+	public static List<BlockEdge> findEdges(BlockGetter level, BlockPos pos, BlockState state, Direction hDir, int coord) {
+		if (state == null || state.isAir()) return List.of();
 
 		BlockGetter bg = level != null ? level : EmptyBlockGetter.INSTANCE;
 		BlockPos bp = pos != null ? pos : BlockPos.ZERO;
 
 		VoxelShape shape = state.getShape(bg, bp);
-		if (shape.isEmpty()) return null;
+		if (shape.isEmpty()) return List.of();
 
 		double tangent = (coord + 0.5) / (double) Canvas.SIZE;
 		List<AABB> boxes = shape.toAabbs();
@@ -274,10 +278,11 @@ public final class PaintSurface {
 			}
 		}
 
-		if (maxTop == NONE) return null;
+		if (maxTop == NONE) return List.of();
 
 		boolean hasUpperStructure = maxTop > 0.35;
-		AABB bestBox = null;
+		List<BlockEdge> edges = new ArrayList<>(2);
+		AABB bestOuterBox = null;
 
 		for (AABB box : boxes) {
 			boolean tangentMatch = switch (hDir) {
@@ -291,8 +296,65 @@ public final class PaintSurface {
 				continue;
 			}
 
-			if (bestBox == null) {
-				bestBox = box;
+			// Check for internal vertical drop (e.g. stair riser, composter/cauldron/hopper cavity wall)
+			double testOffset = 0.05;
+			double testX = tangent;
+			double testZ = tangent;
+			boolean canTestInternal = false;
+
+			switch (hDir) {
+				case NORTH -> {
+					testZ = box.minZ - testOffset;
+					canTestInternal = testZ >= 0.0 && box.minZ > 0.05;
+				}
+				case SOUTH -> {
+					testZ = box.maxZ + testOffset;
+					canTestInternal = testZ <= 1.0 && box.maxZ < 0.95;
+				}
+				case WEST -> {
+					testX = box.minX - testOffset;
+					canTestInternal = testX >= 0.0 && box.minX > 0.05;
+				}
+				case EAST -> {
+					testX = box.maxX + testOffset;
+					canTestInternal = testX <= 1.0 && box.maxX < 0.95;
+				}
+			}
+
+			if (canTestInternal) {
+				double internalFloor = surfaceElevationAt(bg, bp, state, testX, testZ);
+				if (internalFloor != NONE && internalFloor < box.maxY - 0.05) {
+					int edgeU, edgeV;
+					double colPlane;
+					switch (hDir) {
+						case NORTH -> {
+							edgeU = coord;
+							edgeV = Math.clamp((int) Math.floor(box.minZ * 16.0), 0, 15);
+							colPlane = box.minZ;
+						}
+						case SOUTH -> {
+							edgeU = coord;
+							edgeV = Math.clamp((int) Math.floor(box.maxZ * 16.0 - 1e-4), 0, 15);
+							colPlane = box.maxZ;
+						}
+						case WEST -> {
+							edgeU = Math.clamp((int) Math.floor(box.minX * 16.0), 0, 15);
+							edgeV = coord;
+							colPlane = box.minX;
+						}
+						case EAST -> {
+							edgeU = Math.clamp((int) Math.floor(box.maxX * 16.0 - 1e-4), 0, 15);
+							edgeV = coord;
+							colPlane = box.maxX;
+						}
+						default -> throw new IllegalArgumentException("invalid horizontal direction: " + hDir);
+					}
+					edges.add(new BlockEdge(edgeU, edgeV, box.maxY, internalFloor, colPlane, true));
+				}
+			}
+
+			if (bestOuterBox == null) {
+				bestOuterBox = box;
 				continue;
 			}
 
@@ -304,10 +366,10 @@ public final class PaintSurface {
 				default -> 0.0;
 			};
 			double bestPlane = switch (hDir) {
-				case NORTH -> bestBox.minZ;
-				case SOUTH -> bestBox.maxZ;
-				case WEST -> bestBox.minX;
-				case EAST -> bestBox.maxX;
+				case NORTH -> bestOuterBox.minZ;
+				case SOUTH -> bestOuterBox.maxZ;
+				case WEST -> bestOuterBox.minX;
+				case EAST -> bestOuterBox.maxX;
 				default -> 0.0;
 			};
 
@@ -315,56 +377,79 @@ public final class PaintSurface {
 			if (hDir == Direction.NORTH || hDir == Direction.WEST) {
 				if (boxPlane < bestPlane - 1e-4) {
 					isBetter = true;
-				} else if (Math.abs(boxPlane - bestPlane) <= 1e-4 && box.maxY > bestBox.maxY + 1e-4) {
+				} else if (Math.abs(boxPlane - bestPlane) <= 1e-4 && box.maxY > bestOuterBox.maxY + 1e-4) {
 					isBetter = true;
 				}
 			} else {
 				if (boxPlane > bestPlane + 1e-4) {
 					isBetter = true;
-				} else if (Math.abs(boxPlane - bestPlane) <= 1e-4 && box.maxY > bestBox.maxY + 1e-4) {
+				} else if (Math.abs(boxPlane - bestPlane) <= 1e-4 && box.maxY > bestOuterBox.maxY + 1e-4) {
 					isBetter = true;
 				}
 			}
 
 			if (isBetter) {
-				bestBox = box;
+				bestOuterBox = box;
 			}
 		}
 
-		if (bestBox == null) return null;
+		if (bestOuterBox != null) {
+			int edgeU;
+			int edgeV;
+			double colPlane;
 
-		int edgeU;
-		int edgeV;
-		double colPlane;
+			switch (hDir) {
+				case NORTH -> {
+					edgeU = coord;
+					edgeV = Math.clamp((int) Math.floor(bestOuterBox.minZ * 16.0), 0, 15);
+					colPlane = bestOuterBox.minZ;
+				}
+				case SOUTH -> {
+					edgeU = coord;
+					edgeV = Math.clamp((int) Math.floor(bestOuterBox.maxZ * 16.0 - 1e-4), 0, 15);
+					colPlane = bestOuterBox.maxZ;
+				}
+				case WEST -> {
+					edgeU = Math.clamp((int) Math.floor(bestOuterBox.minX * 16.0), 0, 15);
+					edgeV = coord;
+					colPlane = bestOuterBox.minX;
+				}
+				case EAST -> {
+					edgeU = Math.clamp((int) Math.floor(bestOuterBox.maxX * 16.0 - 1e-4), 0, 15);
+					edgeV = coord;
+					colPlane = bestOuterBox.maxX;
+				}
+				default -> throw new IllegalArgumentException("invalid horizontal direction: " + hDir);
+			}
 
-		switch (hDir) {
-			case NORTH -> {
-				edgeU = coord;
-				edgeV = Math.clamp((int) Math.floor(bestBox.minZ * 16.0), 0, 15);
-				colPlane = bestBox.minZ;
-			}
-			case SOUTH -> {
-				edgeU = coord;
-				edgeV = Math.clamp((int) Math.floor(bestBox.maxZ * 16.0 - 1e-4), 0, 15);
-				colPlane = bestBox.maxZ;
-			}
-			case WEST -> {
-				edgeU = Math.clamp((int) Math.floor(bestBox.minX * 16.0), 0, 15);
-				edgeV = coord;
-				colPlane = bestBox.minX;
-			}
-			case EAST -> {
-				edgeU = Math.clamp((int) Math.floor(bestBox.maxX * 16.0 - 1e-4), 0, 15);
-				edgeV = coord;
-				colPlane = bestBox.maxX;
-			}
-			default -> throw new IllegalArgumentException("invalid horizontal direction: " + hDir);
+			edges.add(new BlockEdge(edgeU, edgeV, bestOuterBox.maxY, bestOuterBox.minY, colPlane, false));
 		}
 
-		return new BlockEdge(edgeU, edgeV, bestBox.maxY, bestBox.minY, colPlane);
+		return edges;
+	}
+
+	public static BlockEdge findEdge(BlockGetter level, BlockPos pos, BlockState state, Direction hDir, int coord) {
+		List<BlockEdge> edges = findEdges(level, pos, state, hDir, coord);
+		if (edges.isEmpty()) return null;
+		for (BlockEdge e : edges) {
+			if (!e.isInternal()) return e;
+		}
+		return edges.get(0);
 	}
 
 	public static List<SurfaceCanvas> splitCanvas(BlockGetter level, BlockPos pos, BlockState state, int face, Canvas canvas) {
+		Canvas topCanvas = null;
+		try {
+			ClientCanvasStore store = ClientCanvasStore.get();
+			if (store != null && pos != null) {
+				topCanvas = store.get(pos, FaceAxes.UP);
+			}
+		} catch (Throwable ignored) {
+		}
+		return splitCanvas(level, pos, state, face, canvas, topCanvas);
+	}
+
+	public static List<SurfaceCanvas> splitCanvas(BlockGetter level, BlockPos pos, BlockState state, int face, Canvas canvas, Canvas topCanvas) {
 		if (state == null || state.isAir() || isIgnored(state)) {
 			return List.of();
 		}
@@ -454,8 +539,52 @@ public final class PaintSurface {
 					}
 					boolean hasUpperStructure = maxTop > 0.35;
 
-					AABB bestBox = null;
+					boolean hasInternalBlood = false;
+					boolean hasOuterBlood = false;
 
+					if (topCanvas != null) {
+						int[] topT = topCanvas.texels();
+						switch (face) {
+							case FaceAxes.SOUTH -> {
+								int uCoord = pu;
+								for (int v = 0; v <= 7; v++) {
+									if (topT[v * Canvas.SIZE + uCoord] != 0) { hasInternalBlood = true; break; }
+								}
+								for (int v = 8; v < Canvas.SIZE; v++) {
+									if (topT[v * Canvas.SIZE + uCoord] != 0) { hasOuterBlood = true; break; }
+								}
+							}
+							case FaceAxes.NORTH -> {
+								int uCoord = 15 - pu;
+								for (int v = 8; v < Canvas.SIZE; v++) {
+									if (topT[v * Canvas.SIZE + uCoord] != 0) { hasInternalBlood = true; break; }
+								}
+								for (int v = 0; v <= 7; v++) {
+									if (topT[v * Canvas.SIZE + uCoord] != 0) { hasOuterBlood = true; break; }
+								}
+							}
+							case FaceAxes.WEST -> {
+								int vCoord = pu;
+								for (int un = 8; un < Canvas.SIZE; un++) {
+									if (topT[vCoord * Canvas.SIZE + un] != 0) { hasInternalBlood = true; break; }
+								}
+								for (int un = 0; un <= 7; un++) {
+									if (topT[vCoord * Canvas.SIZE + un] != 0) { hasOuterBlood = true; break; }
+								}
+							}
+							case FaceAxes.EAST -> {
+								int vCoord = 15 - pu;
+								for (int un = 0; un <= 7; un++) {
+									if (topT[vCoord * Canvas.SIZE + un] != 0) { hasInternalBlood = true; break; }
+								}
+								for (int un = 8; un < Canvas.SIZE; un++) {
+									if (topT[vCoord * Canvas.SIZE + un] != 0) { hasOuterBlood = true; break; }
+								}
+							}
+						}
+					}
+
+					List<AABB> candidateBoxes = new ArrayList<>();
 					for (AABB box : boxes) {
 						boolean tangentMatch = switch (face) {
 							case FaceAxes.NORTH, FaceAxes.SOUTH -> tangent >= box.minX - 1e-4 && tangent <= box.maxX + 1e-4;
@@ -463,75 +592,41 @@ public final class PaintSurface {
 							default -> false;
 						};
 						if (!tangentMatch) continue;
+						if (hasUpperStructure && box.maxY <= 0.25 + 1e-4) continue;
+						candidateBoxes.add(box);
+					}
+					if (candidateBoxes.isEmpty()) continue;
 
-						boolean outerHalf = switch (face) {
-							case FaceAxes.NORTH -> box.minZ < 0.5 - 1e-4;
-							case FaceAxes.SOUTH -> box.maxZ > 0.5 + 1e-4;
-							case FaceAxes.WEST -> box.minX < 0.5 - 1e-4;
-							case FaceAxes.EAST -> box.maxX > 0.5 + 1e-4;
-							default -> true;
-						};
-						if (!outerHalf) continue;
-
-						if (hasUpperStructure && box.maxY <= 0.25 + 1e-4) {
-							continue;
+					List<AABB> chosenBoxes = new ArrayList<>(2);
+					if (hasInternalBlood && !hasOuterBlood) {
+						for (AABB b : candidateBoxes) {
+							if (isInternalBox(b, face)) chosenBoxes.add(b);
 						}
-
-						if (bestBox == null) {
-							bestBox = box;
-							continue;
+					} else if (hasOuterBlood && !hasInternalBlood) {
+						for (AABB b : candidateBoxes) {
+							if (!isInternalBox(b, face)) chosenBoxes.add(b);
 						}
-
-						double boxPlane = switch (face) {
-							case FaceAxes.NORTH -> box.minZ;
-							case FaceAxes.SOUTH -> box.maxZ;
-							case FaceAxes.WEST -> box.minX;
-							case FaceAxes.EAST -> box.maxX;
-							default -> 0.0;
-						};
-						double currentBestPlane = switch (face) {
-							case FaceAxes.NORTH -> bestBox.minZ;
-							case FaceAxes.SOUTH -> bestBox.maxZ;
-							case FaceAxes.WEST -> bestBox.minX;
-							case FaceAxes.EAST -> bestBox.maxX;
-							default -> 0.0;
-						};
-
-						boolean isBetter = false;
-						if (face == FaceAxes.NORTH || face == FaceAxes.WEST) {
-							if (boxPlane < currentBestPlane - 1e-4) {
-								isBetter = true;
-							} else if (Math.abs(boxPlane - currentBestPlane) <= 1e-4 && box.maxY > bestBox.maxY + 1e-4) {
-								isBetter = true;
-							}
-						} else {
-							if (boxPlane > currentBestPlane + 1e-4) {
-								isBetter = true;
-							} else if (Math.abs(boxPlane - currentBestPlane) <= 1e-4 && box.maxY > bestBox.maxY + 1e-4) {
-								isBetter = true;
-							}
-						}
-
-						if (isBetter) {
-							bestBox = box;
-						}
+					} else if (hasInternalBlood && hasOuterBlood) {
+						chosenBoxes.addAll(candidateBoxes);
 					}
 
-					// Fallback if no box is strictly in the outer half
-					if (bestBox == null) {
-						for (AABB box : boxes) {
-							boolean tangentMatch = switch (face) {
-								case FaceAxes.NORTH, FaceAxes.SOUTH -> tangent >= box.minX - 1e-4 && tangent <= box.maxX + 1e-4;
-								case FaceAxes.WEST, FaceAxes.EAST -> tangent >= box.minZ - 1e-4 && tangent <= box.maxZ + 1e-4;
-								default -> false;
+					// Fallback if nothing was chosen by topCanvas preference
+					if (chosenBoxes.isEmpty()) {
+						AABB bestBox = null;
+						for (AABB box : candidateBoxes) {
+							boolean outerHalf = switch (face) {
+								case FaceAxes.NORTH -> box.minZ < 0.5 - 1e-4;
+								case FaceAxes.SOUTH -> box.maxZ > 0.5 + 1e-4;
+								case FaceAxes.WEST -> box.minX < 0.5 - 1e-4;
+								case FaceAxes.EAST -> box.maxX > 0.5 + 1e-4;
+								default -> true;
 							};
-							if (!tangentMatch) continue;
+							if (!outerHalf) continue;
 
 							if (bestBox == null) {
 								bestBox = box;
 								continue;
 							}
-
 							double boxPlane = switch (face) {
 								case FaceAxes.NORTH -> box.minZ;
 								case FaceAxes.SOUTH -> box.maxZ;
@@ -546,7 +641,6 @@ public final class PaintSurface {
 								case FaceAxes.EAST -> bestBox.maxX;
 								default -> 0.0;
 							};
-
 							boolean isBetter = false;
 							if (face == FaceAxes.NORTH || face == FaceAxes.WEST) {
 								if (boxPlane < currentBestPlane - 1e-4) {
@@ -561,61 +655,94 @@ public final class PaintSurface {
 									isBetter = true;
 								}
 							}
+							if (isBetter) bestBox = box;
+						}
 
-							if (isBetter) {
-								bestBox = box;
+						if (bestBox == null) {
+							for (AABB box : candidateBoxes) {
+								if (bestBox == null) {
+									bestBox = box;
+									continue;
+								}
+								double boxPlane = switch (face) {
+									case FaceAxes.NORTH -> box.minZ;
+									case FaceAxes.SOUTH -> box.maxZ;
+									case FaceAxes.WEST -> box.minX;
+									case FaceAxes.EAST -> box.maxX;
+									default -> 0.0;
+								};
+								double currentBestPlane = switch (face) {
+									case FaceAxes.NORTH -> bestBox.minZ;
+									case FaceAxes.SOUTH -> bestBox.maxZ;
+									case FaceAxes.WEST -> bestBox.minX;
+									case FaceAxes.EAST -> bestBox.maxX;
+									default -> 0.0;
+								};
+								boolean isBetter = false;
+								if (face == FaceAxes.NORTH || face == FaceAxes.WEST) {
+									if (boxPlane < currentBestPlane - 1e-4) {
+										isBetter = true;
+									} else if (Math.abs(boxPlane - currentBestPlane) <= 1e-4 && box.maxY > bestBox.maxY + 1e-4) {
+										isBetter = true;
+									}
+								} else {
+									if (boxPlane > currentBestPlane + 1e-4) {
+										isBetter = true;
+									} else if (Math.abs(boxPlane - currentBestPlane) <= 1e-4 && box.maxY > bestBox.maxY + 1e-4) {
+										isBetter = true;
+									}
+								}
+								if (isBetter) bestBox = box;
 							}
+						}
+
+						if (bestBox != null) {
+							chosenBoxes.add(bestBox);
 						}
 					}
 
-					if (bestBox == null) {
-						continue;
-					}
-
-					double plane = switch (face) {
-						case FaceAxes.NORTH -> bestBox.minZ;
-						case FaceAxes.SOUTH -> bestBox.maxZ;
-						case FaceAxes.WEST -> bestBox.minX;
-						case FaceAxes.EAST -> bestBox.maxX;
-						default -> 0.0;
-					};
-					double top = bestBox.maxY;
-
-					double pixelY = top - (pv + 0.5) / (double) Canvas.SIZE;
-
-					// Verify pixelY lies on a box surface sharing this face plane at this tangent
-					boolean onFace = false;
-					for (AABB box : boxes) {
-						boolean tangentMatch = switch (face) {
-							case FaceAxes.NORTH, FaceAxes.SOUTH -> tangent >= box.minX - 1e-4 && tangent <= box.maxX + 1e-4;
-							case FaceAxes.WEST, FaceAxes.EAST -> tangent >= box.minZ - 1e-4 && tangent <= box.maxZ + 1e-4;
-							default -> false;
-						};
-						if (!tangentMatch) continue;
-
-						double boxPlane = switch (face) {
-							case FaceAxes.NORTH -> box.minZ;
-							case FaceAxes.SOUTH -> box.maxZ;
-							case FaceAxes.WEST -> box.minX;
-							case FaceAxes.EAST -> box.maxX;
+					for (AABB targetBox : chosenBoxes) {
+						double plane = switch (face) {
+							case FaceAxes.NORTH -> targetBox.minZ;
+							case FaceAxes.SOUTH -> targetBox.maxZ;
+							case FaceAxes.WEST -> targetBox.minX;
+							case FaceAxes.EAST -> targetBox.maxX;
 							default -> 0.0;
 						};
-						if (Math.abs(boxPlane - plane) < 1e-4) {
-							if (pixelY >= box.minY - 0.03 && pixelY <= box.maxY + 0.03) {
-								onFace = true;
-								break;
+						double top = targetBox.maxY;
+						double pixelY = top - (pv + 0.5) / (double) Canvas.SIZE;
+
+						boolean onFace = false;
+						for (AABB box : boxes) {
+							boolean tangentMatch = switch (face) {
+								case FaceAxes.NORTH, FaceAxes.SOUTH -> tangent >= box.minX - 1e-4 && tangent <= box.maxX + 1e-4;
+								case FaceAxes.WEST, FaceAxes.EAST -> tangent >= box.minZ - 1e-4 && tangent <= box.maxZ + 1e-4;
+								default -> false;
+							};
+							if (!tangentMatch) continue;
+
+							double boxPlane = switch (face) {
+								case FaceAxes.NORTH -> box.minZ;
+								case FaceAxes.SOUTH -> box.maxZ;
+								case FaceAxes.WEST -> box.minX;
+								case FaceAxes.EAST -> box.maxX;
+								default -> 0.0;
+							};
+							if (Math.abs(boxPlane - plane) < 1e-4) {
+								if (pixelY >= box.minY - 0.03 && pixelY <= box.maxY + 0.03) {
+									onFace = true;
+									break;
+								}
 							}
 						}
-					}
 
-					if (!onFace) {
-						continue;
-					}
+						if (!onFace) continue;
 
-					float surfaceY = (float) (Math.round(top * 10000.0) / 10000.0);
-					float facePlane = (float) (Math.round(plane * 10000.0) / 10000.0);
-					FacePlaneInfo key = new FacePlaneInfo(facePlane, surfaceY);
-					planes.computeIfAbsent(key, k -> new int[Canvas.TEXELS])[idx] = col;
+						float surfaceY = (float) (Math.round(top * 10000.0) / 10000.0);
+						float facePlane = (float) (Math.round(plane * 10000.0) / 10000.0);
+						FacePlaneInfo key = new FacePlaneInfo(facePlane, surfaceY);
+						planes.computeIfAbsent(key, k -> new int[Canvas.TEXELS])[idx] = col;
+					}
 				}
 			}
 		}
@@ -653,5 +780,15 @@ public final class PaintSurface {
 
 	public static float planeFor(BlockGetter level, BlockPos pos, BlockState state, Direction face) {
 		return (float) planeFor(level, pos, state, face.get3DDataValue());
+	}
+
+	private static boolean isInternalBox(AABB box, int face) {
+		return switch (face) {
+			case FaceAxes.NORTH -> box.minZ > 0.05;
+			case FaceAxes.SOUTH -> box.maxZ < 0.95;
+			case FaceAxes.WEST -> box.minX > 0.05;
+			case FaceAxes.EAST -> box.maxX < 0.95;
+			default -> false;
+		};
 	}
 }
