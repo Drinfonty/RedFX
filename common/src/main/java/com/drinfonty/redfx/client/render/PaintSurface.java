@@ -103,7 +103,7 @@ public final class PaintSurface {
 
 		AABB bounds = shape.bounds();
 		if (bounds.minX < 0.0 || bounds.minY < 0.0 || bounds.minZ < 0.0
-			|| bounds.maxX > 1.0 || bounds.maxZ > 1.0 || bounds.maxY > 1.0) {
+			|| bounds.maxX > 1.0 || bounds.maxZ > 1.0 || bounds.maxY > 1.25) {
 			return NONE;
 		}
 
@@ -260,11 +260,26 @@ public final class PaintSurface {
 		if (shape.isEmpty()) return null;
 
 		double tangent = (coord + 0.5) / (double) Canvas.SIZE;
+		List<AABB> boxes = shape.toAabbs();
 
+		double maxTop = NONE;
+		for (AABB box : boxes) {
+			boolean tangentMatch = switch (hDir) {
+				case NORTH, SOUTH -> tangent >= box.minX - 1e-4 && tangent <= box.maxX + 1e-4;
+				case WEST, EAST -> tangent >= box.minZ - 1e-4 && tangent <= box.maxZ + 1e-4;
+				default -> false;
+			};
+			if (tangentMatch && box.maxY > maxTop) {
+				maxTop = box.maxY;
+			}
+		}
+
+		if (maxTop == NONE) return null;
+
+		boolean hasUpperStructure = maxTop > 0.35;
 		AABB bestBox = null;
-		double bestTop = NONE;
 
-		for (AABB box : shape.toAabbs()) {
+		for (AABB box : boxes) {
 			boolean tangentMatch = switch (hDir) {
 				case NORTH, SOUTH -> tangent >= box.minX - 1e-4 && tangent <= box.maxX + 1e-4;
 				case WEST, EAST -> tangent >= box.minZ - 1e-4 && tangent <= box.maxZ + 1e-4;
@@ -272,8 +287,46 @@ public final class PaintSurface {
 			};
 			if (!tangentMatch) continue;
 
-			if (box.maxY > bestTop) {
-				bestTop = box.maxY;
+			if (hasUpperStructure && box.maxY <= 0.25 + 1e-4) {
+				continue;
+			}
+
+			if (bestBox == null) {
+				bestBox = box;
+				continue;
+			}
+
+			double boxPlane = switch (hDir) {
+				case NORTH -> box.minZ;
+				case SOUTH -> box.maxZ;
+				case WEST -> box.minX;
+				case EAST -> box.maxX;
+				default -> 0.0;
+			};
+			double bestPlane = switch (hDir) {
+				case NORTH -> bestBox.minZ;
+				case SOUTH -> bestBox.maxZ;
+				case WEST -> bestBox.minX;
+				case EAST -> bestBox.maxX;
+				default -> 0.0;
+			};
+
+			boolean isBetter = false;
+			if (hDir == Direction.NORTH || hDir == Direction.WEST) {
+				if (boxPlane < bestPlane - 1e-4) {
+					isBetter = true;
+				} else if (Math.abs(boxPlane - bestPlane) <= 1e-4 && box.maxY > bestBox.maxY + 1e-4) {
+					isBetter = true;
+				}
+			} else {
+				if (boxPlane > bestPlane + 1e-4) {
+					isBetter = true;
+				} else if (Math.abs(boxPlane - bestPlane) <= 1e-4 && box.maxY > bestBox.maxY + 1e-4) {
+					isBetter = true;
+				}
+			}
+
+			if (isBetter) {
 				bestBox = box;
 			}
 		}
@@ -388,8 +441,20 @@ public final class PaintSurface {
 						default -> u;
 					};
 
+					double maxTop = NONE;
+					for (AABB box : boxes) {
+						boolean tangentMatch = switch (face) {
+							case FaceAxes.NORTH, FaceAxes.SOUTH -> tangent >= box.minX - 1e-4 && tangent <= box.maxX + 1e-4;
+							case FaceAxes.WEST, FaceAxes.EAST -> tangent >= box.minZ - 1e-4 && tangent <= box.maxZ + 1e-4;
+							default -> false;
+						};
+						if (tangentMatch && box.maxY > maxTop) {
+							maxTop = box.maxY;
+						}
+					}
+					boolean hasUpperStructure = maxTop > 0.35;
+
 					AABB bestBox = null;
-					double bestTop = NONE;
 
 					for (AABB box : boxes) {
 						boolean tangentMatch = switch (face) {
@@ -408,35 +473,46 @@ public final class PaintSurface {
 						};
 						if (!outerHalf) continue;
 
-						boolean isBetter = false;
+						if (hasUpperStructure && box.maxY <= 0.25 + 1e-4) {
+							continue;
+						}
+
 						if (bestBox == null) {
-							isBetter = true;
-						} else if (box.maxY > bestTop + 1e-4) {
-							isBetter = true;
-						} else if (Math.abs(box.maxY - bestTop) <= 1e-4) {
-							double boxPlane = switch (face) {
-								case FaceAxes.NORTH -> box.minZ;
-								case FaceAxes.SOUTH -> box.maxZ;
-								case FaceAxes.WEST -> box.minX;
-								case FaceAxes.EAST -> box.maxX;
-								default -> 0.0;
-							};
-							double currentBestPlane = switch (face) {
-								case FaceAxes.NORTH -> bestBox.minZ;
-								case FaceAxes.SOUTH -> bestBox.maxZ;
-								case FaceAxes.WEST -> bestBox.minX;
-								case FaceAxes.EAST -> bestBox.maxX;
-								default -> 0.0;
-							};
-							if (face == FaceAxes.NORTH || face == FaceAxes.WEST) {
-								isBetter = boxPlane < currentBestPlane - 1e-4;
-							} else {
-								isBetter = boxPlane > currentBestPlane + 1e-4;
+							bestBox = box;
+							continue;
+						}
+
+						double boxPlane = switch (face) {
+							case FaceAxes.NORTH -> box.minZ;
+							case FaceAxes.SOUTH -> box.maxZ;
+							case FaceAxes.WEST -> box.minX;
+							case FaceAxes.EAST -> box.maxX;
+							default -> 0.0;
+						};
+						double currentBestPlane = switch (face) {
+							case FaceAxes.NORTH -> bestBox.minZ;
+							case FaceAxes.SOUTH -> bestBox.maxZ;
+							case FaceAxes.WEST -> bestBox.minX;
+							case FaceAxes.EAST -> bestBox.maxX;
+							default -> 0.0;
+						};
+
+						boolean isBetter = false;
+						if (face == FaceAxes.NORTH || face == FaceAxes.WEST) {
+							if (boxPlane < currentBestPlane - 1e-4) {
+								isBetter = true;
+							} else if (Math.abs(boxPlane - currentBestPlane) <= 1e-4 && box.maxY > bestBox.maxY + 1e-4) {
+								isBetter = true;
+							}
+						} else {
+							if (boxPlane > currentBestPlane + 1e-4) {
+								isBetter = true;
+							} else if (Math.abs(boxPlane - currentBestPlane) <= 1e-4 && box.maxY > bestBox.maxY + 1e-4) {
+								isBetter = true;
 							}
 						}
 
 						if (isBetter) {
-							bestTop = box.maxY;
 							bestBox = box;
 						}
 					}
@@ -451,35 +527,42 @@ public final class PaintSurface {
 							};
 							if (!tangentMatch) continue;
 
-							boolean isBetter = false;
 							if (bestBox == null) {
-								isBetter = true;
-							} else if (box.maxY > bestTop + 1e-4) {
-								isBetter = true;
-							} else if (Math.abs(box.maxY - bestTop) <= 1e-4) {
-								double boxPlane = switch (face) {
-									case FaceAxes.NORTH -> box.minZ;
-									case FaceAxes.SOUTH -> box.maxZ;
-									case FaceAxes.WEST -> box.minX;
-									case FaceAxes.EAST -> box.maxX;
-									default -> 0.0;
-								};
-								double currentBestPlane = switch (face) {
-									case FaceAxes.NORTH -> bestBox.minZ;
-									case FaceAxes.SOUTH -> bestBox.maxZ;
-									case FaceAxes.WEST -> bestBox.minX;
-									case FaceAxes.EAST -> bestBox.maxX;
-									default -> 0.0;
-								};
-								if (face == FaceAxes.NORTH || face == FaceAxes.WEST) {
-									isBetter = boxPlane < currentBestPlane - 1e-4;
-								} else {
-									isBetter = boxPlane > currentBestPlane + 1e-4;
+								bestBox = box;
+								continue;
+							}
+
+							double boxPlane = switch (face) {
+								case FaceAxes.NORTH -> box.minZ;
+								case FaceAxes.SOUTH -> box.maxZ;
+								case FaceAxes.WEST -> box.minX;
+								case FaceAxes.EAST -> box.maxX;
+								default -> 0.0;
+							};
+							double currentBestPlane = switch (face) {
+								case FaceAxes.NORTH -> bestBox.minZ;
+								case FaceAxes.SOUTH -> bestBox.maxZ;
+								case FaceAxes.WEST -> bestBox.minX;
+								case FaceAxes.EAST -> bestBox.maxX;
+								default -> 0.0;
+							};
+
+							boolean isBetter = false;
+							if (face == FaceAxes.NORTH || face == FaceAxes.WEST) {
+								if (boxPlane < currentBestPlane - 1e-4) {
+									isBetter = true;
+								} else if (Math.abs(boxPlane - currentBestPlane) <= 1e-4 && box.maxY > bestBox.maxY + 1e-4) {
+									isBetter = true;
+								}
+							} else {
+								if (boxPlane > currentBestPlane + 1e-4) {
+									isBetter = true;
+								} else if (Math.abs(boxPlane - currentBestPlane) <= 1e-4 && box.maxY > bestBox.maxY + 1e-4) {
+									isBetter = true;
 								}
 							}
 
 							if (isBetter) {
-								bestTop = box.maxY;
 								bestBox = box;
 							}
 						}
