@@ -354,7 +354,7 @@ public class BloodParticle extends TerrainParticle {
         if (face == Direction.UP.get3DDataValue()) {
             Set<BlockPos> solidTopBlocks = new HashSet<>();
             Map<BlockPos, Double> blockElevations = new HashMap<>();
-            SurfaceInfo targetSurface = resolveTopSurfaceInfo(level, targetBlock);
+            SurfaceInfo targetSurface = resolveTopSurfaceInfo(level, targetBlock, (centerU + 0.5) / 16.0, (centerV + 0.5) / 16.0);
             double targetElevation = targetSurface != null ? targetSurface.elevation() : (double) (targetBlock.getY() + 1.0);
 
             BloodSplatter.stampGlobal(globalCenterU, globalCenterV, argb, splatIndex, scale, (gu, gv, col, stage) -> {
@@ -371,11 +371,11 @@ public class BloodParticle extends TerrainParticle {
                 int wy = normal;
                 int wz = bv;
                 BlockPos colPos = new BlockPos(wx, wy, wz);
-                SurfaceInfo surfaceInfo = resolveTopSurfaceInfo(level, colPos);
+                SurfaceInfo surfaceInfo = resolveTopSurfaceInfo(level, colPos, (uTexel + 0.5) / 16.0, (vTexel + 0.5) / 16.0);
 
                 if (surfaceInfo != null) {
                     // Only stamp on top faces that are roughly level with the impact surface
-                    if (surfaceInfo.blockPos().equals(targetBlock) || Math.abs(surfaceInfo.elevation() - targetElevation) < 0.45) {
+                    if (surfaceInfo.blockPos().equals(targetBlock) || Math.abs(surfaceInfo.elevation() - targetElevation) < 0.85) {
                         paintTexel(modifiedCanvases, store, surfaceInfo.blockPos(), Direction.UP.get3DDataValue(), uTexel, vTexel, col);
                         solidTopBlocks.add(surfaceInfo.blockPos());
                         blockElevations.put(surfaceInfo.blockPos(), surfaceInfo.elevation());
@@ -434,16 +434,25 @@ public class BloodParticle extends TerrainParticle {
 
                         int sideFace = hDir.get3DDataValue();
 
-                        // Identify columns along this edge that have blood, and connect them to the edge
-                        boolean[] hasBlood = new boolean[Canvas.SIZE];
-                        int[] rimColors = new int[Canvas.SIZE];
-                        PaintSurface.BlockEdge[] columnEdges = new PaintSurface.BlockEdge[Canvas.SIZE];
+                        for (boolean checkInternal : new boolean[] { false, true }) {
+                            // Identify columns along this edge that have blood, and connect them to the edge
+                            boolean[] hasBlood = new boolean[Canvas.SIZE];
+                            int[] rimColors = new int[Canvas.SIZE];
+                            PaintSurface.BlockEdge[] columnEdges = new PaintSurface.BlockEdge[Canvas.SIZE];
+                            boolean foundAny = false;
 
-                        for (int coord = 0; coord < Canvas.SIZE; coord++) {
-                            PaintSurface.BlockEdge edge = PaintSurface.findEdge(level, bPos, bState, hDir, coord);
-                            if (edge == null) continue;
+                            for (int coord = 0; coord < Canvas.SIZE; coord++) {
+                                List<PaintSurface.BlockEdge> edges = PaintSurface.findEdges(level, bPos, bState, hDir, coord);
+                                PaintSurface.BlockEdge edge = null;
+                                for (PaintSurface.BlockEdge e : edges) {
+                                    if (e.isInternal() == checkInternal) {
+                                        edge = e;
+                                        break;
+                                    }
+                                }
+                                if (edge == null) continue;
 
-                            int edgeCol = topTexels[edge.edgeV() * Canvas.SIZE + edge.edgeU()];
+                                int edgeCol = topTexels[edge.edgeV() * Canvas.SIZE + edge.edgeU()];
 
                             // If outer edge pixel is empty, check up to 2 pixels inward (splash near edge)
                             if (edgeCol == 0) {
@@ -489,8 +498,11 @@ public class BloodParticle extends TerrainParticle {
                                 hasBlood[coord] = true;
                                 rimColors[coord] = edgeCol;
                                 columnEdges[coord] = edge;
+                                foundAny = true;
                             }
                         }
+
+                        if (!foundAny) continue;
 
                         // Find continuous clusters of columns and trickle teardrop beads at random within the boundary
                         int cStart = -1;
@@ -526,8 +538,8 @@ public class BloodParticle extends TerrainParticle {
                                     double inFrontX = (hDir == Direction.WEST || hDir == Direction.EAST) ? colPlane + forwardOffset : (c + 0.5) / 16.0;
                                     double inFrontZ = (hDir == Direction.NORTH || hDir == Direction.SOUTH) ? colPlane + forwardOffset : (c + 0.5) / 16.0;
 
-                                    boolean isInternalStep = false;
-                                    if (inFrontX >= 0.0 && inFrontX <= 1.0 && inFrontZ >= 0.0 && inFrontZ <= 1.0) {
+                                    boolean isInternalStep = edge.isInternal();
+                                    if (!isInternalStep && inFrontX >= 0.0 && inFrontX <= 1.0 && inFrontZ >= 0.0 && inFrontZ <= 1.0) {
                                         double internalFloor = PaintSurface.surfaceElevationAt(level, bPos, bState, inFrontX, inFrontZ);
                                         if (internalFloor != PaintSurface.NONE && internalFloor < colTop - 0.05) {
                                             isInternalStep = true;
@@ -755,7 +767,8 @@ public class BloodParticle extends TerrainParticle {
                     }
                 }
             }
-        } else {
+        }
+    } else {
             Map<Long, BlockPos> resolvedBlocks = new HashMap<>();
             Set<Long> invalidBlocks = new HashSet<>();
 
@@ -856,18 +869,18 @@ public class BloodParticle extends TerrainParticle {
     private record SurfaceInfo(BlockPos blockPos, double elevation) {
     }
 
-    private static SurfaceInfo resolveTopSurfaceInfo(ClientLevel level, BlockPos colPos) {
+    private static SurfaceInfo resolveTopSurfaceInfo(ClientLevel level, BlockPos colPos, double relX, double relZ) {
         BlockPos abovePos = colPos.above();
         BlockState aboveState = level.getBlockState(abovePos);
         if (!aboveState.isAir() && aboveState.getFluidState().isEmpty() && !PaintSurface.isIgnored(aboveState)) {
-            double top = PaintSurface.topOf(level, abovePos, aboveState);
+            double top = PaintSurface.surfaceElevationAt(level, abovePos, aboveState, relX, relZ);
             if (top != PaintSurface.NONE && top < 1.0) {
                 return new SurfaceInfo(abovePos, abovePos.getY() + top);
             }
         }
         BlockState bs = level.getBlockState(colPos);
         if (!bs.isAir() && bs.getFluidState().isEmpty() && !PaintSurface.isIgnored(bs)) {
-            double top = PaintSurface.topOf(level, colPos, bs);
+            double top = PaintSurface.surfaceElevationAt(level, colPos, bs, relX, relZ);
             if (top != PaintSurface.NONE) {
                 return new SurfaceInfo(colPos, colPos.getY() + top);
             }
@@ -875,12 +888,16 @@ public class BloodParticle extends TerrainParticle {
         BlockPos belowPos = colPos.below();
         BlockState belowState = level.getBlockState(belowPos);
         if (!belowState.isAir() && belowState.getFluidState().isEmpty() && !PaintSurface.isIgnored(belowState)) {
-            double top = PaintSurface.topOf(level, belowPos, belowState);
+            double top = PaintSurface.surfaceElevationAt(level, belowPos, belowState, relX, relZ);
             if (top != PaintSurface.NONE) {
                 return new SurfaceInfo(belowPos, belowPos.getY() + top);
             }
         }
         return null;
+    }
+
+    private static SurfaceInfo resolveTopSurfaceInfo(ClientLevel level, BlockPos colPos) {
+        return resolveTopSurfaceInfo(level, colPos, 0.5, 0.5);
     }
 
     private static void paintTexel(Map<CanvasTarget, int[]> modifiedCanvases, ClientCanvasStore store,
