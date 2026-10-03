@@ -23,7 +23,6 @@ import net.minecraft.world.level.block.CactusBlock;
 import net.minecraft.world.level.block.GrowingPlantBlock;
 import net.minecraft.world.level.block.HangingRootsBlock;
 import com.drinfonty.redfx.client.ClientCanvasStore;
-import net.minecraft.world.level.block.LeavesBlock;
 import net.minecraft.world.level.block.SnowLayerBlock;
 import net.minecraft.world.level.block.SporeBlossomBlock;
 import net.minecraft.world.level.block.SugarCaneBlock;
@@ -65,7 +64,6 @@ public final class PaintSurface {
 		Block block = state.getBlock();
 		return block instanceof BushBlock
 			|| block instanceof AzaleaBlock
-			|| block instanceof LeavesBlock
 			|| block instanceof VineBlock
 			|| block instanceof SugarCaneBlock
 			|| block instanceof BambooStalkBlock
