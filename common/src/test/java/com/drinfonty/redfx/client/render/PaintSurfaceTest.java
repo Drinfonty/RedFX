@@ -86,7 +86,8 @@ class PaintSurfaceTest {
 		assertEquals(PaintSurface.NONE, PaintSurface.topOf(level, pos, Blocks.AZALEA.defaultBlockState()));
 		assertEquals(PaintSurface.NONE, PaintSurface.topOf(level, pos, Blocks.FLOWERING_AZALEA.defaultBlockState()));
 		assertEquals(PaintSurface.NONE, PaintSurface.topOf(level, pos, Blocks.OAK_SAPLING.defaultBlockState()));
-		assertEquals(PaintSurface.NONE, PaintSurface.topOf(level, pos, Blocks.OAK_LEAVES.defaultBlockState()));
+		assertEquals(1.0, PaintSurface.topOf(level, pos, Blocks.OAK_LEAVES.defaultBlockState()), 1e-4);
+		org.junit.jupiter.api.Assertions.assertFalse(PaintSurface.isIgnored(Blocks.OAK_LEAVES.defaultBlockState()));
 		assertEquals(PaintSurface.NONE, PaintSurface.topOf(level, pos, Blocks.VINE.defaultBlockState()));
 		assertEquals(PaintSurface.NONE, PaintSurface.topOf(level, pos, Blocks.SUGAR_CANE.defaultBlockState()));
 		assertEquals(PaintSurface.NONE, PaintSurface.topOf(level, pos, Blocks.BAMBOO.defaultBlockState()));
