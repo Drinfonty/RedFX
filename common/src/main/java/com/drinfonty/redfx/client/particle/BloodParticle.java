@@ -749,9 +749,7 @@ public class BloodParticle extends TerrainParticle {
                                                     if (drop instanceof SingleQuadParticle sqp) {
                                                         sqp.setColor(dropR, dropG, dropB);
                                                     }
-                                                    if (drop instanceof ParticleAlphaAccessor paa) {
-                                                        paa.redfx$setAlpha(RedfxConfig.get().bloodOpacity);
-                                                    }
+                                                    ParticleAlphaHelper.setAlpha(drop, RedfxConfig.get().bloodOpacity);
                                                     if (drop instanceof BloodDripAccessor bda) {
                                                         bda.redfx$setBloodDrip(dropR, dropG, dropB);
                                                     }
