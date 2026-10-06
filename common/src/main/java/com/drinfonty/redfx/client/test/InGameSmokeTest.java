@@ -864,8 +864,8 @@ public final class InGameSmokeTest {
 			if (layer != translucentTerrain) {
 				throw new AssertionError("BloodParticle layer is not TRANSLUCENT_TERRAIN: " + layer);
 			}
-		} catch (ClassNotFoundException ignored) {
-			// Older Minecraft version without SingleQuadParticle$Layer
+		} catch (ClassNotFoundException | NoSuchFieldException | NoSuchMethodException ignored) {
+			// Older Minecraft version without SingleQuadParticle$Layer or TRANSLUCENT_TERRAIN
 		} catch (Exception e) {
 			throw new RuntimeException("Failed checking BloodParticle layer", e);
 		}
