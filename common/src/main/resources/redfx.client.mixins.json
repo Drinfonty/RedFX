@@ -7,8 +7,7 @@
 		"LivingEntityMixin",
 		"MinecraftClientSmokeTestMixin",
 		"ParticleMixin",
-		"PlayerSpawnSmokeTestMixin",
-		"SingleQuadParticleMixin"
+		"PlayerSpawnSmokeTestMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1
