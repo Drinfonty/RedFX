@@ -34,8 +34,18 @@ public class RedfxConfigScreen extends Screen {
                 config.bloodEnabled = !config.bloodEnabled;
                 btn.setMessage(getBloodButtonMessage(config));
             }
-        ).bounds(x, startY, buttonWidth, buttonHeight).build();
+        ).bounds(leftX, startY, colWidth, buttonHeight).build();
         this.addRenderableWidget(bloodToggle);
+
+        // Button 1b: Toggle Directional Blood Spray
+        Button directionalToggle = Button.builder(
+            getDirectionalButtonMessage(config),
+            btn -> {
+                config.directionalBlood = !config.directionalBlood;
+                btn.setMessage(getDirectionalButtonMessage(config));
+            }
+        ).bounds(rightX, startY, colWidth, buttonHeight).build();
+        this.addRenderableWidget(directionalToggle);
 
         // Button 2: Toggle Particle Amount Multiplier
         Button amountToggle = Button.builder(
@@ -286,7 +296,11 @@ public class RedfxConfigScreen extends Screen {
     }
 
     private Component getBloodButtonMessage(RedfxConfig config) {
-        return Component.literal("Blood Effects: " + (config.bloodEnabled ? "ON" : "OFF"));
+        return Component.literal("Blood: " + (config.bloodEnabled ? "ON" : "OFF"));
+    }
+
+    private Component getDirectionalButtonMessage(RedfxConfig config) {
+        return Component.literal("Directional: " + (config.directionalBlood ? "ON" : "OFF"));
     }
 
     private Component getAmountButtonMessage(RedfxConfig config) {
