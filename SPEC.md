@@ -25,7 +25,7 @@ RedFX is a client-only Fabric Minecraft mod designed to enhance combat feedback 
 ### 2.1 Dynamic Blood Particles
 When a living entity (mob, player, animal) is damaged:
 1.  **Hurt Detection**: Detects damage client-side by monitoring the entity's `hurtTime` in the client tick loop.
-2.  **Directional Spray**: Particles spray **away** from the attacker based on the relative impact angle retrieved via `getHurtDir()`.
+2.  **Directional Spray**: Particles spray **away** from the attacker/damage source based on `DamageSource` position / attacker position (falling back to a 360° radial spray for non-directional environmental damage).
 3.  **Physical Properties**: Spawns flying blood droplets affected by gravity and friction.
     *   **Airborne Lifetime**: Spawns with a short 2-second flying phase lifetime (`this.lifetime = 40`) to prevent failed landing drops from floating in midair indefinitely.
 
@@ -82,7 +82,7 @@ Blood particles automatically inherit unique colors based on the entity type:
 Targeting `net.minecraft.world.entity.LivingEntity`:
 *   **Target Method**: `tick` at `HEAD`.
 *   **Trigger**: `self.hurtTime == self.hurtDuration && self.hurtTime > 0`.
-*   **Yaw Retrieval**: Calls `self.getHurtDir()` to align directional spray.
+*   **Direction Retrieval**: Queries `self.getLastDamageSource()` to align directional spray away from the hit/attacker.
 
 ### 3.2 High-Resolution Assets
 *   **Mod Menu Icon**: Single high-resolution 256x256 pixel-art droplet icon (`assets/redfx/icon.png`) for crisp rendering on high-DPI displays.
