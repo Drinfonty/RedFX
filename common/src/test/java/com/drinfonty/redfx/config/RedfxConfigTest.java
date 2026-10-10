@@ -30,9 +30,11 @@ class RedfxConfigTest {
         if (obj.has("gradualSplatter")) config.gradualSplatter = obj.get("gradualSplatter").getAsBoolean();
         if (obj.has("splatterGrowthDelayTicks")) config.splatterGrowthDelayTicks = obj.get("splatterGrowthDelayTicks").getAsInt();
         if (obj.has("wallDripping")) config.wallDripping = obj.get("wallDripping").getAsBoolean();
+        if (obj.has("directionalBlood")) config.directionalBlood = obj.get("directionalBlood").getAsBoolean();
 
         // Defaults must remain intact
         assertTrue(config.bloodEnabled);
+        assertTrue(config.directionalBlood, "directionalBlood should default to true even if missing in JSON");
         assertTrue(config.gradualSplatter, "gradualSplatter should default to true even if missing in JSON");
         assertTrue(config.wallDripping, "wallDripping should default to true even if missing in JSON");
         assertEquals(2, config.splatterGrowthDelayTicks, "splatterGrowthDelayTicks should default to 2");
