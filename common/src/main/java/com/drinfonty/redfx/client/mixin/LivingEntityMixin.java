@@ -110,8 +110,8 @@ public class LivingEntityMixin {
         boolean isDirectional = false;
 
         if (attackerPos != null) {
-            double dx = entity.getX() - attackerPos.x();
-            double dz = entity.getZ() - attackerPos.z();
+            double dx = attackerPos.x() - entity.getX();
+            double dz = attackerPos.z() - entity.getZ();
             double distSq = dx * dx + dz * dz;
             if (distSq > 1.0e-4) {
                 double len = Math.sqrt(distSq);
@@ -154,20 +154,17 @@ public class LivingEntityMixin {
             double pz = entity.getZ() + (entity.getRandom().nextDouble() - 0.5) * entity.getBbWidth() * 0.8;
             
             // Adjust velocity based on attack direction + random spread
-            double vx;
-            double vz;
-            if (isDirectional) {
-                double spreadSpeed = (isDeath ? 0.15 : 0.1) + entity.getRandom().nextDouble() * (isDeath ? 0.3 : 0.2);
-                double spreadRandomness = isDeath ? 0.22 : 0.15;
-                vx = forceX * spreadSpeed + (entity.getRandom().nextDouble() - 0.5) * spreadRandomness;
-                vz = forceZ * spreadSpeed + (entity.getRandom().nextDouble() - 0.5) * spreadRandomness;
-            } else {
-                double angle = entity.getRandom().nextDouble() * Math.PI * 2.0;
-                double speed = (isDeath ? 0.15 : 0.08) + entity.getRandom().nextDouble() * (isDeath ? 0.25 : 0.15);
-                vx = Math.cos(angle) * speed;
-                vz = Math.sin(angle) * speed;
+            double angle = entity.getRandom().nextDouble() * Math.PI * 2.0;
+            double omniSpeed = (isDeath ? 0.05 : 0.04) + entity.getRandom().nextDouble() * (isDeath ? 0.08 : 0.07);
+            double vx = Math.cos(angle) * omniSpeed;
+            double vz = Math.sin(angle) * omniSpeed;
+
+            if (isDirectional && RedfxConfig.get().directionalBlood) {
+                double bias = isDeath ? 0.10 : 0.08;
+                vx += forceX * bias;
+                vz += forceZ * bias;
             }
-            double vy = (isDeath ? 0.2 : 0.15) + entity.getRandom().nextDouble() * 0.25;
+            double vy = (isDeath ? 0.10 : 0.08) + entity.getRandom().nextDouble() * (isDeath ? 0.12 : 0.10);
             
             // Introduce stronger color variation per particle (+/- 0.18 variance)
             float variance = (entity.getRandom().nextFloat() - 0.5F) * 0.36F; // -0.18 to +0.18
