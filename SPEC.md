@@ -25,7 +25,7 @@ RedFX is a client-only Fabric Minecraft mod designed to enhance combat feedback 
 ### 2.1 Dynamic Blood Particles
 When a living entity (mob, player, animal) is damaged:
 1.  **Hurt Detection**: Detects damage client-side by monitoring the entity's `hurtTime` in the client tick loop.
-2.  **Directional Spray**: Particles spray **away** from the attacker/damage source based on `DamageSource` position / attacker position (falling back to a 360° radial spray for non-directional environmental damage).
+2.  **Directional Spray**: Particles burst in a radial splatter with a directional bias pulled towards the attacker/damage source based on `DamageSource` position / attacker position (configurable via `directionalBlood`, falling back to an even 360° radial spray when disabled or for environmental damage).
 3.  **Physical Properties**: Spawns flying blood droplets affected by gravity and friction.
     *   **Airborne Lifetime**: Spawns with a short 2-second flying phase lifetime (`this.lifetime = 40`) to prevent failed landing drops from floating in midair indefinitely.
 

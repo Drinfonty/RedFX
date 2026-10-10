@@ -70,6 +70,10 @@ public class BloodParticle extends TerrainParticle {
         super(level, x, y, z, vx, vy, vz, state);
         enableTranslucentTerrain(this);
 
+        this.xd = vx;
+        this.yd = vy;
+        this.zd = vz;
+
         this.lifetime = 40; // max fall time before despawning
         this.gravity = 1.0F;
         this.friction = 0.98F;
