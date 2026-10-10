@@ -1,6 +1,8 @@
 package com.drinfonty.redfx.client.mixin;
 
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.world.level.block.Blocks;
@@ -42,8 +44,7 @@ public class LivingEntityMixin {
         if (self.level().isClientSide() && RedfxConfig.get().bloodEnabled) {
             // Check if damage has just occurred in this tick (hurtTime equals hurtDuration)
             if (self.hurtTime == self.hurtDuration && self.hurtTime > 0 && self.deathTime == 0) {
-                float yaw = self.getHurtDir();
-                spawnBloodParticles(self, yaw, false);
+                spawnBloodParticles(self, self.getLastDamageSource(), false);
             }
 
             // Drip effect: low on health (<= 35% health)
@@ -65,12 +66,12 @@ public class LivingEntityMixin {
                 com.drinfonty.redfx.RedfxMod.LOGGER.info("Death status (3) detected for entity {}!", self.getType().getDescriptionId());
             }
             if (self.level().isClientSide()) {
-                spawnBloodParticles(self, 0.0f, true); // Larger burst on death
+                spawnBloodParticles(self, self.getLastDamageSource(), true); // Larger burst on death
             }
         }
     }
 
-    private void spawnBloodParticles(LivingEntity entity, float yaw, boolean isDeath) {
+    private void spawnBloodParticles(LivingEntity entity, DamageSource damageSource, boolean isDeath) {
         String entityKey = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).toString();
         if (!RedfxConfig.get().isBloodEnabledFor(entityKey)) return;
 
@@ -83,18 +84,46 @@ public class LivingEntityMixin {
         
         if (count <= 0) return;
         
-        if (com.drinfonty.redfx.RedfxMod.DEBUG) {
-            com.drinfonty.redfx.RedfxMod.LOGGER.info("Spawning {} blood particles (totalMultiplier={}, weaponScale={}) for entity {} (yaw={})",
-                count, totalMultiplier, weaponMultiplier, entity.getType().getDescriptionId(), yaw);
+        // Determine attack direction from damage source
+        Vec3 attackerPos = null;
+        if (damageSource != null) {
+            if (damageSource.getEntity() != null) {
+                attackerPos = damageSource.getEntity().position();
+            } else if (damageSource.getDirectEntity() != null) {
+                attackerPos = damageSource.getDirectEntity().position();
+            } else {
+                attackerPos = damageSource.getSourcePosition();
+            }
         }
-        
-        // Calculate force direction away from the source of the blow
-        float absoluteAngle = entity.getYRot() + yaw;
-        float rad = absoluteAngle * ((float)Math.PI / 180F);
-        
-        // Attacker is in direction (sin(rad), -cos(rad)). Blood sprays in opposite direction:
-        double forceX = -Math.sin(rad);
-        double forceZ = Math.cos(rad);
+
+        // Local client player fallback (e.g. melee hit from local player)
+        Minecraft mc = Minecraft.getInstance();
+        if (attackerPos == null && mc.player != null) {
+            if (mc.player.distanceToSqr(entity) <= 36.0) {
+                attackerPos = mc.player.position();
+            }
+        }
+
+        double forceX = 0.0;
+        double forceZ = 0.0;
+        boolean isDirectional = false;
+
+        if (attackerPos != null) {
+            double dx = entity.getX() - attackerPos.x();
+            double dz = entity.getZ() - attackerPos.z();
+            double distSq = dx * dx + dz * dz;
+            if (distSq > 1.0e-4) {
+                double len = Math.sqrt(distSq);
+                forceX = dx / len;
+                forceZ = dz / len;
+                isDirectional = true;
+            }
+        }
+
+        if (com.drinfonty.redfx.RedfxMod.DEBUG) {
+            com.drinfonty.redfx.RedfxMod.LOGGER.info("Spawning {} blood particles (totalMultiplier={}, weaponScale={}) for entity {} (isDirectional={}, forceX={}, forceZ={})",
+                count, totalMultiplier, weaponMultiplier, entity.getType().getDescriptionId(), isDirectional, forceX, forceZ);
+        }
 
         String particleType = RedfxConfig.get().particleType;
         boolean isPoof = particleType.equals("RedPoof");
@@ -124,10 +153,20 @@ public class LivingEntityMixin {
             double pz = entity.getZ() + (entity.getRandom().nextDouble() - 0.5) * entity.getBbWidth() * 0.8;
             
             // Adjust velocity based on attack direction + random spread
-            double spreadSpeed = 0.1 + entity.getRandom().nextDouble() * 0.2;
-            double vx = forceX * spreadSpeed + (entity.getRandom().nextDouble() - 0.5) * 0.15;
-            double vy = 0.15 + entity.getRandom().nextDouble() * 0.25;
-            double vz = forceZ * spreadSpeed + (entity.getRandom().nextDouble() - 0.5) * 0.15;
+            double vx;
+            double vz;
+            if (isDirectional) {
+                double spreadSpeed = (isDeath ? 0.15 : 0.1) + entity.getRandom().nextDouble() * (isDeath ? 0.3 : 0.2);
+                double spreadRandomness = isDeath ? 0.22 : 0.15;
+                vx = forceX * spreadSpeed + (entity.getRandom().nextDouble() - 0.5) * spreadRandomness;
+                vz = forceZ * spreadSpeed + (entity.getRandom().nextDouble() - 0.5) * spreadRandomness;
+            } else {
+                double angle = entity.getRandom().nextDouble() * Math.PI * 2.0;
+                double speed = (isDeath ? 0.15 : 0.08) + entity.getRandom().nextDouble() * (isDeath ? 0.25 : 0.15);
+                vx = Math.cos(angle) * speed;
+                vz = Math.sin(angle) * speed;
+            }
+            double vy = (isDeath ? 0.2 : 0.15) + entity.getRandom().nextDouble() * 0.25;
             
             // Introduce stronger color variation per particle (+/- 0.18 variance)
             float variance = (entity.getRandom().nextFloat() - 0.5F) * 0.36F; // -0.18 to +0.18
