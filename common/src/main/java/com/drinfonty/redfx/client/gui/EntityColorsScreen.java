@@ -25,42 +25,6 @@ public class EntityColorsScreen extends Screen {
     private final List<String> currentMatches = new ArrayList<>();
     private int suggestionIndex = 0;
 
-    public record ColorPreset(String name, String hex, int colorInt) {
-        public ColorPreset(String name, String hex) {
-            this(name, hex, RedfxConfig.parseColorInt(hex, 0xFF0000));
-        }
-    }
-
-    public static final List<ColorPreset> PRESETS = List.of(
-        new ColorPreset("Pure Red", "#FF0000"),
-        new ColorPreset("Blood Red", "#FF0D0D"),
-        new ColorPreset("Crimson", "#8B0000"),
-        new ColorPreset("Rust Brown", "#85522E"),
-        new ColorPreset("Blaze Orange", "#E6B21A"),
-        new ColorPreset("Bright Orange", "#FF7700"),
-
-        new ColorPreset("Gold", "#FFD700"),
-        new ColorPreset("Yellow", "#FFE600"),
-        new ColorPreset("Slime Green", "#33E633"),
-        new ColorPreset("Acid Lime", "#00FF00"),
-        new ColorPreset("Forest Green", "#1B4D1B"),
-        new ColorPreset("Bogged Olive", "#4D6633"),
-
-        new ColorPreset("Turquoise", "#00CED1"),
-        new ColorPreset("Sculk Cyan", "#0D4DB2"),
-        new ColorPreset("Sky Blue", "#1E90FF"),
-        new ColorPreset("Royal Blue", "#0033CC"),
-        new ColorPreset("Ender Purple", "#991ACC"),
-        new ColorPreset("Deep Violet", "#660099"),
-
-        new ColorPreset("Hot Pink", "#FF69B4"),
-        new ColorPreset("Magenta", "#FF00FF"),
-        new ColorPreset("Bone White", "#E6E6E6"),
-        new ColorPreset("Light Gray", "#A0A0A0"),
-        new ColorPreset("Dark Gray", "#555555"),
-        new ColorPreset("Wither Dark", "#262626")
-    );
-
     public EntityColorsScreen(Screen parent) {
         super(Component.literal("Entity Blood Colors"));
         this.parent = parent;
@@ -410,22 +374,13 @@ public class EntityColorsScreen extends Screen {
         }
         int colorInt = RedfxConfig.parseColorInt(hex, 0xFF0000);
         String name = "Custom";
-        for (ColorPreset p : PRESETS) {
-            if (p.hex.equalsIgnoreCase(hex)) {
-                name = p.name;
+        for (ColorPickerScreen.PresetSwatch p : ColorPickerScreen.SWATCHES) {
+            if (p.hex().equalsIgnoreCase(hex)) {
+                name = p.name();
                 break;
             }
         }
         return Component.literal("■ ").withColor(colorInt).append(Component.literal(name));
-    }
-
-    private String getNextPresetHex(String currentHex) {
-        for (int i = 0; i < PRESETS.size(); i++) {
-            if (PRESETS.get(i).hex.equalsIgnoreCase(currentHex)) {
-                return PRESETS.get((i + 1) % PRESETS.size()).hex;
-            }
-        }
-        return PRESETS.get(0).hex;
     }
 
     private void openColorPicker(String entityId, String currentHex) {

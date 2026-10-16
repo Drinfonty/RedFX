@@ -3,19 +3,21 @@ package com.drinfonty.redfx.client.particle;
 import net.minecraft.client.particle.Particle;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class ParticleAlphaHelper {
+    private static final MethodType TARGET_TYPE = MethodType.methodType(void.class, Particle.class, float.class);
     private static final Map<Class<?>, MethodHandle> SET_ALPHA_HANDLES = new ConcurrentHashMap<>();
     private static final MethodHandle NOOP;
 
     static {
         MethodHandle noop = null;
         try {
-            noop = MethodHandles.lookup().findStatic(ParticleAlphaHelper.class, "noop",
-                java.lang.invoke.MethodType.methodType(void.class, Particle.class, float.class));
+            noop = MethodHandles.lookup().findStatic(ParticleAlphaHelper.class, "noop", TARGET_TYPE);
         } catch (Throwable ignored) {
         }
         NOOP = noop;
@@ -37,12 +39,31 @@ public final class ParticleAlphaHelper {
 
     private static MethodHandle findSetAlphaHandle(Class<?> clazz) {
         MethodHandles.Lookup lookup = MethodHandles.lookup();
+        // Pass 1: Match explicit Mojmap ("setAlpha") or Fabric Intermediary ("method_3084") name
         for (Class<?> c = clazz; c != null && c != Object.class; c = c.getSuperclass()) {
             for (Method m : c.getDeclaredMethods()) {
                 if (m.getReturnType() == void.class && m.getParameterCount() == 1 && m.getParameterTypes()[0] == float.class) {
+                    String name = m.getName();
+                    if ("setAlpha".equals(name) || "method_3084".equals(name)) {
+                        try {
+                            m.setAccessible(true);
+                            return lookup.unreflect(m).asType(TARGET_TYPE);
+                        } catch (Throwable ignored) {
+                        }
+                    }
+                }
+            }
+        }
+        // Pass 2: Fallback for any other obfuscated mapping of protected void setAlpha(float)
+        for (Class<?> c = clazz; c != null && c != Object.class; c = c.getSuperclass()) {
+            for (Method m : c.getDeclaredMethods()) {
+                if (Modifier.isProtected(m.getModifiers())
+                    && m.getReturnType() == void.class
+                    && m.getParameterCount() == 1
+                    && m.getParameterTypes()[0] == float.class) {
                     try {
                         m.setAccessible(true);
-                        return lookup.unreflect(m);
+                        return lookup.unreflect(m).asType(TARGET_TYPE);
                     } catch (Throwable ignored) {
                     }
                 }
