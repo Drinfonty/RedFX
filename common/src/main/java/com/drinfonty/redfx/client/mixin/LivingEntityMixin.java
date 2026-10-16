@@ -76,7 +76,7 @@ public class LivingEntityMixin {
         if (!RedfxConfig.get().isBloodEnabledFor(entityKey)) return;
 
         float configMultiplier = RedfxConfig.get().getMultiplier();
-        float weaponMultiplier = getWeaponMultiplier(entity);
+        float weaponMultiplier = getWeaponMultiplier(entity, damageSource);
         float totalMultiplier = configMultiplier * weaponMultiplier;
 
         int baseCount = isDeath ? (25 + entity.getRandom().nextInt(15)) : (12 + entity.getRandom().nextInt(8));
@@ -98,7 +98,7 @@ public class LivingEntityMixin {
 
         // Local client player fallback (e.g. melee hit from local player)
         Minecraft mc = Minecraft.getInstance();
-        if (attackerPos == null && mc.player != null) {
+        if (attackerPos == null && damageSource == null && mc.player != null) {
             if (mc.player.distanceToSqr(entity) <= 36.0) {
                 attackerPos = mc.player.position();
             }
@@ -164,51 +164,67 @@ public class LivingEntityMixin {
                 vz += forceZ * bias;
             }
             double vy = (isDeath ? 0.10 : 0.08) + entity.getRandom().nextDouble() * (isDeath ? 0.12 : 0.10);
-            
-            // Introduce stronger color variation per particle (+/- 0.18 variance)
-            float variance = (entity.getRandom().nextFloat() - 0.5F) * 0.36F; // -0.18 to +0.18
-            float particleR = Math.max(0.0F, Math.min(1.0F, r + variance));
-            float particleG = Math.max(0.0F, Math.min(1.0F, g + (entity.getRandom().nextFloat() - 0.5F) * 0.18F));
-            float particleB = Math.max(0.0F, Math.min(1.0F, b + (entity.getRandom().nextFloat() - 0.5F) * 0.18F));
-            
-            if (isPoof) {
-                net.minecraft.client.particle.Particle p = Minecraft.getInstance().particleEngine.createParticle(
-                    ParticleTypes.POOF, px, py, pz, vx, vy, vz
-                );
-                if (p instanceof net.minecraft.client.particle.SingleQuadParticle sqp) {
-                    sqp.setColor(particleR, particleG, particleB);
-                    sqp.setLifetime(RedfxConfig.get().particleLifetimeSeconds * 4);
-                }
-                com.drinfonty.redfx.client.particle.ParticleAlphaHelper.setAlpha(p, RedfxConfig.get().bloodOpacity);
-            } else {
-                // Spawn our custom sliding/sticking BloodParticle and apply custom tint
-                BloodParticle blood = new BloodParticle(clientLevel, px, py, pz, vx, vy, vz, blockState);
-                blood.setColor(particleR, particleG, particleB);
-                blood.setAlpha(RedfxConfig.get().bloodOpacity);
-                Minecraft.getInstance().particleEngine.add(blood);
-            }
+
+            spawnSingleBloodParticle(clientLevel, entity, isPoof, blockState, px, py, pz, vx, vy, vz, r, g, b);
         }
     }
 
-    private float getWeaponMultiplier(LivingEntity entity) {
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null) return 1.0f;
-        
-        // Check if the local player is reasonably close to the entity ( melee/close range )
-        double distSq = mc.player.distanceToSqr(entity);
-        if (distSq > 36.0) { // Distance > 6 blocks
-            // Player is far away. Check if holding a ranged weapon
-            if (mc.player.getMainHandItem().getItem() instanceof ProjectileWeaponItem) {
+    private void spawnSingleBloodParticle(
+        ClientLevel clientLevel, LivingEntity entity, boolean isPoof,
+        net.minecraft.world.level.block.state.BlockState blockState,
+        double px, double py, double pz, double vx, double vy, double vz,
+        float r, float g, float b
+    ) {
+        // Introduce color variation per particle (+/- 0.18 variance)
+        float variance = (entity.getRandom().nextFloat() - 0.5F) * 0.36F;
+        float particleR = Math.max(0.0F, Math.min(1.0F, r + variance));
+        float particleG = Math.max(0.0F, Math.min(1.0F, g + (entity.getRandom().nextFloat() - 0.5F) * 0.18F));
+        float particleB = Math.max(0.0F, Math.min(1.0F, b + (entity.getRandom().nextFloat() - 0.5F) * 0.18F));
+
+        if (isPoof) {
+            net.minecraft.client.particle.Particle p = Minecraft.getInstance().particleEngine.createParticle(
+                ParticleTypes.POOF, px, py, pz, vx, vy, vz
+            );
+            if (p instanceof net.minecraft.client.particle.SingleQuadParticle sqp) {
+                sqp.setColor(particleR, particleG, particleB);
+                sqp.setLifetime(RedfxConfig.get().particleLifetimeSeconds * 4);
+            }
+            com.drinfonty.redfx.client.particle.ParticleAlphaHelper.setAlpha(p, RedfxConfig.get().bloodOpacity);
+        } else {
+            BloodParticle blood = new BloodParticle(clientLevel, px, py, pz, vx, vy, vz, blockState);
+            blood.setColor(particleR, particleG, particleB);
+            Minecraft.getInstance().particleEngine.add(blood);
+        }
+    }
+
+    private float getWeaponMultiplier(LivingEntity entity, DamageSource damageSource) {
+        LivingEntity attacker = null;
+        if (damageSource != null) {
+            if (damageSource.getEntity() instanceof LivingEntity livingAttacker) {
+                attacker = livingAttacker;
+            } else {
+                return 1.0f; // Environmental or indirect non-entity damage
+            }
+        } else {
+            Minecraft mc = Minecraft.getInstance();
+            if (mc.player != null && mc.player.distanceToSqr(entity) <= 36.0) {
+                attacker = mc.player;
+            }
+        }
+        if (attacker == null) return 1.0f;
+
+        ItemStack stack = attacker.getMainHandItem();
+        if (attacker.distanceToSqr(entity) > 36.0) {
+            if (stack.getItem() instanceof ProjectileWeaponItem) {
                 return 0.6f; // Ranged puncture (less blood spray)
             }
-            return 1.0f; // Environmental damage or indirect
+            return 1.0f;
         }
-        
-        ItemStack stack = mc.player.getMainHandItem();
+
         if (stack.isEmpty()) {
             return 0.4f; // Fist/blunt hit (very little blood)
         }
-        
+
         if (stack.is(ItemTags.SWORDS)) {
             return 1.3f; // Sword slashing
         } else if (stack.is(ItemTags.AXES)) {
@@ -216,7 +232,7 @@ public class LivingEntityMixin {
         } else if (stack.getItem() instanceof ProjectileWeaponItem) {
             return 0.6f; // Bow/Crossbow close range
         }
-        
+
         return 1.0f; // Default item
     }
 
@@ -288,23 +304,6 @@ public class LivingEntityMixin {
         double vy = -0.04 - entity.getRandom().nextDouble() * 0.04;
         double vz = (entity.getRandom().nextDouble() - 0.5) * 0.01;
 
-        float variance = (entity.getRandom().nextFloat() - 0.5F) * 0.36F;
-        float particleR = Math.max(0.0F, Math.min(1.0F, r + variance));
-        float particleG = Math.max(0.0F, Math.min(1.0F, g + (entity.getRandom().nextFloat() - 0.5F) * 0.18F));
-        float particleB = Math.max(0.0F, Math.min(1.0F, b + (entity.getRandom().nextFloat() - 0.5F) * 0.18F));
-
-        if (isPoof) {
-            net.minecraft.client.particle.Particle p = Minecraft.getInstance().particleEngine.createParticle(
-                ParticleTypes.POOF, px, py, pz, vx, vy, vz
-            );
-            if (p instanceof net.minecraft.client.particle.SingleQuadParticle sqp) {
-                sqp.setColor(particleR, particleG, particleB);
-                sqp.setLifetime(RedfxConfig.get().particleLifetimeSeconds * 4);
-            }
-        } else {
-            BloodParticle blood = new BloodParticle(clientLevel, px, py, pz, vx, vy, vz, blockState);
-            blood.setColor(particleR, particleG, particleB);
-            Minecraft.getInstance().particleEngine.add(blood);
-        }
+        spawnSingleBloodParticle(clientLevel, entity, isPoof, blockState, px, py, pz, vx, vy, vz, r, g, b);
     }
 }

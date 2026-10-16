@@ -257,9 +257,6 @@ public class BloodParticle extends TerrainParticle {
                     if (smoke instanceof BloodSmokeAccessor bsa) {
                         bsa.redfx$setBloodSmoke(true);
                     }
-                    if (smoke != null) {
-                        Minecraft.getInstance().particleEngine.add(smoke);
-                    }
                 } catch (Exception e) {
                 }
             }
@@ -460,14 +457,10 @@ public class BloodParticle extends TerrainParticle {
 
                             // If outer edge pixel is empty, check up to 2 pixels inward (splash near edge)
                             if (edgeCol == 0) {
-                                int inU1 = edge.edgeU();
-                                int inV1 = edge.edgeV();
-                                switch (hDir) {
-                                    case NORTH -> inV1 += 1;
-                                    case SOUTH -> inV1 -= 1;
-                                    case WEST -> inU1 += 1;
-                                    case EAST -> inU1 -= 1;
-                                }
+                                int du = hDir == Direction.WEST ? 1 : (hDir == Direction.EAST ? -1 : 0);
+                                int dv = hDir == Direction.NORTH ? 1 : (hDir == Direction.SOUTH ? -1 : 0);
+                                int inU1 = edge.edgeU() + du;
+                                int inV1 = edge.edgeV() + dv;
                                 if (inU1 >= 0 && inU1 < Canvas.SIZE && inV1 >= 0 && inV1 < Canvas.SIZE) {
                                     int inward1 = topTexels[inV1 * Canvas.SIZE + inU1];
                                     if (inward1 != 0) {
@@ -475,14 +468,8 @@ public class BloodParticle extends TerrainParticle {
                                         topTexels[edge.edgeV() * Canvas.SIZE + edge.edgeU()] = inward1;
                                         addTexel.accept(new ClientCanvasStore.PendingTexel(bPos, Direction.UP.get3DDataValue(), edge.edgeU(), edge.edgeV(), inward1, expirationMs), nowMs + 2 * baseDelayMs);
                                     } else {
-                                        int inU2 = inU1;
-                                        int inV2 = inV1;
-                                        switch (hDir) {
-                                            case NORTH -> inV2 += 1;
-                                            case SOUTH -> inV2 -= 1;
-                                            case WEST -> inU2 += 1;
-                                            case EAST -> inU2 -= 1;
-                                        }
+                                        int inU2 = inU1 + du;
+                                        int inV2 = inV1 + dv;
                                         if (inU2 >= 0 && inU2 < Canvas.SIZE && inV2 >= 0 && inV2 < Canvas.SIZE) {
                                             int inward2 = topTexels[inV2 * Canvas.SIZE + inU2];
                                             if (inward2 != 0) {
