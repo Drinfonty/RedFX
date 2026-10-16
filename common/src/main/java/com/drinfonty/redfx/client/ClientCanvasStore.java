@@ -108,15 +108,31 @@ public final class ClientCanvasStore {
 		return false;
 	}
 
-	public boolean hasAnyBlood() {
-		return !chunks.isEmpty() || !pendingStages.isEmpty();
+	public synchronized boolean hasAnyBlood() {
+		return !chunks.isEmpty() || !pendingStages.isEmpty() || !pendingActions.isEmpty();
+	}
+
+	public boolean hasPaintedOrPending(BlockPos pos) {
+		if (isPainted(pos)) {
+			return true;
+		}
+		synchronized (this) {
+			for (PendingStage stage : pendingStages) {
+				for (PendingTexel pt : stage.texels) {
+					if (pt.pos.equals(pos)) {
+						return true;
+					}
+				}
+			}
+		}
+		return false;
 	}
 
 	public synchronized void scheduleStage(long executeAtMs, List<PendingTexel> texels) {
 		if (texels == null || texels.isEmpty()) {
 			return;
 		}
-		pendingStages.add(new PendingStage(executeAtMs, texels));
+		pendingStages.add(new PendingStage(executeAtMs, new ArrayList<>(texels)));
 	}
 
 	public synchronized void scheduleAction(long executeAtMs, Runnable action) {
@@ -226,6 +242,13 @@ public final class ClientCanvasStore {
 	}
 
 	public synchronized void clearBlock(BlockPos pos) {
+		if (!pendingStages.isEmpty()) {
+			pendingStages.removeIf(stage -> {
+				stage.texels.removeIf(pt -> pt.pos.equals(pos));
+				return stage.texels.isEmpty();
+			});
+		}
+
 		long chunkKey = chunkKey(pos);
 		Long2ObjectMap<Canvas> current = chunks.get(chunkKey);
 		if (current == null || current.isEmpty()) {
