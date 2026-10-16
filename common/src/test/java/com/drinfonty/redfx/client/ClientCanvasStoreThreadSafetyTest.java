@@ -332,4 +332,24 @@ class ClientCanvasStoreThreadSafetyTest {
 		assertEquals(0, store.pendingStageCount());
 		assertFalse(store.hasAnyBlood());
 	}
+
+	@Test
+	void testClearBlockClearsPendingStagesForBrokenBlock() {
+		BlockPos brokenPos = new BlockPos(5, 64, 5);
+		BlockPos intactPos = new BlockPos(6, 64, 5);
+		store.scheduleStage(5000L, List.of(
+			new ClientCanvasStore.PendingTexel(brokenPos, FaceAxes.UP, 5, 5, 0xFFFF0000, 10000L),
+			new ClientCanvasStore.PendingTexel(intactPos, FaceAxes.UP, 2, 2, 0xFFFF0000, 10000L)
+		));
+		assertTrue(store.hasPaintedOrPending(brokenPos));
+		assertTrue(store.hasPaintedOrPending(intactPos));
+
+		store.clearBlock(brokenPos);
+		assertFalse(store.hasPaintedOrPending(brokenPos));
+		assertTrue(store.hasPaintedOrPending(intactPos));
+
+		store.tickExpiration(6000L);
+		assertFalse(store.isPainted(brokenPos), "Broken block should not receive delayed blood texels after being cleared");
+		assertTrue(store.isPainted(intactPos), "Neighboring intact block should still receive its delayed blood texels");
+	}
 }
