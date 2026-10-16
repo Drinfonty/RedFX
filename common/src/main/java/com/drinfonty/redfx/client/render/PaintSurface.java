@@ -40,6 +40,12 @@ public final class PaintSurface {
 	public static final double NONE = -1.0;
 
 	public record SurfaceCanvas(Canvas canvas, float facePlane, float surfaceY) {
+		public SurfaceCanvas {
+			if (canvas != null && (canvas.fadeStartTimeMs() != 0L || canvas.nextErodeTimeMs() != 0L)) {
+				canvas = new Canvas(canvas.texels(), 0L, 0L);
+			}
+		}
+
 		public SurfaceCanvas(Canvas canvas, float surfaceY) {
 			this(canvas, Float.NaN, surfaceY);
 		}
@@ -351,42 +357,7 @@ public final class PaintSurface {
 				}
 			}
 
-			if (bestOuterBox == null) {
-				bestOuterBox = box;
-				continue;
-			}
-
-			double boxPlane = switch (hDir) {
-				case NORTH -> box.minZ;
-				case SOUTH -> box.maxZ;
-				case WEST -> box.minX;
-				case EAST -> box.maxX;
-				default -> 0.0;
-			};
-			double bestPlane = switch (hDir) {
-				case NORTH -> bestOuterBox.minZ;
-				case SOUTH -> bestOuterBox.maxZ;
-				case WEST -> bestOuterBox.minX;
-				case EAST -> bestOuterBox.maxX;
-				default -> 0.0;
-			};
-
-			boolean isBetter = false;
-			if (hDir == Direction.NORTH || hDir == Direction.WEST) {
-				if (boxPlane < bestPlane - 1e-4) {
-					isBetter = true;
-				} else if (Math.abs(boxPlane - bestPlane) <= 1e-4 && box.maxY > bestOuterBox.maxY + 1e-4) {
-					isBetter = true;
-				}
-			} else {
-				if (boxPlane > bestPlane + 1e-4) {
-					isBetter = true;
-				} else if (Math.abs(boxPlane - bestPlane) <= 1e-4 && box.maxY > bestOuterBox.maxY + 1e-4) {
-					isBetter = true;
-				}
-			}
-
-			if (isBetter) {
+			if (isBetterOuterBox(box, bestOuterBox, hDir.get3DDataValue())) {
 				bestOuterBox = box;
 			}
 		}
@@ -621,76 +592,16 @@ public final class PaintSurface {
 							};
 							if (!outerHalf) continue;
 
-							if (bestBox == null) {
+							if (isBetterOuterBox(box, bestBox, face)) {
 								bestBox = box;
-								continue;
 							}
-							double boxPlane = switch (face) {
-								case FaceAxes.NORTH -> box.minZ;
-								case FaceAxes.SOUTH -> box.maxZ;
-								case FaceAxes.WEST -> box.minX;
-								case FaceAxes.EAST -> box.maxX;
-								default -> 0.0;
-							};
-							double currentBestPlane = switch (face) {
-								case FaceAxes.NORTH -> bestBox.minZ;
-								case FaceAxes.SOUTH -> bestBox.maxZ;
-								case FaceAxes.WEST -> bestBox.minX;
-								case FaceAxes.EAST -> bestBox.maxX;
-								default -> 0.0;
-							};
-							boolean isBetter = false;
-							if (face == FaceAxes.NORTH || face == FaceAxes.WEST) {
-								if (boxPlane < currentBestPlane - 1e-4) {
-									isBetter = true;
-								} else if (Math.abs(boxPlane - currentBestPlane) <= 1e-4 && box.maxY > bestBox.maxY + 1e-4) {
-									isBetter = true;
-								}
-							} else {
-								if (boxPlane > currentBestPlane + 1e-4) {
-									isBetter = true;
-								} else if (Math.abs(boxPlane - currentBestPlane) <= 1e-4 && box.maxY > bestBox.maxY + 1e-4) {
-									isBetter = true;
-								}
-							}
-							if (isBetter) bestBox = box;
 						}
 
 						if (bestBox == null) {
 							for (AABB box : candidateBoxes) {
-								if (bestBox == null) {
+								if (isBetterOuterBox(box, bestBox, face)) {
 									bestBox = box;
-									continue;
 								}
-								double boxPlane = switch (face) {
-									case FaceAxes.NORTH -> box.minZ;
-									case FaceAxes.SOUTH -> box.maxZ;
-									case FaceAxes.WEST -> box.minX;
-									case FaceAxes.EAST -> box.maxX;
-									default -> 0.0;
-								};
-								double currentBestPlane = switch (face) {
-									case FaceAxes.NORTH -> bestBox.minZ;
-									case FaceAxes.SOUTH -> bestBox.maxZ;
-									case FaceAxes.WEST -> bestBox.minX;
-									case FaceAxes.EAST -> bestBox.maxX;
-									default -> 0.0;
-								};
-								boolean isBetter = false;
-								if (face == FaceAxes.NORTH || face == FaceAxes.WEST) {
-									if (boxPlane < currentBestPlane - 1e-4) {
-										isBetter = true;
-									} else if (Math.abs(boxPlane - currentBestPlane) <= 1e-4 && box.maxY > bestBox.maxY + 1e-4) {
-										isBetter = true;
-									}
-								} else {
-									if (boxPlane > currentBestPlane + 1e-4) {
-										isBetter = true;
-									} else if (Math.abs(boxPlane - currentBestPlane) <= 1e-4 && box.maxY > bestBox.maxY + 1e-4) {
-										isBetter = true;
-									}
-								}
-								if (isBetter) bestBox = box;
 							}
 						}
 
@@ -700,13 +611,7 @@ public final class PaintSurface {
 					}
 
 					for (AABB targetBox : chosenBoxes) {
-						double plane = switch (face) {
-							case FaceAxes.NORTH -> targetBox.minZ;
-							case FaceAxes.SOUTH -> targetBox.maxZ;
-							case FaceAxes.WEST -> targetBox.minX;
-							case FaceAxes.EAST -> targetBox.maxX;
-							default -> 0.0;
-						};
+						double plane = boxPlaneForFace(targetBox, face);
 						double top = targetBox.maxY;
 						double pixelY = top - (pv + 0.5) / (double) Canvas.SIZE;
 
@@ -719,13 +624,7 @@ public final class PaintSurface {
 							};
 							if (!tangentMatch) continue;
 
-							double boxPlane = switch (face) {
-								case FaceAxes.NORTH -> box.minZ;
-								case FaceAxes.SOUTH -> box.maxZ;
-								case FaceAxes.WEST -> box.minX;
-								case FaceAxes.EAST -> box.maxX;
-								default -> 0.0;
-							};
+							double boxPlane = boxPlaneForFace(box, face);
 							if (Math.abs(boxPlane - plane) < 1e-4) {
 								if (pixelY >= box.minY - 0.03 && pixelY <= box.maxY + 0.03) {
 									onFace = true;
@@ -778,6 +677,35 @@ public final class PaintSurface {
 
 	public static float planeFor(BlockGetter level, BlockPos pos, BlockState state, Direction face) {
 		return (float) planeFor(level, pos, state, face.get3DDataValue());
+	}
+
+	private static double boxPlaneForFace(AABB box, int face) {
+		return switch (face) {
+			case FaceAxes.NORTH -> box.minZ;
+			case FaceAxes.SOUTH -> box.maxZ;
+			case FaceAxes.WEST -> box.minX;
+			case FaceAxes.EAST -> box.maxX;
+			default -> 0.0;
+		};
+	}
+
+	private static boolean isBetterOuterBox(AABB box, AABB bestBox, int face) {
+		if (bestBox == null) {
+			return true;
+		}
+		double boxPlane = boxPlaneForFace(box, face);
+		double bestPlane = boxPlaneForFace(bestBox, face);
+		if (face == FaceAxes.NORTH || face == FaceAxes.WEST) {
+			if (boxPlane < bestPlane - 1e-4) {
+				return true;
+			}
+			return Math.abs(boxPlane - bestPlane) <= 1e-4 && box.maxY > bestBox.maxY + 1e-4;
+		} else {
+			if (boxPlane > bestPlane + 1e-4) {
+				return true;
+			}
+			return Math.abs(boxPlane - bestPlane) <= 1e-4 && box.maxY > bestBox.maxY + 1e-4;
+		}
 	}
 
 	private static boolean isInternalBox(AABB box, int face) {

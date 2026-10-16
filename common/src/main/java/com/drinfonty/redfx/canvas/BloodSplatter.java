@@ -219,19 +219,6 @@ public final class BloodSplatter {
 	}
 
 	/**
-	 * Stamps vertical dripping blood running down a wall (+v direction).
-	 * Features an impact splash at (globalCenterU, globalCenterV), streaming rivulets,
-	/**
-	 * Stamps vertical dripping blood running down a wall (+v direction).
-	 * Starts with a smaller, compact impact splatter, picks 1-2 drip points at the bottom of the splatter,
-	 * and slowly drips down across 3 stages with random lengths (1-3 pixels) and widths (1-2 pixels).
-	 *
-	 * Stage 0: Immediate compact impact head
-	 * Stage 1: Drip stage 1 (runs down 1-3 px, 1-2 px wide)
-	 * Stage 2: Drip stage 2 (runs down another 1-3 px, 1-2 px wide)
-	 * Stage 3: Drip stage 3 (runs down another 1-3 px, forming a teardrop bead at tip)
-	 */
-	/**
 	 * Stamps a blood splatter on a vertical wall with downward-dripping teardrop beads.
 	 *
 	 * Stage 0: Core splatter pixels
