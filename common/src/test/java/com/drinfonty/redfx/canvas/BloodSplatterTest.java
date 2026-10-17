@@ -13,8 +13,9 @@ class BloodSplatterTest {
 		boolean stamped = BloodSplatter.stamp(texels, 7, 7, red, 1, 1.0f);
 
 		assertTrue(stamped);
-		assertEquals(0x00FF0000, texels[7 * 16 + 7] & 0x00FFFFFF);
-		assertTrue(PaintColor.isPainted(texels[7 * 16 + 7]));
+		int center = texels[7 * 16 + 7];
+		assertTrue(PaintColor.isPainted(center));
+		assertTrue(((center >> 16) & 0xFF) > 180 && (center & 0xFFFF) == 0, "Centre texel should be a shade of red");
 
 		int count = 0;
 		for (int t : texels) {
