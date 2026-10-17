@@ -14,34 +14,6 @@ import java.util.Set;
  * Supports multi-block bleeding across the face plane, organic edge noise, and edge erosion.
  */
 public final class BloodSplatter {
-	// 16x16 binary masks for splat patterns 1..5 (packed as 16 short bitmasks, one per row)
-	private static final short[][] MASKS = {
-		// Splat 1
-		{
-			0x0000, 0x0000, 0x0000, 0x4000, 0x2000, 0x03C0, 0x0FC0, 0x0FE0,
-			0x1FE0, 0x0FE0, 0x0FE0, 0x0FC0, 0x0040, 0x0040, 0x0000, 0x0400
-		},
-		// Splat 2
-		{
-			0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x07C0, 0x7F00,
-			0x3F00, 0x3F00, 0x7F00, 0x3F00, 0x0F80, 0x0400, 0x0000, 0x0800
-		},
-		// Splat 3
-		{
-			0x0000, 0x0000, 0x0000, 0x0300, 0x0FC0, 0x0FE0, 0x1FF0, 0x3FF0,
-			0x3FF0, 0x1FF0, 0x1FE0, 0x0FE0, 0x0380, 0x0000, 0x0000, 0x0000
-		},
-		// Splat 4
-		{
-			0x0000, 0x0000, 0x0000, 0x0000, 0x0100, 0x01C0, 0x07C0, 0x03E0,
-			0x07E0, 0x07E0, 0x01C0, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000
-		},
-		// Splat 5
-		{
-			0x0000, 0x0000, 0x0000, 0x0000, 0x01C0, 0x07E0, 0x0FF0, 0x0FF0,
-			0x0FF0, 0x0FF0, 0x07F0, 0x07E0, 0x0500, 0x0000, 0x0000, 0x0000
-		}
-	};
 
 
 	public interface CanvasWriter {
@@ -75,53 +47,31 @@ public final class BloodSplatter {
 	 */
 	public static void stampGlobal(int globalCenterU, int globalCenterV, int argb, int splatIndex, float scale, StagedCanvasWriter writer) {
 		var random = java.util.concurrent.ThreadLocalRandom.current();
-		int pattern = (splatIndex >= 1 && splatIndex <= 5) ? (splatIndex - 1) : random.nextInt(5);
-		short[] mask = MASKS[pattern];
-		int maskCenter = 7;
 
 		Set<TexelPos> points = new HashSet<>();
+		Set<TexelPos> blob = generateOrganicBlob(globalCenterU, globalCenterV, splatIndex, scale, random);
+		points.addAll(blob);
 
-		for (int my = 0; my < 16; my++) {
-			short row = mask[my];
-			if (row == 0) continue;
-
-			for (int mx = 0; mx < 16; mx++) {
-				if ((row & (1 << (15 - mx))) != 0) {
-					int du = Math.round((mx - maskCenter) * scale);
-					int dv = Math.round((my - maskCenter) * scale);
-
-					int gu = globalCenterU + du;
-					int gv = globalCenterV + dv;
-
-					points.add(new TexelPos(gu, gv));
+		// Roughen the main blob's rim lightly so it reads as pixel-art speckle rather than a smooth disc
+		if (blob.size() > 10) {
+			List<TexelPos> rim = new ArrayList<>();
+			for (TexelPos p : blob) {
+				if (!blob.contains(new TexelPos(p.u - 1, p.v))
+					|| !blob.contains(new TexelPos(p.u + 1, p.v))
+					|| !blob.contains(new TexelPos(p.u, p.v - 1))
+					|| !blob.contains(new TexelPos(p.u, p.v + 1))) {
+					rim.add(p);
 				}
 			}
-		}
-
-		if (points.isEmpty()) {
-			points.add(new TexelPos(globalCenterU, globalCenterV));
-		}
-
-		// Find perimeter points of the stamped shape (points with fewer than 4 cardinal neighbors)
-		List<TexelPos> edgePoints = new ArrayList<>();
-		for (TexelPos p : points) {
-			if (!points.contains(new TexelPos(p.u - 1, p.v))
-				|| !points.contains(new TexelPos(p.u + 1, p.v))
-				|| !points.contains(new TexelPos(p.u, p.v - 1))
-				|| !points.contains(new TexelPos(p.u, p.v + 1))) {
-				edgePoints.add(p);
-			}
-		}
-
-		// Roughen up perimeter edges by randomly not placing ~25-35% of perimeter points
-		if (points.size() > 6 && !edgePoints.isEmpty()) {
-			Collections.shuffle(edgePoints, random);
-			int numToRemove = Math.max(1, (int) (edgePoints.size() * 0.28f));
-			numToRemove = Math.min(numToRemove, points.size() - 3); // ensure core remains
+			Collections.shuffle(rim, random);
+			int numToRemove = Math.min((int) (rim.size() * 0.15f), points.size() - 3);
 			for (int i = 0; i < numToRemove; i++) {
-				points.remove(edgePoints.get(i));
+				points.remove(rim.get(i));
 			}
 		}
+
+		addSatellites(points, globalCenterU, globalCenterV, scale, random);
+		points.add(new TexelPos(globalCenterU, globalCenterV));
 
 		int rgb = argb & 0xFFFFFF;
 		int baseAlpha = (argb >>> 24);
@@ -152,7 +102,14 @@ public final class BloodSplatter {
 			}
 		}
 
-		boolean hasInterior = points.size() > d1.size();
+		Set<TexelPos> d3 = new HashSet<>();
+		for (TexelPos p : points) {
+			if (!d1.contains(p) && !d2.contains(p)) {
+				d3.add(p);
+			}
+		}
+
+		boolean hasInterior = !d3.isEmpty() || !d2.isEmpty();
 
 		int minDistSq = Integer.MAX_VALUE;
 		int maxDistSq = Integer.MIN_VALUE;
@@ -166,13 +123,19 @@ public final class BloodSplatter {
 
 		for (TexelPos p : points) {
 			int stage;
-			if (hasInterior) {
-				if (!d1.contains(p) && !d2.contains(p)) {
+			if (!d3.isEmpty()) {
+				if (d3.contains(p)) {
 					stage = 0; // Deep core
 				} else if (d2.contains(p)) {
 					stage = 1; // Sub-perimeter
 				} else {
 					stage = 2; // Outermost edge
+				}
+			} else if (!d2.isEmpty()) {
+				if (d2.contains(p)) {
+					stage = 0; // Innermost layer acts as core
+				} else {
+					stage = (p.u == globalCenterU && p.v == globalCenterV) ? 1 : 2;
 				}
 			} else {
 				int d2c = (p.u - globalCenterU) * (p.u - globalCenterU) + (p.v - globalCenterV) * (p.v - globalCenterV);
@@ -213,9 +176,114 @@ public final class BloodSplatter {
 				}
 			}
 
-			int col = (alpha << 24) | rgb;
+			int col = (alpha << 24) | shade(rgb, p.u, p.v);
 			writer.setTexel(p.u, p.v, col, stage);
 		}
+	}
+
+	/**
+	 * Builds an irregular, slightly elongated blob whose outline is perturbed by low-frequency
+	 * angular harmonics plus per-texel jitter, so no two splats share the same silhouette.
+	 */
+	private static Set<TexelPos> generateOrganicBlob(int cu, int cv, int splatIndex, float scale, Random random) {
+		Set<TexelPos> out = new HashSet<>();
+		double radius = Math.max(1.2, (2.8 + random.nextDouble() * 1.6) * scale);
+		double elong = 1.0 + random.nextDouble() * 0.5;
+		double angle = random.nextDouble() * Math.PI * 2.0;
+		double cos = Math.cos(angle);
+		double sin = Math.sin(angle);
+
+		int harmonics = 3;
+		double[] amp = new double[harmonics];
+		double[] phase = new double[harmonics];
+		for (int k = 0; k < harmonics; k++) {
+			amp[k] = (0.10 + random.nextDouble() * 0.14) / (k + 1);
+			phase[k] = random.nextDouble() * Math.PI * 2.0;
+		}
+
+		int bound = (int) Math.ceil(radius * elong * 1.5) + 1;
+		for (int dv = -bound; dv <= bound; dv++) {
+			for (int du = -bound; du <= bound; du++) {
+				double x = (du * cos + dv * sin) / elong;
+				double y = -du * sin + dv * cos;
+				double r = Math.sqrt(x * x + y * y);
+				double theta = Math.atan2(y, x);
+				double edge = 1.0;
+				for (int k = 0; k < harmonics; k++) {
+					edge += amp[k] * Math.sin((k + 2) * theta + phase[k]);
+				}
+				double jitter = (random.nextDouble() - 0.5) * 0.9;
+				if (r + jitter <= radius * edge) {
+					out.add(new TexelPos(cu + du, cv + dv));
+				}
+			}
+		}
+		return out;
+	}
+
+	/**
+	 * Scatters small satellite droplets around the main blob, some joined to it by thin tendrils,
+	 * which gives the spattered, "flung" look and helps neighbouring splats bridge together.
+	 */
+	private static void addSatellites(Set<TexelPos> points, int cu, int cv, float scale, Random random) {
+		double radius = Math.max(0.7, 3.0 * scale);
+		int count = (int) Math.round((1 + random.nextDouble() * 4) * Math.min(1.5, scale + 0.3));
+		for (int i = 0; i < count; i++) {
+			double a = random.nextDouble() * Math.PI * 2.0;
+			double dist = radius * (1.2 + random.nextDouble() * 1.0);
+			int su = cu + (int) Math.round(Math.cos(a) * dist);
+			int sv = cv + (int) Math.round(Math.sin(a) * dist);
+			int size = random.nextDouble() < 0.35 * Math.min(1.0, scale) ? 1 : 0;
+			for (int dv = -size; dv <= size; dv++) {
+				for (int du = -size; du <= size; du++) {
+					if (size == 0 || Math.abs(du) + Math.abs(dv) <= size) {
+						points.add(new TexelPos(su + du, sv + dv));
+					}
+				}
+			}
+			if (random.nextDouble() < 0.4) {
+				int steps = (int) Math.ceil(dist);
+				for (int s = 1; s < steps; s++) {
+					double t = s / (double) steps;
+					points.add(new TexelPos(cu + (int) Math.round(Math.cos(a) * dist * t),
+						cv + (int) Math.round(Math.sin(a) * dist * t)));
+				}
+			}
+		}
+	}
+
+	/**
+	 * Mottles colour by world-plane texel coordinate (not per-splat), so where splats overlap
+	 * they continue the same pattern and read as one merged pool.
+	 */
+	private static int shade(int rgb, int gu, int gv) {
+		double n = 0.65 * smoothNoise(gu / 3.0, gv / 3.0) + 0.35 * hash01(gu, gv);
+		double f = 0.80 + 0.28 * n;
+		int r = (int) Math.min(255, Math.round(((rgb >> 16) & 0xFF) * f));
+		int g = (int) Math.min(255, Math.round(((rgb >> 8) & 0xFF) * f));
+		int b = (int) Math.min(255, Math.round((rgb & 0xFF) * f));
+		return (r << 16) | (g << 8) | b;
+	}
+
+	private static double smoothNoise(double x, double y) {
+		int x0 = (int) Math.floor(x);
+		int y0 = (int) Math.floor(y);
+		double fx = x - x0;
+		double fy = y - y0;
+		fx = fx * fx * (3 - 2 * fx);
+		fy = fy * fy * (3 - 2 * fy);
+		double a = hash01(x0 * 7919, y0 * 104729);
+		double b = hash01((x0 + 1) * 7919, y0 * 104729);
+		double c = hash01(x0 * 7919, (y0 + 1) * 104729);
+		double d = hash01((x0 + 1) * 7919, (y0 + 1) * 104729);
+		return (a + (b - a) * fx) + ((c + (d - c) * fx) - (a + (b - a) * fx)) * fy;
+	}
+
+	private static double hash01(int x, int y) {
+		int h = x * 374761393 + y * 668265263;
+		h = (h ^ (h >>> 13)) * 1274126177;
+		h ^= h >>> 16;
+		return (h & 0x7FFFFFFF) / (double) 0x7FFFFFFF;
 	}
 
 	/**
