@@ -186,8 +186,18 @@ public final class ClientCanvasStore {
 					int existingAlpha = (existing >>> 24);
 					int newAlpha = (pt.col >>> 24);
 
-					if (newAlpha > existingAlpha || (newAlpha == existingAlpha && existing != pt.col)) {
-						canvasTexels[idx] = pt.col;
+					int merged;
+					if (existingAlpha == 0) {
+						merged = pt.col;
+					} else {
+						int r = (((existing >> 16) & 0xFF) + ((pt.col >> 16) & 0xFF)) >> 1;
+						int g = (((existing >> 8) & 0xFF) + ((pt.col >> 8) & 0xFF)) >> 1;
+						int b = ((existing & 0xFF) + (pt.col & 0xFF)) >> 1;
+						merged = (Math.max(existingAlpha, newAlpha) << 24) | (r << 16) | (g << 8) | b;
+					}
+
+					if (merged != existing) {
+						canvasTexels[idx] = merged;
 						canvasChanged = true;
 						if (pt.expirationMs > fadeStart) {
 							fadeStart = pt.expirationMs;
