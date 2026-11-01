@@ -43,3 +43,30 @@
 
 ## Future Features
 - [ ] **Screen Effects**: Add screen blood splatters when a player receives heavy damage or hits a mob up close.
+
+### Combat Dynamics & Impact "Juice"
+- [ ] **Directional Weapon Slashes & Cast-off Arcs**: Spawn crescent arcs and elongated cast-off streaks along weapon swing planes (e.g. sword sweeps, jump crits) connecting weapon motion directly to decals.
+- [ ] **Velocity-Stretched Flying Droplets (Needles / Teardrops)**: Elongate blood particle quads along their velocity vector $(\vec{v})$ while flying at high speed, easing into round drops as they decelerate.
+- [ ] **Crit & Finisher Mist Bursts**: Spawn a lingering crimson vapor / aerosol mist cloud upon lethal hits or heavy critical strikes that gently drifts before dissipating.
+
+### Fluid & Surface Realism
+- [ ] **Drying & Coagulation Aging Progression**: Transition splatters over time through three distinct visual states:
+  - *Fresh*: Bright, wet, translucent rim, rich crimson core.
+  - *Coagulating*: Loses gloss/brightness, shifts towards darker, desaturated dried burgundy / dark maroon.
+  - *Dried*: Edge crusting / flaking before final fade or erosion.
+- [ ] **Surface-Aware Splash Dynamics**:
+  - *Glass / Ice / Polished*: Higher droplet bounce, sharper splatter shapes, longer sliding wall drips.
+  - *Porous / Earthy (Dirt, Sand, Wood, Sponge)*: Flatter matte stains; sand/gravel absorb droplets into smaller concentrated stains.
+  - *Water / Lava*: Expanding diluted ripple rings in water; sizzling steam puffs in lava.
+- [ ] **Corner & Stair Wrapping (Liquid Bleed)**: Allow droplets landing near block edges or stair risers to trickle over corners and down vertical faces.
+
+### Creature Biology & Distinct Themes
+- [ ] **Ender Blood (Void Shimmer / Inverted Wisps)**: Endermen, Shulkers, and the Ender Dragon spill deep purple/black obsidian fluid laced with floating teleportation flecks or inverse-gravity wisps.
+- [ ] **Arthropod Hemolymph**: Spiders, Cave Spiders, and Silverfish splatter neon yellow-green or iridescent amber hemolymph.
+- [ ] **Wither & Nether Bleed**: Wither Skeletons, Magma Cubes, and Blazes leave scorched, smoking charcoal-black or tar-like residues.
+- [ ] **Sculk / Warden Resonance**: Wardens and sculk-infected entities yield faintly glowing cyan / teal bioluminescent splatter that pulses before dissolving.
+
+### Dynamic Lighting & Specular Glisten
+- [ ] **Faux-Normal / Wet-Highlight Shimmer**: Calculate a directional highlight using the boundary distance fields ($d_1, d_2, d_3$) to render subtle meniscus highlights and core ambient shadows for a thick, 3D beaded liquid look under vanilla lighting.
+- [ ] **Shaders / PBR LabPBR Support**: Expose RedFX decal quads with specular smoothness channels for Iris/Oculus shader packs to realistically reflect sunlight, moonlight, and torchlight.
+
