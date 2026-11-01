@@ -287,7 +287,7 @@ public class BloodParticle extends TerrainParticle {
             if (targetState.isAir() || !targetState.getFluidState().isEmpty() || PaintSurface.isIgnored(targetState)) {
                 hitDirection = null;
             } else {
-                stampToCanvas(this.level, this.x, this.y, this.z, this.rCol, this.gCol, this.bCol, this.splatIndex, this.random, targetBlock, hitDirection);
+                stampToCanvas(this.level, this.x, this.y, this.z, oldXd, oldYd, oldZd, this.rCol, this.gCol, this.bCol, this.splatIndex, this.random, targetBlock, hitDirection);
 
                 if (RedfxConfig.get().enableSplatDust) {
                     spawnSplatDust(this.level, this.x, this.y, this.z, this.rCol, this.gCol, this.bCol, this.random);
@@ -299,6 +299,14 @@ public class BloodParticle extends TerrainParticle {
     }
 
     public static void stampToCanvas(ClientLevel level, double x, double y, double z,
+                                     float rCol, float gCol, float bCol,
+                                     int splatIndex, RandomSource random,
+                                     BlockPos targetBlock, Direction hitDirection) {
+        stampToCanvas(level, x, y, z, 0.0, 0.0, 0.0, rCol, gCol, bCol, splatIndex, random, targetBlock, hitDirection);
+    }
+
+    public static void stampToCanvas(ClientLevel level, double x, double y, double z,
+                                     double impactVx, double impactVy, double impactVz,
                                      float rCol, float gCol, float bCol,
                                      int splatIndex, RandomSource random,
                                      BlockPos targetBlock, Direction hitDirection) {
@@ -316,6 +324,26 @@ public class BloodParticle extends TerrainParticle {
 
         int centerU = FaceAxes.texel(uCoord);
         int centerV = FaceAxes.texel(vCoord);
+
+        // Project 3D impact velocity onto the 2D face plane (tangentU, tangentV)
+        double tangentU = 0.0;
+        double tangentV = 0.0;
+        if (RedfxConfig.get().directionalSlashes) {
+            tangentU = switch (face) {
+                case FaceAxes.NORTH -> -impactVx;
+                case FaceAxes.SOUTH -> impactVx;
+                case FaceAxes.WEST -> impactVz;
+                case FaceAxes.EAST -> -impactVz;
+                case FaceAxes.UP, FaceAxes.DOWN -> impactVx;
+                default -> 0.0;
+            };
+            tangentV = switch (face) {
+                case FaceAxes.NORTH, FaceAxes.SOUTH, FaceAxes.WEST, FaceAxes.EAST -> -impactVy;
+                case FaceAxes.UP -> impactVz;
+                case FaceAxes.DOWN -> -impactVz;
+                default -> 0.0;
+            };
+        }
 
         int argb = PaintColor.fromRgb(rCol, gCol, bCol, RedfxConfig.get().bloodOpacity);
 
@@ -358,7 +386,7 @@ public class BloodParticle extends TerrainParticle {
             SurfaceInfo targetSurface = resolveTopSurfaceInfo(level, targetBlock, (centerU + 0.5) / 16.0, (centerV + 0.5) / 16.0);
             double targetElevation = targetSurface != null ? targetSurface.elevation() : (double) (targetBlock.getY() + 1.0);
 
-            BloodSplatter.stampGlobal(globalCenterU, globalCenterV, argb, splatIndex, scale, (gu, gv, col, stage) -> {
+            BloodSplatter.stampGlobal(globalCenterU, globalCenterV, argb, splatIndex, scale, tangentU, tangentV, (gu, gv, col, stage) -> {
                 int bu = FaceStroke.blockOfU(face, gu);
                 int bv = FaceStroke.blockOfV(face, gv);
                 int uTexel = gu - FaceStroke.encodeU(face, bu, 0);
@@ -822,7 +850,7 @@ public class BloodParticle extends TerrainParticle {
                     }
                 }
             } else {
-                BloodSplatter.stampGlobal(globalCenterU, globalCenterV, argb, splatIndex, scale, wallWriter);
+                BloodSplatter.stampGlobal(globalCenterU, globalCenterV, argb, splatIndex, scale, tangentU, tangentV, wallWriter);
                 for (Map.Entry<Integer, List<ClientCanvasStore.PendingTexel>> entry : wallStageTexels.entrySet()) {
                     int stage = entry.getKey();
                     long execTime = stage == 0 ? nowMs : nowMs + (long) stage * baseDelayMs;

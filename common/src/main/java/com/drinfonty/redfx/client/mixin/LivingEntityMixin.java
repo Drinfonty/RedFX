@@ -84,10 +84,17 @@ public class LivingEntityMixin {
         
         if (count <= 0) return;
         
-        // Determine attack direction from damage source
+        // Determine attack direction and attacker entity
+        LivingEntity attackerEntity = null;
         Vec3 attackerPos = null;
         if (damageSource != null) {
-            if (damageSource.getEntity() != null) {
+            if (damageSource.getEntity() instanceof LivingEntity le) {
+                attackerEntity = le;
+                attackerPos = le.position();
+            } else if (damageSource.getDirectEntity() instanceof LivingEntity directLe) {
+                attackerEntity = directLe;
+                attackerPos = directLe.position();
+            } else if (damageSource.getEntity() != null) {
                 attackerPos = damageSource.getEntity().position();
             } else if (damageSource.getDirectEntity() != null) {
                 attackerPos = damageSource.getDirectEntity().position();
@@ -100,6 +107,7 @@ public class LivingEntityMixin {
         Minecraft mc = Minecraft.getInstance();
         if (attackerPos == null && damageSource == null && mc.player != null) {
             if (mc.player.distanceToSqr(entity) <= 36.0) {
+                attackerEntity = mc.player;
                 attackerPos = mc.player.position();
             }
         }
@@ -120,9 +128,42 @@ public class LivingEntityMixin {
             }
         }
 
+        // Determine if this is a melee weapon slash (sword) or heavy chop (axe)
+        boolean isSlash = false;
+        boolean isChop = false;
+        double swingDirX = 0.0;
+        double swingDirZ = 0.0;
+        double sweepTangentX = 0.0;
+        double sweepTangentZ = 0.0;
+
+        if (attackerEntity != null && isDirectional && RedfxConfig.get().directionalSlashes) {
+            ItemStack weapon = attackerEntity.getMainHandItem();
+            if (weapon.is(ItemTags.SWORDS)) {
+                isSlash = true;
+            } else if (weapon.is(ItemTags.AXES)) {
+                isChop = true;
+            }
+
+            if (isSlash || isChop) {
+                float yaw = attackerEntity.getYRot();
+                double rad = Math.toRadians(yaw);
+                // Attacker's forward horizontal vector (from attacker towards target)
+                swingDirX = -Math.sin(rad);
+                swingDirZ = Math.cos(rad);
+                // Transverse / lateral vector (tangent along the sword sweep plane)
+                sweepTangentX = Math.cos(rad);
+                sweepTangentZ = Math.sin(rad);
+                // Randomize swing chirality (left-to-right vs right-to-left)
+                if (attackerEntity.getRandom().nextBoolean()) {
+                    sweepTangentX = -sweepTangentX;
+                    sweepTangentZ = -sweepTangentZ;
+                }
+            }
+        }
+
         if (com.drinfonty.redfx.RedfxMod.DEBUG) {
-            com.drinfonty.redfx.RedfxMod.LOGGER.info("Spawning {} blood particles (totalMultiplier={}, weaponScale={}) for entity {} (isDirectional={}, forceX={}, forceZ={})",
-                count, totalMultiplier, weaponMultiplier, entity.getType().getDescriptionId(), isDirectional, forceX, forceZ);
+            com.drinfonty.redfx.RedfxMod.LOGGER.info("Spawning {} blood particles (totalMultiplier={}, weaponScale={}, isSlash={}, isChop={}) for entity {}",
+                count, totalMultiplier, weaponMultiplier, isSlash, isChop, entity.getType().getDescriptionId());
         }
 
         String particleType = RedfxConfig.get().particleType;
@@ -152,18 +193,39 @@ public class LivingEntityMixin {
             double py = entity.getY() + entity.getBbHeight() * 0.5 + (entity.getRandom().nextDouble() - 0.5) * entity.getBbHeight() * 0.5;
             double pz = entity.getZ() + (entity.getRandom().nextDouble() - 0.5) * entity.getBbWidth() * 0.8;
             
-            // Adjust velocity based on attack direction + random spread
-            double angle = entity.getRandom().nextDouble() * Math.PI * 2.0;
-            double omniSpeed = (isDeath ? 0.05 : 0.04) + entity.getRandom().nextDouble() * (isDeath ? 0.08 : 0.07);
-            double vx = Math.cos(angle) * omniSpeed;
-            double vz = Math.sin(angle) * omniSpeed;
+            double vx;
+            double vy;
+            double vz;
 
-            if (isDirectional && RedfxConfig.get().directionalBlood) {
-                double bias = isDeath ? 0.10 : 0.08;
-                vx += forceX * bias;
-                vz += forceZ * bias;
+            if (isSlash) {
+                // Directional sword slash arc: cast-off particles distributed across a sweeping horizontal crescent
+                double t = ((double) i / Math.max(1, count - 1)) * 2.0 - 1.0; // -1.0 to +1.0 along swing
+                double arcLateral = t * 0.16 + (entity.getRandom().nextDouble() - 0.5) * 0.05;
+                double arcForward = (1.0 - t * t * 0.45) * 0.14 + entity.getRandom().nextDouble() * 0.06;
+                vx = swingDirX * arcForward + sweepTangentX * arcLateral;
+                vz = swingDirZ * arcForward + sweepTangentZ * arcLateral;
+                vy = (0.04 + entity.getRandom().nextDouble() * 0.08) + (1.0 - Math.abs(t)) * 0.04;
+            } else if (isChop) {
+                // Heavy axe chop: sharp downward/forward cast-off whip
+                double fwd = 0.12 + entity.getRandom().nextDouble() * 0.10;
+                double lat = (entity.getRandom().nextDouble() - 0.5) * 0.06;
+                vx = swingDirX * fwd + sweepTangentX * lat;
+                vz = swingDirZ * fwd + sweepTangentZ * lat;
+                vy = (entity.getRandom().nextDouble() - 0.3) * 0.15;
+            } else {
+                // Adjust velocity based on attack direction + random spread
+                double angle = entity.getRandom().nextDouble() * Math.PI * 2.0;
+                double omniSpeed = (isDeath ? 0.05 : 0.04) + entity.getRandom().nextDouble() * (isDeath ? 0.08 : 0.07);
+                vx = Math.cos(angle) * omniSpeed;
+                vz = Math.sin(angle) * omniSpeed;
+
+                if (isDirectional && RedfxConfig.get().directionalBlood) {
+                    double bias = isDeath ? 0.10 : 0.08;
+                    vx += forceX * bias;
+                    vz += forceZ * bias;
+                }
+                vy = (isDeath ? 0.10 : 0.08) + entity.getRandom().nextDouble() * (isDeath ? 0.12 : 0.10);
             }
-            double vy = (isDeath ? 0.10 : 0.08) + entity.getRandom().nextDouble() * (isDeath ? 0.12 : 0.10);
 
             spawnSingleBloodParticle(clientLevel, entity, isPoof, blockState, px, py, pz, vx, vy, vz, r, g, b);
         }
