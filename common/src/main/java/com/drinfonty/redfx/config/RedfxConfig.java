@@ -43,12 +43,14 @@ public class RedfxConfig {
         entityBloodColors.put("minecraft:enderman", "#991ACC");
         entityBloodColors.put("minecraft:ender_dragon", "#991ACC");
         entityBloodColors.put("minecraft:endermite", "#991ACC");
+        entityBloodColors.put("minecraft:shulker", "#991ACC");
         entityBloodColors.put("minecraft:skeleton", "#85522E");
         entityBloodColors.put("minecraft:skeleton_horse", "#85522E");
         entityBloodColors.put("minecraft:stray", "#6B8A99");
         entityBloodColors.put("minecraft:bogged", "#4D6633");
         entityBloodColors.put("minecraft:wither_skeleton", "#262626");
-        entityBloodColors.put("minecraft:warden", "#0D4DB2");
+        entityBloodColors.put("minecraft:wither", "#1A1A1A");
+        entityBloodColors.put("minecraft:warden", "#00D9C0");
         entityBloodColors.put("minecraft:spider", "#B2E61A");
         entityBloodColors.put("minecraft:cave_spider", "#99E61A");
         entityBloodColors.put("minecraft:silverfish", "#B2E61A");
