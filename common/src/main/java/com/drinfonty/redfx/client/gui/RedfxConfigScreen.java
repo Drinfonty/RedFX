@@ -37,11 +37,19 @@ public class RedfxConfigScreen extends Screen {
         ).bounds(leftX, startY, colWidth, buttonHeight).build();
         this.addRenderableWidget(bloodToggle);
 
-        // Button 1b: Toggle Directional Blood Spray
+        // Button 1b: Toggle Directional Blood / Weapon Slashes
         Button directionalToggle = Button.builder(
             getDirectionalButtonMessage(config),
             btn -> {
-                config.directionalBlood = !config.directionalBlood;
+                if (!config.directionalBlood) {
+                    config.directionalBlood = true;
+                    config.directionalSlashes = false;
+                } else if (!config.directionalSlashes) {
+                    config.directionalSlashes = true;
+                } else {
+                    config.directionalBlood = false;
+                    config.directionalSlashes = false;
+                }
                 btn.setMessage(getDirectionalButtonMessage(config));
             }
         ).bounds(rightX, startY, colWidth, buttonHeight).build();
@@ -302,7 +310,10 @@ public class RedfxConfigScreen extends Screen {
     }
 
     private Component getDirectionalButtonMessage(RedfxConfig config) {
-        return Component.literal("Directional: " + (config.directionalBlood ? "ON" : "OFF"));
+        if (!config.directionalBlood) {
+            return Component.literal("Directional: OFF");
+        }
+        return Component.literal("Directional: " + (config.directionalSlashes ? "Slashes" : "Spray"));
     }
 
     private Component getAmountButtonMessage(RedfxConfig config) {
