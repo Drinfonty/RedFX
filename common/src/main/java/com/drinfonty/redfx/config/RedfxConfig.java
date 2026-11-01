@@ -49,6 +49,9 @@ public class RedfxConfig {
         entityBloodColors.put("minecraft:bogged", "#4D6633");
         entityBloodColors.put("minecraft:wither_skeleton", "#262626");
         entityBloodColors.put("minecraft:warden", "#0D4DB2");
+        entityBloodColors.put("minecraft:spider", "#B2E61A");
+        entityBloodColors.put("minecraft:cave_spider", "#99E61A");
+        entityBloodColors.put("minecraft:silverfish", "#B2E61A");
         entityBloodColors.put("minecraft:sulfur_cube", "#EBEBEB");
     }
 
