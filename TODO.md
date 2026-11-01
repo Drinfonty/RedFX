@@ -61,10 +61,10 @@
 - [ ] **Corner & Stair Wrapping (Liquid Bleed)**: Allow droplets landing near block edges or stair risers to trickle over corners and down vertical faces.
 
 ### Creature Biology & Distinct Themes
-- [ ] **Ender Blood (Void Shimmer / Inverted Wisps)**: Endermen, Shulkers, and the Ender Dragon spill deep purple/black obsidian fluid laced with floating teleportation flecks or inverse-gravity wisps.
+- [x] **Ender Blood (Void Shimmer / Inverted Wisps)**: Endermen, Shulkers, and the Ender Dragon spill deep purple/black obsidian fluid laced with floating teleportation flecks or inverse-gravity wisps.
 - [x] **Arthropod Hemolymph**: Spiders, Cave Spiders, and Silverfish splatter neon yellow-green or iridescent amber hemolymph.
-- [ ] **Wither & Nether Bleed**: Wither Skeletons, Magma Cubes, and Blazes leave scorched, smoking charcoal-black or tar-like residues.
-- [ ] **Sculk / Warden Resonance**: Wardens and sculk-infected entities yield faintly glowing cyan / teal bioluminescent splatter that pulses before dissolving.
+- [x] **Wither & Nether Bleed**: Wither Skeletons, Magma Cubes, and Blazes leave scorched, smoking charcoal-black or tar-like residues.
+- [x] **Sculk / Warden Resonance**: Wardens and sculk-infected entities yield faintly glowing cyan / teal bioluminescent splatter that pulses before dissolving.
 
 ### Dynamic Lighting & Specular Glisten
 - [ ] **Faux-Normal / Wet-Highlight Shimmer**: Calculate a directional highlight using the boundary distance fields ($d_1, d_2, d_3$) to render subtle meniscus highlights and core ambient shadows for a thick, 3D beaded liquid look under vanilla lighting.
