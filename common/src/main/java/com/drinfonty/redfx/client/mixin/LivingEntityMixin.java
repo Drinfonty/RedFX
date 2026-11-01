@@ -6,29 +6,25 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import com.drinfonty.redfx.config.RedfxConfig;
-import net.minecraft.core.registries.BuiltInRegistries;
 import com.drinfonty.redfx.client.particle.BloodParticle;
 
 // Import mobs for entity-specific blood colors
-import net.minecraft.world.entity.monster.Slime;
 import net.minecraft.world.entity.monster.Creeper;
-import net.minecraft.world.entity.monster.EnderMan;
 import net.minecraft.world.entity.boss.enderdragon.EnderDragon;
 import net.minecraft.world.entity.monster.Blaze;
-import net.minecraft.world.entity.monster.MagmaCube;
-import net.minecraft.world.entity.monster.AbstractSkeleton;
-import net.minecraft.world.entity.monster.warden.Warden;
-
 import net.minecraft.world.entity.monster.Endermite;
+import net.minecraft.world.entity.monster.warden.Warden;
+import net.minecraft.tags.EntityTypeTags;
+import com.drinfonty.redfx.client.particle.CreatureTheme;
 
 // Import item types & tags for weapon scaling
 import net.minecraft.world.item.ProjectileWeaponItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.tags.ItemTags;
-import net.minecraft.tags.EntityTypeTags;
 
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -175,8 +171,8 @@ public class LivingEntityMixin {
             if (particleType.equals("TNT")) {
                 blockState = Blocks.TNT.defaultBlockState();
             } else {
-                // Use white wool as a clean canvas for color tinting
-                blockState = Blocks.WHITE_WOOL.defaultBlockState();
+                // Use snow block as a clean white canvas for color tinting
+                blockState = Blocks.SNOW_BLOCK.defaultBlockState();
             }
         }
 
@@ -187,6 +183,45 @@ public class LivingEntityMixin {
         float b = baseColor[2];
 
         ClientLevel clientLevel = (ClientLevel) entity.level();
+
+        CreatureTheme theme = CreatureTheme.fromEntity(entity);
+        if (theme == CreatureTheme.ENDER) {
+            for (int k = 0; k < 3; k++) {
+                clientLevel.addParticle(
+                    ParticleTypes.PORTAL,
+                    entity.getX() + (entity.getRandom().nextDouble() - 0.5) * entity.getBbWidth(),
+                    entity.getY() + entity.getBbHeight() * 0.5 + (entity.getRandom().nextDouble() - 0.5) * entity.getBbHeight() * 0.5,
+                    entity.getZ() + (entity.getRandom().nextDouble() - 0.5) * entity.getBbWidth(),
+                    (entity.getRandom().nextDouble() - 0.5) * 0.4,
+                    (entity.getRandom().nextDouble() - 0.5) * 0.4,
+                    (entity.getRandom().nextDouble() - 0.5) * 0.4
+                );
+            }
+        } else if (theme == CreatureTheme.NETHER_WITHER) {
+            for (int k = 0; k < 2; k++) {
+                clientLevel.addParticle(
+                    ParticleTypes.SMOKE,
+                    entity.getX() + (entity.getRandom().nextDouble() - 0.5) * entity.getBbWidth(),
+                    entity.getY() + entity.getBbHeight() * 0.5 + (entity.getRandom().nextDouble() - 0.5) * entity.getBbHeight() * 0.5,
+                    entity.getZ() + (entity.getRandom().nextDouble() - 0.5) * entity.getBbWidth(),
+                    (entity.getRandom().nextDouble() - 0.5) * 0.03,
+                    0.03 + entity.getRandom().nextDouble() * 0.03,
+                    (entity.getRandom().nextDouble() - 0.5) * 0.03
+                );
+            }
+        } else if (theme == CreatureTheme.SCULK) {
+            for (int k = 0; k < 3; k++) {
+                clientLevel.addParticle(
+                    ParticleTypes.SCULK_CHARGE_POP,
+                    entity.getX() + (entity.getRandom().nextDouble() - 0.5) * entity.getBbWidth(),
+                    entity.getY() + entity.getBbHeight() * 0.5 + (entity.getRandom().nextDouble() - 0.5) * entity.getBbHeight() * 0.5,
+                    entity.getZ() + (entity.getRandom().nextDouble() - 0.5) * entity.getBbWidth(),
+                    (entity.getRandom().nextDouble() - 0.5) * 0.02,
+                    0.02,
+                    (entity.getRandom().nextDouble() - 0.5) * 0.02
+                );
+            }
+        }
 
         for (int i = 0; i < count; i++) {
             double px = entity.getX() + (entity.getRandom().nextDouble() - 0.5) * entity.getBbWidth() * 0.8;
@@ -227,12 +262,12 @@ public class LivingEntityMixin {
                 vy = (isDeath ? 0.10 : 0.08) + entity.getRandom().nextDouble() * (isDeath ? 0.12 : 0.10);
             }
 
-            spawnSingleBloodParticle(clientLevel, entity, isPoof, blockState, px, py, pz, vx, vy, vz, r, g, b);
+            spawnSingleBloodParticle(clientLevel, entity, theme, isPoof, blockState, px, py, pz, vx, vy, vz, r, g, b);
         }
     }
 
     private void spawnSingleBloodParticle(
-        ClientLevel clientLevel, LivingEntity entity, boolean isPoof,
+        ClientLevel clientLevel, LivingEntity entity, CreatureTheme theme, boolean isPoof,
         net.minecraft.world.level.block.state.BlockState blockState,
         double px, double py, double pz, double vx, double vy, double vz,
         float r, float g, float b
@@ -255,6 +290,7 @@ public class LivingEntityMixin {
         } else {
             BloodParticle blood = new BloodParticle(clientLevel, px, py, pz, vx, vy, vz, blockState);
             blood.setColor(particleR, particleG, particleB);
+            blood.setTheme(theme);
             Minecraft.getInstance().particleEngine.add(blood);
         }
     }
@@ -304,18 +340,22 @@ public class LivingEntityMixin {
         float[] base = config.getBloodColorForEntity(entityKey);
 
         if (base == null) {
-            if (entity instanceof Blaze || entity instanceof MagmaCube) {
+            if (entity instanceof Blaze || entityKey.contains("magma_cube")) {
                 base = new float[]{0.9F, 0.7F, 0.1F};
-            } else if (entity instanceof Slime || entity instanceof Creeper) {
+            } else if (entity instanceof Creeper || entityKey.contains("slime")) {
                 base = new float[]{0.2F, 0.9F, 0.2F};
-            } else if (entity instanceof EnderMan || entity instanceof EnderDragon || entity instanceof Endermite) {
+            } else if (entity instanceof EnderDragon || entity instanceof Endermite || entityKey.contains("enderman") || entityKey.contains("shulker")) {
                 base = new float[]{0.6F, 0.1F, 0.8F};
-            } else if (entity instanceof AbstractSkeleton || entity.getType().builtInRegistryHolder().is(EntityTypeTags.SKELETONS)) {
+            } else if (entityKey.contains("wither")) {
+                base = new float[]{0.15F, 0.15F, 0.15F};
+            } else if (entity.getType().builtInRegistryHolder().is(EntityTypeTags.SKELETONS)) {
                 base = new float[]{0.52F, 0.32F, 0.18F};
             } else if (entity.getType().builtInRegistryHolder().is(EntityTypeTags.ARTHROPOD)) {
                 base = new float[]{0.70F, 0.90F, 0.10F};
-            } else if (entity instanceof Warden) {
-                base = new float[]{0.05F, 0.3F, 0.7F};
+            } else if (entityKey.contains("sulfur_cube")) {
+                base = new float[]{0.92F, 0.92F, 0.92F};
+            } else if (entity instanceof Warden || entityKey.contains("warden")) {
+                base = new float[]{0.0F, 0.85F, 0.75F};
             } else {
                 base = config.getDefaultBloodColor();
             }
@@ -349,7 +389,7 @@ public class LivingEntityMixin {
             if (particleType.equals("TNT")) {
                 blockState = Blocks.TNT.defaultBlockState();
             } else {
-                blockState = Blocks.WHITE_WOOL.defaultBlockState();
+                blockState = Blocks.SNOW_BLOCK.defaultBlockState();
             }
         }
 
@@ -367,6 +407,7 @@ public class LivingEntityMixin {
         double vy = -0.04 - entity.getRandom().nextDouble() * 0.04;
         double vz = (entity.getRandom().nextDouble() - 0.5) * 0.01;
 
-        spawnSingleBloodParticle(clientLevel, entity, isPoof, blockState, px, py, pz, vx, vy, vz, r, g, b);
+        CreatureTheme theme = CreatureTheme.fromEntity(entity);
+        spawnSingleBloodParticle(clientLevel, entity, theme, isPoof, blockState, px, py, pz, vx, vy, vz, r, g, b);
     }
 }
