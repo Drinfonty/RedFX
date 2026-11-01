@@ -211,14 +211,26 @@ class BloodSplatterTest {
 	}
 
 	@Test
-	void stampsWallDripAllPatternsWithoutCrashing() {
+	void stampsDirectionalElongatedSplatter() {
 		int red = 0xFFFF0000;
-		for (int pattern = 1; pattern <= 10; pattern++) {
-			java.util.concurrent.atomic.AtomicInteger count = new java.util.concurrent.atomic.AtomicInteger(0);
-			BloodSplatter.stampWallDripGlobal(8, 4, red, pattern, 1.0f, (u, v, argb, stage) -> {
-				count.incrementAndGet();
-			});
-			assertTrue(count.get() >= 5, "Wall drip pattern " + pattern + " should produce dripping pixels");
-		}
+		java.util.List<Integer> uCoords = new java.util.ArrayList<>();
+		java.util.List<Integer> vCoords = new java.util.ArrayList<>();
+
+		// Fast horizontal tangent: tangentU = 0.25, tangentV = 0.0
+		BloodSplatter.stampGlobal(50, 50, red, 1, 1.0f, 0.25, 0.0, (u, v, argb, stage) -> {
+			uCoords.add(u);
+			vCoords.add(v);
+		});
+
+		int minU = uCoords.stream().min(Integer::compareTo).orElse(50);
+		int maxU = uCoords.stream().max(Integer::compareTo).orElse(50);
+		int minV = vCoords.stream().min(Integer::compareTo).orElse(50);
+		int maxV = vCoords.stream().max(Integer::compareTo).orElse(50);
+
+		int spanU = maxU - minU;
+		int spanV = maxV - minV;
+
+		assertTrue(spanU > spanV, "Directional splatter along horizontal tangent should be elongated along U (spanU=" + spanU + ", spanV=" + spanV + ")");
+		assertTrue(maxU > 50, "Droplet momentum should carry texels forward past the center point");
 	}
 }
