@@ -89,6 +89,16 @@ public class BloodParticle extends TerrainParticle {
         this.alpha = RedfxConfig.get().bloodOpacity;
     }
 
+    private CreatureTheme theme = CreatureTheme.NORMAL;
+
+    public void setTheme(CreatureTheme theme) {
+        this.theme = theme != null ? theme : CreatureTheme.NORMAL;
+    }
+
+    public CreatureTheme getTheme() {
+        return this.theme;
+    }
+
     @Override
     public void setAlpha(float alpha) {
         super.setAlpha(alpha);
@@ -195,6 +205,11 @@ public class BloodParticle extends TerrainParticle {
 
     public static void handleLanding(ClientLevel level, double x, double y, double z,
                                       float rCol, float gCol, float bCol, RandomSource random) {
+        handleLanding(level, x, y, z, rCol, gCol, bCol, CreatureTheme.NORMAL, random);
+    }
+
+    public static void handleLanding(ClientLevel level, double x, double y, double z,
+                                      float rCol, float gCol, float bCol, CreatureTheme theme, RandomSource random) {
         if (level == null) return;
         BlockPos currentPos = BlockPos.containing(x, y, z);
         if (level.getFluidState(currentPos).is(FluidTags.WATER)) {
@@ -214,6 +229,8 @@ public class BloodParticle extends TerrainParticle {
         if (RedfxConfig.get().enableSplatDust) {
             spawnSplash(level, x, y, z, rCol, gCol, bCol, random);
         }
+
+        spawnThemeImpactParticles(level, x, y, z, theme, random);
     }
 
     @Override
@@ -262,6 +279,10 @@ public class BloodParticle extends TerrainParticle {
             }
         }
 
+        if (!inWater && this.theme != CreatureTheme.NORMAL) {
+            spawnThemeInFlightParticles();
+        }
+
         double oldXd = this.xd;
         double oldYd = this.yd;
         double oldZd = this.zd;
@@ -293,8 +314,94 @@ public class BloodParticle extends TerrainParticle {
                     spawnSplatDust(this.level, this.x, this.y, this.z, this.rCol, this.gCol, this.bCol, this.random);
                 }
 
+                spawnThemeImpactParticles(this.level, this.x, this.y, this.z, this.theme, this.random);
+
                 this.remove();
             }
+        }
+    }
+
+    private void spawnThemeInFlightParticles() {
+        switch (this.theme) {
+            case ENDER -> {
+                if (this.random.nextFloat() < 0.12F) {
+                    this.level.addParticle(
+                        ParticleTypes.PORTAL,
+                        this.x, this.y, this.z,
+                        (this.random.nextDouble() - 0.5) * 0.2,
+                        (this.random.nextDouble() - 0.5) * 0.2,
+                        (this.random.nextDouble() - 0.5) * 0.2
+                    );
+                }
+            }
+            case NETHER_WITHER -> {
+                if (this.random.nextFloat() < 0.10F) {
+                    this.level.addParticle(
+                        ParticleTypes.SMOKE,
+                        this.x, this.y, this.z,
+                        (this.random.nextDouble() - 0.5) * 0.02,
+                        0.01 + this.random.nextDouble() * 0.02,
+                        (this.random.nextDouble() - 0.5) * 0.02
+                    );
+                }
+            }
+            case SCULK -> {
+                if (this.random.nextFloat() < 0.12F) {
+                    this.level.addParticle(
+                        ParticleTypes.SCULK_CHARGE_POP,
+                        this.x, this.y, this.z,
+                        (this.random.nextDouble() - 0.5) * 0.01,
+                        0.01,
+                        (this.random.nextDouble() - 0.5) * 0.01
+                    );
+                }
+            }
+            default -> {}
+        }
+    }
+
+    public static void spawnThemeImpactParticles(ClientLevel level, double x, double y, double z, CreatureTheme theme, RandomSource random) {
+        if (theme == null || theme == CreatureTheme.NORMAL || theme == CreatureTheme.ARTHROPOD) return;
+        switch (theme) {
+            case ENDER -> {
+                int count = 2 + random.nextInt(3);
+                for (int i = 0; i < count; i++) {
+                    double ox = (random.nextDouble() - 0.5) * 0.35;
+                    double oz = (random.nextDouble() - 0.5) * 0.35;
+                    double oy = 0.04 + random.nextDouble() * 0.04;
+                    level.addParticle(
+                        ParticleTypes.PORTAL,
+                        x + ox, y + oy, z + oz,
+                        (random.nextDouble() - 0.5) * 0.25,
+                        0.10 + random.nextDouble() * 0.20,
+                        (random.nextDouble() - 0.5) * 0.25
+                    );
+                }
+            }
+            case NETHER_WITHER -> {
+                int count = 1 + random.nextInt(2);
+                for (int i = 0; i < count; i++) {
+                    double ox = (random.nextDouble() - 0.5) * 0.25;
+                    double oz = (random.nextDouble() - 0.5) * 0.25;
+                    level.addParticle(
+                        ParticleTypes.SMOKE,
+                        x + ox, y + 0.04, z + oz,
+                        (random.nextDouble() - 0.5) * 0.02,
+                        0.02 + random.nextDouble() * 0.03,
+                        (random.nextDouble() - 0.5) * 0.02
+                    );
+                }
+            }
+            case SCULK -> {
+                double ox = (random.nextDouble() - 0.5) * 0.25;
+                double oz = (random.nextDouble() - 0.5) * 0.25;
+                level.addParticle(
+                    ParticleTypes.SCULK_SOUL,
+                    x + ox, y + 0.04, z + oz,
+                    0.0, 0.025 + random.nextDouble() * 0.02, 0.0
+                );
+            }
+            default -> {}
         }
     }
 
