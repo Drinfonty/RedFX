@@ -12,6 +12,7 @@ public class RedfxConfig {
 
     public boolean bloodEnabled = true;
     public boolean directionalBlood = true; // Bias blood spray direction towards damage source/attacker
+    public boolean directionalSlashes = true; // Cast blood in weapon swing arcs (sweeps, crits) with elongated impact streaks
     public String particleAmount = "High"; // Low, Medium, High, Ultra
     public String particleType = "RedWool"; // RedWool, TNT, RedPoof
     public int particleLifetimeSeconds = 5; // Range: 1 to 30 seconds
@@ -69,6 +70,7 @@ public class RedfxConfig {
                     com.google.gson.JsonObject obj = element.getAsJsonObject();
                     if (obj.has("bloodEnabled")) config.bloodEnabled = obj.get("bloodEnabled").getAsBoolean();
                     if (obj.has("directionalBlood")) config.directionalBlood = obj.get("directionalBlood").getAsBoolean();
+                    if (obj.has("directionalSlashes")) config.directionalSlashes = obj.get("directionalSlashes").getAsBoolean();
                     if (obj.has("particleAmount")) config.particleAmount = obj.get("particleAmount").getAsString();
                     if (obj.has("particleType")) config.particleType = obj.get("particleType").getAsString();
                     if (obj.has("particleLifetimeSeconds")) config.particleLifetimeSeconds = obj.get("particleLifetimeSeconds").getAsInt();
@@ -148,6 +150,7 @@ public class RedfxConfig {
     public void resetToDefaults() {
         this.bloodEnabled = true;
         this.directionalBlood = true;
+        this.directionalSlashes = true;
         this.particleAmount = "High";
         this.particleType = "RedWool";
         this.particleLifetimeSeconds = 5;

@@ -46,10 +46,15 @@ public final class BloodSplatter {
 	 * Stage 2: Outermost perimeter (boundary edge)
 	 */
 	public static void stampGlobal(int globalCenterU, int globalCenterV, int argb, int splatIndex, float scale, StagedCanvasWriter writer) {
+		stampGlobal(globalCenterU, globalCenterV, argb, splatIndex, scale, 0.0, 0.0, writer);
+	}
+
+	public static void stampGlobal(int globalCenterU, int globalCenterV, int argb, int splatIndex, float scale,
+			double tangentU, double tangentV, StagedCanvasWriter writer) {
 		var random = java.util.concurrent.ThreadLocalRandom.current();
 
 		Set<TexelPos> points = new HashSet<>();
-		Set<TexelPos> blob = generateOrganicBlob(globalCenterU, globalCenterV, splatIndex, scale, random);
+		Set<TexelPos> blob = generateOrganicBlob(globalCenterU, globalCenterV, splatIndex, scale, tangentU, tangentV, random);
 		points.addAll(blob);
 
 		// Roughen the main blob's rim lightly so it reads as pixel-art speckle rather than a smooth disc
@@ -70,7 +75,7 @@ public final class BloodSplatter {
 			}
 		}
 
-		addSatellites(points, globalCenterU, globalCenterV, scale, random);
+		addSatellites(points, globalCenterU, globalCenterV, scale, tangentU, tangentV, random);
 		points.add(new TexelPos(globalCenterU, globalCenterV));
 
 		int rgb = argb & 0xFFFFFF;
@@ -182,14 +187,31 @@ public final class BloodSplatter {
 	}
 
 	/**
-	 * Builds an irregular, slightly elongated blob whose outline is perturbed by low-frequency
-	 * angular harmonics plus per-texel jitter, so no two splats share the same silhouette.
+	 * Builds an irregular, elongated blob whose outline is perturbed by low-frequency
+	 * angular harmonics plus per-texel jitter. If tangent velocity (tangentU, tangentV)
+	 * is provided, the splatter aligns and stretches along the impact momentum vector.
 	 */
-	private static Set<TexelPos> generateOrganicBlob(int cu, int cv, int splatIndex, float scale, Random random) {
+	private static Set<TexelPos> generateOrganicBlob(int cu, int cv, int splatIndex, float scale,
+			double tangentU, double tangentV, Random random) {
 		Set<TexelPos> out = new HashSet<>();
 		double radius = Math.max(1.2, (2.8 + random.nextDouble() * 1.6) * scale);
-		double elong = 1.0 + random.nextDouble() * 0.5;
-		double angle = random.nextDouble() * Math.PI * 2.0;
+		
+		double tanSpeedSq = tangentU * tangentU + tangentV * tangentV;
+		boolean hasTangent = tanSpeedSq > 0.001;
+		double elong;
+		double angle;
+
+		if (hasTangent) {
+			// Align elongation axis with impact tangent vector
+			angle = Math.atan2(tangentV, tangentU);
+			double speed = Math.sqrt(tanSpeedSq);
+			// Elongate from 1.6x up to 3.2x depending on momentum
+			elong = 1.4 + Math.min(1.8, speed * 4.5) + random.nextDouble() * 0.4;
+		} else {
+			elong = 1.0 + random.nextDouble() * 0.5;
+			angle = random.nextDouble() * Math.PI * 2.0;
+		}
+
 		double cos = Math.cos(angle);
 		double sin = Math.sin(angle);
 
@@ -201,11 +223,17 @@ public final class BloodSplatter {
 			phase[k] = random.nextDouble() * Math.PI * 2.0;
 		}
 
-		int bound = (int) Math.ceil(radius * elong * 1.5) + 1;
+		// When impacting with high momentum, shift the droplet center slightly forward along tangent
+		double shiftU = hasTangent ? Math.cos(angle) * radius * 0.4 : 0.0;
+		double shiftV = hasTangent ? Math.sin(angle) * radius * 0.4 : 0.0;
+
+		int bound = (int) Math.ceil(radius * elong * 1.5) + 2;
 		for (int dv = -bound; dv <= bound; dv++) {
 			for (int du = -bound; du <= bound; du++) {
-				double x = (du * cos + dv * sin) / elong;
-				double y = -du * sin + dv * cos;
+				double rx = du - shiftU;
+				double ry = dv - shiftV;
+				double x = (rx * cos + ry * sin) / elong;
+				double y = -rx * sin + ry * cos;
 				double r = Math.sqrt(x * x + y * y);
 				double theta = Math.atan2(y, x);
 				double edge = 1.0;
@@ -224,13 +252,28 @@ public final class BloodSplatter {
 	/**
 	 * Scatters small satellite droplets around the main blob, some joined to it by thin tendrils,
 	 * which gives the spattered, "flung" look and helps neighbouring splats bridge together.
+	 * If tangent velocity is present, casts additional forward "flying" droplets in the splash direction.
 	 */
-	private static void addSatellites(Set<TexelPos> points, int cu, int cv, float scale, Random random) {
+	private static void addSatellites(Set<TexelPos> points, int cu, int cv, float scale,
+			double tangentU, double tangentV, Random random) {
 		double radius = Math.max(0.7, 3.0 * scale);
 		int count = (int) Math.round((1 + random.nextDouble() * 4) * Math.min(1.5, scale + 0.3));
+		double tanSpeedSq = tangentU * tangentU + tangentV * tangentV;
+		boolean hasTangent = tanSpeedSq > 0.001;
+		double impactAngle = hasTangent ? Math.atan2(tangentV, tangentU) : 0.0;
+
 		for (int i = 0; i < count; i++) {
-			double a = random.nextDouble() * Math.PI * 2.0;
-			double dist = radius * (1.2 + random.nextDouble() * 1.0);
+			double a;
+			double dist;
+			if (hasTangent && random.nextDouble() < 0.65) {
+				// 65% of satellites are flung forward along the impact tangent cone (+/- 45 deg)
+				a = impactAngle + (random.nextDouble() - 0.5) * (Math.PI * 0.5);
+				dist = radius * (1.4 + random.nextDouble() * 1.8);
+			} else {
+				a = random.nextDouble() * Math.PI * 2.0;
+				dist = radius * (1.2 + random.nextDouble() * 1.0);
+			}
+
 			int su = cu + (int) Math.round(Math.cos(a) * dist);
 			int sv = cv + (int) Math.round(Math.sin(a) * dist);
 			int size = random.nextDouble() < 0.35 * Math.min(1.0, scale) ? 1 : 0;
@@ -241,7 +284,7 @@ public final class BloodSplatter {
 					}
 				}
 			}
-			if (random.nextDouble() < 0.4) {
+			if (random.nextDouble() < (hasTangent ? 0.6 : 0.4)) {
 				int steps = (int) Math.ceil(dist);
 				for (int s = 1; s < steps; s++) {
 					double t = s / (double) steps;
