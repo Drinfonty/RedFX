@@ -313,6 +313,8 @@ public class LivingEntityMixin {
                 base = new float[]{0.6F, 0.1F, 0.8F};
             } else if (entity instanceof AbstractSkeleton || entity.getType().builtInRegistryHolder().is(EntityTypeTags.SKELETONS)) {
                 base = new float[]{0.52F, 0.32F, 0.18F};
+            } else if (entity.getType().builtInRegistryHolder().is(EntityTypeTags.ARTHROPOD)) {
+                base = new float[]{0.70F, 0.90F, 0.10F};
             } else if (entity instanceof SulfurCube) {
                 base = new float[]{0.92F, 0.92F, 0.92F};
             } else if (entity instanceof Warden) {
