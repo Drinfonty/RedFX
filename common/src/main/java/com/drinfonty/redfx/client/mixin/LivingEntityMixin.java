@@ -27,6 +27,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.tags.ItemTags;
 
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -34,13 +35,21 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(LivingEntity.class)
 public class LivingEntityMixin {
 
+    @Unique
+    private int redfx$lastDeathTick = -100;
+
     @Inject(method = "tick", at = @At("HEAD"))
     private void onTick(CallbackInfo ci) {
         LivingEntity self = (LivingEntity) (Object) this;
         if (self.level().isClientSide() && RedfxConfig.get().bloodEnabled) {
             // Check if damage has just occurred in this tick (hurtTime equals hurtDuration)
-            if (self.hurtTime == self.hurtDuration && self.hurtTime > 0 && self.deathTime == 0) {
+            if (self.hurtTime == self.hurtDuration && self.hurtTime > 0 && self.deathTime == 0 && self.getHealth() > 0.0F) {
                 spawnBloodParticles(self, self.getLastDamageSource(), false);
+            }
+
+            // Death burst trigger if entity dies
+            if (self.deathTime == 1 || (self.getHealth() <= 0.0F && self.hurtTime == self.hurtDuration && self.hurtTime > 0)) {
+                triggerDeathBurst(self);
             }
 
             // Drip effect: low on health (<= 35% health)
@@ -58,13 +67,21 @@ public class LivingEntityMixin {
         LivingEntity self = (LivingEntity) (Object) this;
         if (status == 3 && RedfxConfig.get().bloodEnabled) {
             // Entity death status code is 3
-            if (com.drinfonty.redfx.RedfxMod.DEBUG) {
-                com.drinfonty.redfx.RedfxMod.LOGGER.info("Death status (3) detected for entity {}!", self.getType().getDescriptionId());
-            }
             if (self.level().isClientSide()) {
-                spawnBloodParticles(self, self.getLastDamageSource(), true); // Larger burst on death
+                triggerDeathBurst(self);
             }
         }
+    }
+
+    @Unique
+    private void triggerDeathBurst(LivingEntity self) {
+        if (self.tickCount - this.redfx$lastDeathTick < 15) return;
+        this.redfx$lastDeathTick = self.tickCount;
+
+        if (com.drinfonty.redfx.RedfxMod.DEBUG) {
+            com.drinfonty.redfx.RedfxMod.LOGGER.info("Death burst triggered for entity {}!", self.getType().getDescriptionId());
+        }
+        spawnBloodParticles(self, self.getLastDamageSource(), true);
     }
 
     private void spawnBloodParticles(LivingEntity entity, DamageSource damageSource, boolean isDeath) {
@@ -75,7 +92,7 @@ public class LivingEntityMixin {
         float weaponMultiplier = getWeaponMultiplier(entity, damageSource);
         float totalMultiplier = configMultiplier * weaponMultiplier;
 
-        int baseCount = isDeath ? (25 + entity.getRandom().nextInt(15)) : (12 + entity.getRandom().nextInt(8));
+        int baseCount = isDeath ? (50 + entity.getRandom().nextInt(25)) : (12 + entity.getRandom().nextInt(8));
         int count = Math.round(baseCount * totalMultiplier);
         
         if (count <= 0) return;
@@ -132,7 +149,7 @@ public class LivingEntityMixin {
         double sweepTangentX = 0.0;
         double sweepTangentZ = 0.0;
 
-        if (attackerEntity != null && isDirectional && RedfxConfig.get().directionalSlashes) {
+        if (!isDeath && attackerEntity != null && isDirectional && RedfxConfig.get().directionalSlashes) {
             ItemStack weapon = attackerEntity.getMainHandItem();
             if (weapon.is(ItemTags.SWORDS)) {
                 isSlash = true;
@@ -185,54 +202,76 @@ public class LivingEntityMixin {
         ClientLevel clientLevel = (ClientLevel) entity.level();
 
         CreatureTheme theme = CreatureTheme.fromEntity(entity);
+        int themeBurstCount = isDeath ? 8 : 3;
         if (theme == CreatureTheme.ENDER) {
-            for (int k = 0; k < 3; k++) {
+            for (int k = 0; k < themeBurstCount; k++) {
                 clientLevel.addParticle(
                     ParticleTypes.PORTAL,
                     entity.getX() + (entity.getRandom().nextDouble() - 0.5) * entity.getBbWidth(),
                     entity.getY() + entity.getBbHeight() * 0.5 + (entity.getRandom().nextDouble() - 0.5) * entity.getBbHeight() * 0.5,
                     entity.getZ() + (entity.getRandom().nextDouble() - 0.5) * entity.getBbWidth(),
-                    (entity.getRandom().nextDouble() - 0.5) * 0.4,
-                    (entity.getRandom().nextDouble() - 0.5) * 0.4,
-                    (entity.getRandom().nextDouble() - 0.5) * 0.4
+                    (entity.getRandom().nextDouble() - 0.5) * 0.6,
+                    (entity.getRandom().nextDouble() - 0.5) * 0.6,
+                    (entity.getRandom().nextDouble() - 0.5) * 0.6
                 );
             }
         } else if (theme == CreatureTheme.NETHER_WITHER) {
-            for (int k = 0; k < 2; k++) {
+            for (int k = 0; k < (isDeath ? 6 : 2); k++) {
                 clientLevel.addParticle(
                     ParticleTypes.SMOKE,
                     entity.getX() + (entity.getRandom().nextDouble() - 0.5) * entity.getBbWidth(),
                     entity.getY() + entity.getBbHeight() * 0.5 + (entity.getRandom().nextDouble() - 0.5) * entity.getBbHeight() * 0.5,
                     entity.getZ() + (entity.getRandom().nextDouble() - 0.5) * entity.getBbWidth(),
-                    (entity.getRandom().nextDouble() - 0.5) * 0.03,
-                    0.03 + entity.getRandom().nextDouble() * 0.03,
-                    (entity.getRandom().nextDouble() - 0.5) * 0.03
+                    (entity.getRandom().nextDouble() - 0.5) * 0.05,
+                    0.03 + entity.getRandom().nextDouble() * 0.05,
+                    (entity.getRandom().nextDouble() - 0.5) * 0.05
                 );
             }
         } else if (theme == CreatureTheme.SCULK) {
-            for (int k = 0; k < 3; k++) {
+            for (int k = 0; k < themeBurstCount; k++) {
                 clientLevel.addParticle(
                     ParticleTypes.SCULK_CHARGE_POP,
                     entity.getX() + (entity.getRandom().nextDouble() - 0.5) * entity.getBbWidth(),
                     entity.getY() + entity.getBbHeight() * 0.5 + (entity.getRandom().nextDouble() - 0.5) * entity.getBbHeight() * 0.5,
                     entity.getZ() + (entity.getRandom().nextDouble() - 0.5) * entity.getBbWidth(),
-                    (entity.getRandom().nextDouble() - 0.5) * 0.02,
-                    0.02,
-                    (entity.getRandom().nextDouble() - 0.5) * 0.02
+                    (entity.getRandom().nextDouble() - 0.5) * 0.04,
+                    0.03,
+                    (entity.getRandom().nextDouble() - 0.5) * 0.04
                 );
             }
         }
 
         for (int i = 0; i < count; i++) {
-            double px = entity.getX() + (entity.getRandom().nextDouble() - 0.5) * entity.getBbWidth() * 0.8;
-            double py = entity.getY() + entity.getBbHeight() * 0.5 + (entity.getRandom().nextDouble() - 0.5) * entity.getBbHeight() * 0.5;
-            double pz = entity.getZ() + (entity.getRandom().nextDouble() - 0.5) * entity.getBbWidth() * 0.8;
+            double px;
+            double py;
+            double pz;
+
+            if (isDeath) {
+                px = entity.getX() + (entity.getRandom().nextDouble() - 0.5) * entity.getBbWidth() * 0.5;
+                py = entity.getY() + entity.getBbHeight() * 0.5 + (entity.getRandom().nextDouble() - 0.5) * entity.getBbHeight() * 0.4;
+                pz = entity.getZ() + (entity.getRandom().nextDouble() - 0.5) * entity.getBbWidth() * 0.5;
+            } else {
+                px = entity.getX() + (entity.getRandom().nextDouble() - 0.5) * entity.getBbWidth() * 0.8;
+                py = entity.getY() + entity.getBbHeight() * 0.5 + (entity.getRandom().nextDouble() - 0.5) * entity.getBbHeight() * 0.5;
+                pz = entity.getZ() + (entity.getRandom().nextDouble() - 0.5) * entity.getBbWidth() * 0.8;
+            }
             
             double vx;
             double vy;
             double vz;
 
-            if (isSlash) {
+            if (isDeath) {
+                // 3D Omnidirectional radial explosion: all blood shoots out in every direction
+                // Evenly spaced angles with jitter across full 360-degree sphere
+                double angle = ((double) i / Math.max(1, count)) * Math.PI * 2.0 + (entity.getRandom().nextDouble() - 0.5) * 0.4;
+                // Elevation ranging from slightly downward (-13°) to high upwards (+72°)
+                double elevation = (entity.getRandom().nextDouble() * 0.95 - 0.15) * Math.PI * 0.5;
+                // Dynamic outward explosion velocity
+                double speed = 0.12 + entity.getRandom().nextDouble() * 0.18;
+                vx = Math.cos(angle) * Math.cos(elevation) * speed;
+                vz = Math.sin(angle) * Math.cos(elevation) * speed;
+                vy = Math.sin(elevation) * speed + 0.06 + entity.getRandom().nextDouble() * 0.08;
+            } else if (isSlash) {
                 // Directional sword slash arc: cast-off particles distributed across a sweeping horizontal crescent
                 double t = ((double) i / Math.max(1, count - 1)) * 2.0 - 1.0; // -1.0 to +1.0 along swing
                 double arcLateral = t * 0.16 + (entity.getRandom().nextDouble() - 0.5) * 0.05;
@@ -250,16 +289,16 @@ public class LivingEntityMixin {
             } else {
                 // Adjust velocity based on attack direction + random spread
                 double angle = entity.getRandom().nextDouble() * Math.PI * 2.0;
-                double omniSpeed = (isDeath ? 0.05 : 0.04) + entity.getRandom().nextDouble() * (isDeath ? 0.08 : 0.07);
+                double omniSpeed = 0.04 + entity.getRandom().nextDouble() * 0.07;
                 vx = Math.cos(angle) * omniSpeed;
                 vz = Math.sin(angle) * omniSpeed;
 
                 if (isDirectional && RedfxConfig.get().directionalBlood) {
-                    double bias = isDeath ? 0.10 : 0.08;
+                    double bias = 0.08;
                     vx += forceX * bias;
                     vz += forceZ * bias;
                 }
-                vy = (isDeath ? 0.10 : 0.08) + entity.getRandom().nextDouble() * (isDeath ? 0.12 : 0.10);
+                vy = 0.08 + entity.getRandom().nextDouble() * 0.10;
             }
 
             spawnSingleBloodParticle(clientLevel, entity, theme, isPoof, blockState, px, py, pz, vx, vy, vz, r, g, b);
@@ -342,8 +381,18 @@ public class LivingEntityMixin {
         if (base == null) {
             if (entity instanceof Blaze || entityKey.contains("magma_cube")) {
                 base = new float[]{0.9F, 0.7F, 0.1F};
-            } else if (entity instanceof Creeper || entityKey.contains("slime")) {
+            } else if (entity instanceof Creeper || entityKey.contains("slime") || entityKey.contains("phantom")) {
                 base = new float[]{0.2F, 0.9F, 0.2F};
+            } else if (entityKey.contains("snow_golem")) {
+                base = new float[]{1.0F, 1.0F, 1.0F};
+            } else if (entityKey.contains("creaking")) {
+                base = new float[]{1.0F, 0.467F, 0.0F};
+            } else if (entityKey.contains("glow_squid")) {
+                base = new float[]{0.0F, 0.898F, 0.784F};
+            } else if (entityKey.contains("squid")) {
+                base = new float[]{0.078F, 0.078F, 0.078F};
+            } else if (entityKey.contains("iron_golem")) {
+                base = new float[]{0.753F, 0.753F, 0.753F};
             } else if (entity instanceof EnderDragon || entity instanceof Endermite || entityKey.contains("enderman") || entityKey.contains("shulker")) {
                 base = new float[]{0.6F, 0.1F, 0.8F};
             } else if (entityKey.contains("wither")) {
