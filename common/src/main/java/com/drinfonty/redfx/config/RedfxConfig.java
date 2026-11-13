@@ -55,6 +55,12 @@ public class RedfxConfig {
         entityBloodColors.put("minecraft:cave_spider", "#99E61A");
         entityBloodColors.put("minecraft:silverfish", "#B2E61A");
         entityBloodColors.put("minecraft:sulfur_cube", "#EBEBEB");
+        entityBloodColors.put("minecraft:snow_golem", "#FFFFFF");
+        entityBloodColors.put("minecraft:creaking", "#FF7700");
+        entityBloodColors.put("minecraft:glow_squid", "#00E5C8");
+        entityBloodColors.put("minecraft:squid", "#141414");
+        entityBloodColors.put("minecraft:iron_golem", "#C0C0C0");
+        entityBloodColors.put("minecraft:phantom", "#33E633");
     }
 
     private static RedfxConfig instance;
@@ -91,7 +97,6 @@ public class RedfxConfig {
                     if (obj.has("gradualSplatter")) config.gradualSplatter = obj.get("gradualSplatter").getAsBoolean();
                     if (obj.has("splatterGrowthDelayTicks")) config.splatterGrowthDelayTicks = obj.get("splatterGrowthDelayTicks").getAsInt();
                     if (obj.has("entityBloodColors") && obj.get("entityBloodColors").isJsonObject()) {
-                        config.entityBloodColors.clear();
                         for (java.util.Map.Entry<String, com.google.gson.JsonElement> entry : obj.getAsJsonObject("entityBloodColors").entrySet()) {
                             if (entry.getValue().isJsonPrimitive()) {
                                 config.entityBloodColors.put(entry.getKey(), entry.getValue().getAsString());

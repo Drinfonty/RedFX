@@ -40,6 +40,18 @@ class RedfxConfigTest {
         assertEquals(2, config.splatterGrowthDelayTicks, "splatterGrowthDelayTicks should default to 2");
         assertTrue(config.entityBloodColors.containsKey("minecraft:creeper"));
         assertEquals("#33E633", config.entityBloodColors.get("minecraft:creeper"));
+        assertTrue(config.entityBloodColors.containsKey("minecraft:snow_golem"));
+        assertEquals("#FFFFFF", config.entityBloodColors.get("minecraft:snow_golem"));
+        assertTrue(config.entityBloodColors.containsKey("minecraft:creaking"));
+        assertEquals("#FF7700", config.entityBloodColors.get("minecraft:creaking"));
+        assertTrue(config.entityBloodColors.containsKey("minecraft:glow_squid"));
+        assertEquals("#00E5C8", config.entityBloodColors.get("minecraft:glow_squid"));
+        assertTrue(config.entityBloodColors.containsKey("minecraft:squid"));
+        assertEquals("#141414", config.entityBloodColors.get("minecraft:squid"));
+        assertTrue(config.entityBloodColors.containsKey("minecraft:iron_golem"));
+        assertEquals("#C0C0C0", config.entityBloodColors.get("minecraft:iron_golem"));
+        assertTrue(config.entityBloodColors.containsKey("minecraft:phantom"));
+        assertEquals("#33E633", config.entityBloodColors.get("minecraft:phantom"));
     }
 
     @Test
