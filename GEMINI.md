@@ -16,7 +16,7 @@ Always follow this strict workflow for any feature, refactor, bugfix, or test:
    - **NEVER cherry-pick** commits from `main` to version branches. Always use `git merge main`.
    - **Always execute the merge and check via a single loop command** so the user only has to approve once:
      ```bash
-     for branch in mc-26.3 mc-26.2 mc-26.1 mc-1.21.11 mc-1.21.10 mc-1.21.8 mc-1.21.4 mc-1.21.1; do echo "=== Merging and verifying $branch ===" && git checkout "$branch" && git merge main -m "Merge main into $branch" && ./gradlew check || exit 1; done && git checkout mc-26.2
+     for branch in mc-26.3 mc-26.2 mc-26.1 mc-1.21.11 mc-1.21.10 mc-1.21.8 mc-1.21.4 mc-1.21.1 mc-1.20.1; do echo "=== Merging and verifying $branch ===" && git checkout "$branch" && git merge main -m "Merge main into $branch" && ./gradlew check || exit 1; done && git checkout mc-26.2
      ```
    - The version branches are:
      - `mc-26.3`
@@ -27,6 +27,7 @@ Always follow this strict workflow for any feature, refactor, bugfix, or test:
      - `mc-1.21.8`
      - `mc-1.21.4`
      - `mc-1.21.1`
+     - `mc-1.20.1`
    - When merging `main` into a version branch:
      - Retain branch-specific adaptations (`gradle.properties`, Loom configurations, version-specific model renderers, and GUI text drawing methods).
      - Integrate all shared feature changes from `main`.
