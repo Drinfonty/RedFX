@@ -239,9 +239,9 @@ public final class InGameSmokeTest {
 			client.player.yRotO = targetYaw;
 			client.player.xRotO = targetPitch;
 
-			// Wait 25 render ticks so the asynchronous chunk compiler finishes uploading decal quads and sweep smoke clears
+			// Wait 45 render ticks so flying particles finish landing and the asynchronous chunk compiler uploads decal quads
 			tickCounter++;
-			if (tickCounter < 25) {
+			if (tickCounter < 45) {
 				return;
 			}
 
