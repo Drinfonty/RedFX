@@ -30,12 +30,14 @@ The project maintains different branches to target different major Minecraft and
 | **`mc-1.21.8`** | **`1.21.8`** | `1.21.5` – `1.21.8` | `21.5`–`21.8` | 21 |
 | **`mc-1.21.4`** | **`1.21.4`** | `1.21.2` – `1.21.4` | `21.2`–`21.4` | 21 |
 | **`mc-1.21.1`** | **`1.21.1`** | `1.21` – `1.21.1` | `21.0`–`21.1` | 21 |
+| **`mc-1.20.1`** | **`1.20.1`** | `1.20.1` | `47.3.0` (Forge) | 17 |
 
 "Supported Minecraft" is the range declared in `minecraft_dependency`, and is what
 `modrinth_game_versions` publishes. Only the "Built Against" version is compiled and
 launched during verification.
 
 The 1.21 line needs five branches because Mojang overhauled rendering and APIs across the line:
+- 1.20.1 targets Forge `1.20.1-47.3.0` (built with `net.neoforged.moddev.legacyforge` and Java 17), using `BakedModel` + `ChunkRenderTypeSet`, `QuadBakingVertexConsumer`, and `META-INF/mods.toml`.
 - 1.21.2 introduced `DelegateBakedModel` and changed block sprite atlas access (`ModelManager.getAtlas(...)`).
 - 1.21.5 redesigned block models from `BakedModel` to `BlockStateModel` / `DynamicBlockStateModel` (NeoForge) and `WrapperBlockStateModel` (Fabric API), and changed `LevelChunk.setBlockState`'s signature.
 - 1.21.8 introduced `ChunkSectionLayer` in Fabric rendering (bridged backwards to 1.21.5 via dynamic layer shim).
@@ -67,14 +69,15 @@ This differs per branch and decides how a Fabric jar must be verified before pub
 | **`mc-1.21.8`** | 1.14.10 | `fabric-loom-remap` | **`intermediary`** — `remapJar` rewrites the mod | `:fabric:runProdClient` |
 | **`mc-1.21.4`** | 1.14.10 | `fabric-loom-remap` | **`intermediary`** — `remapJar` rewrites the mod | `:fabric:runProdClient` |
 | **`mc-1.21.1`** | 1.14.10 | `fabric-loom-remap` | **`intermediary`** — `remapJar` rewrites the mod | `:fabric:runProdClient` |
+| **`mc-1.20.1`** | 1.14.10 | `fabric-loom-remap` | **`intermediary`** — `remapJar` rewrites the mod | `:fabric:runProdClient` |
 
 Fabric does not publish intermediary mappings for Minecraft 26.x, so on `mc-26.2` and
 `mc-26.1` the `jar` output *is* the publishable artifact and the dev client runs in the
-same namespace as production. On the `mc-1.21.x` branches the published artifact is `remapJar`'s
+same namespace as production. On the `mc-1.21.x` and `mc-1.20.1` branches the published artifact is `remapJar`'s
 output, and the dev client namespace does **not** match production — see
 [Pre-Publish Verification](#2-pre-publish-verification).
 
-NeoForge runs Mojang mappings on every branch, so its jar is never remapped.
+NeoForge runs Mojang mappings on 1.21+ and 26.x, so its jar is not remapped there; on `mc-1.20.1`, Forge uses `net.neoforged.moddev.legacyforge` and `reobfJar` reobfuscates to SRG.
 
 ---
 
@@ -162,7 +165,7 @@ former by staging the jar as the only mod in an isolated `neoforge/run-testjar/`
 
 ## Branch Layout
 
-Eight branches. Seven target a Minecraft version; one holds everything that does not.
+Nine branches. Eight target a Minecraft version; one holds everything that does not.
 
 | Branch | Role |
 | :--- | :--- |
@@ -174,8 +177,9 @@ Eight branches. Seven target a Minecraft version; one holds everything that does
 | **`mc-1.21.8`** | Minecraft 1.21.5 – 1.21.8 |
 | **`mc-1.21.4`** | Minecraft 1.21.2 – 1.21.4 |
 | **`mc-1.21.1`** | Minecraft 1.21 – 1.21.1 |
+| **`mc-1.20.1`** | Minecraft 1.20.1 |
 
-`main` is an ancestor of all seven version branches, so its changes reach them by
+`main` is an ancestor of all eight version branches, so its changes reach them by
 `git merge` rather than by separate cherry-picks. Anything edited there lands
 everywhere in one step: docs, release notes, the mod version, assets, and the Java files
 that carry no version-specific API.
@@ -200,7 +204,7 @@ that carry no version-specific API.
 | :--- | :--- |
 | `gradle.properties` | Every Minecraft, Loom, NeoForge and Java version value |
 | `build.gradle`, `common/build.gradle` | The Loom plugin id — `plugins {}` needs a literal, so it cannot be a property |
-| `fabric/build.gradle`, `neoforge/build.gradle` | Shared between `mc-26.2` and `mc-26.1`; `mc-1.21.x` branches differ (`modImplementation`, explicit Mojang mappings, `remapJar`) |
+| `fabric/build.gradle`, `neoforge/build.gradle` | Shared between `mc-26.2` and `mc-26.1`; `mc-1.21.x` and `mc-1.20.1` branches differ (`modImplementation`, explicit Mojang mappings, `remapJar` / `reobfJar`) |
 | `RedfxConfigScreen.java`, `LivingEntityMixin.java`, `ClientLevelChunkMixin.java` | Real Minecraft API / mixin signature differences |
 | `release/release-note-1.1.2.md` | Frozen per-branch history |
 
@@ -221,7 +225,7 @@ templating the metadata files through `processResources`, so `fabric.mod.json`,
 ```bash
 git checkout main
 # ...edit, commit...
-for b in mc-26.2 mc-26.1 mc-1.21.11 mc-1.21.10 mc-1.21.8 mc-1.21.4 mc-1.21.1; do
+for b in mc-26.2 mc-26.1 mc-1.21.11 mc-1.21.10 mc-1.21.8 mc-1.21.4 mc-1.21.1 mc-1.20.1; do
   git checkout $b && git merge main
 done
 ```
