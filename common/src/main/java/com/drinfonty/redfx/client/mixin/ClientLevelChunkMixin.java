@@ -30,7 +30,7 @@ public abstract class ClientLevelChunkMixin {
 		if (after.isAir() || !after.is(oldState.getBlock())) {
 			ClientCanvasStore store = ClientCanvasStore.get();
 			if (store.hasPaintedOrPending(pos)) {
-				store.clearBlock(pos);
+				store.scheduleClearIfChanged(pos, oldState.getBlock());
 			}
 		}
 	}

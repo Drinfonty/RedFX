@@ -288,6 +288,35 @@ public final class ClientCanvasStore {
 		}
 	}
 
+	private static final class PendingClear {
+		final BlockPos pos;
+		final net.minecraft.world.level.block.Block expectedOldBlock;
+		int ticksRemaining;
+
+		PendingClear(BlockPos pos, net.minecraft.world.level.block.Block expectedOldBlock, int ticksRemaining) {
+			this.pos = pos.immutable();
+			this.expectedOldBlock = expectedOldBlock;
+			this.ticksRemaining = ticksRemaining;
+		}
+	}
+
+	private final List<PendingClear> pendingClears = new ArrayList<>();
+
+	/**
+	 * Schedules a deferred blood clear for {@code pos} if the block is still air or a different block
+	 * after 2 client ticks. Avoids clearing blood when Forge's {@code onBlockBreakEvent} sends a
+	 * transient air block update followed immediately by a restoration update (e.g. Creative mode with a sword).
+	 */
+	public synchronized void scheduleClearIfChanged(BlockPos pos, net.minecraft.world.level.block.Block oldBlock) {
+		for (PendingClear pc : pendingClears) {
+			if (pc.pos.equals(pos)) {
+				pc.ticksRemaining = 2;
+				return;
+			}
+		}
+		pendingClears.add(new PendingClear(pos, oldBlock, 2));
+	}
+
 	public synchronized void clearChunk(int chunkX, int chunkZ) {
 		clearChunk(chunkKey(chunkX, chunkZ), true);
 	}
@@ -317,6 +346,7 @@ public final class ClientCanvasStore {
 		chunks.clear();
 		pendingStages.clear();
 		pendingActions.clear();
+		pendingClears.clear();
 	}
 
 	/**
@@ -324,8 +354,26 @@ public final class ClientCanvasStore {
 	 * and apply scheduled splatter expansion stages and actions.
 	 */
 	public synchronized void tickExpiration(long nowMs) {
-		if (chunks.isEmpty() && pendingStages.isEmpty() && pendingActions.isEmpty()) {
+		if (chunks.isEmpty() && pendingStages.isEmpty() && pendingActions.isEmpty() && pendingClears.isEmpty()) {
 			return;
+		}
+
+		if (!pendingClears.isEmpty()) {
+			Minecraft mc = Minecraft.getInstance();
+			var level = mc != null ? mc.level : null;
+			Iterator<PendingClear> cIt = pendingClears.iterator();
+			while (cIt.hasNext()) {
+				PendingClear pc = cIt.next();
+				if (--pc.ticksRemaining <= 0) {
+					cIt.remove();
+					if (level != null) {
+						var current = level.getBlockState(pc.pos);
+						if (current.isAir() || !current.is(pc.expectedOldBlock)) {
+							clearBlock(pc.pos);
+						}
+					}
+				}
+			}
 		}
 
 		LongOpenHashSet toDirtySections = new LongOpenHashSet();
