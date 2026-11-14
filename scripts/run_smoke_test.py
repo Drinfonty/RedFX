@@ -15,6 +15,7 @@ ALL_BRANCHES = [
     "mc-1.21.8",
     "mc-1.21.4",
     "mc-1.21.1",
+    "mc-1.20.1",
 ]
 
 import tarfile
