@@ -399,7 +399,7 @@ public class LivingEntityMixin {
                 base = new float[]{0.15F, 0.15F, 0.15F};
             } else if (entity.getType().builtInRegistryHolder().is(EntityTypeTags.SKELETONS)) {
                 base = new float[]{0.52F, 0.32F, 0.18F};
-            } else if (entity.getType().builtInRegistryHolder().is(EntityTypeTags.ARTHROPOD)) {
+            } else if (entity.getMobType() == net.minecraft.world.entity.MobType.ARTHROPOD) {
                 base = new float[]{0.70F, 0.90F, 0.10F};
             } else if (entityKey.contains("sulfur_cube")) {
                 base = new float[]{0.92F, 0.92F, 0.92F};

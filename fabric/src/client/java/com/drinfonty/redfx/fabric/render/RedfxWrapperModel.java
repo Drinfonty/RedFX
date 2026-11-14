@@ -126,10 +126,10 @@ public class RedfxWrapperModel extends ForwardingBakedModel {
 	}
 
 	private static float uOf(int vertex) {
-		return vertex == 0 || vertex == 3 ? 0.0F : 1.0F;
+		return vertex == 0 || vertex == 3 ? 0.0F : 16.0F;
 	}
 
 	private static float vOf(int vertex) {
-		return vertex < 2 ? 1.0F : 0.0F;
+		return vertex < 2 ? 16.0F : 0.0F;
 	}
 }

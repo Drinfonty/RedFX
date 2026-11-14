@@ -166,7 +166,7 @@ public class ColorPickerScreen extends Screen {
             int by = gridStartY + row * (swatchH + spacing);
 
             Button swatchBtn = Button.builder(
-                Component.literal("■").withColor(swatch.colorInt()),
+                Component.literal("■").withStyle(style -> style.withColor(swatch.colorInt())),
                 btn -> {
                     setColor(swatch.hex());
                 }
@@ -295,7 +295,7 @@ public class ColorPickerScreen extends Screen {
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        this.renderTransparentBackground(graphics);
+        this.renderBackground(graphics);
 
         int modalWidth = 280;
         int leftX = (this.width - modalWidth) / 2;
@@ -374,7 +374,7 @@ public class ColorPickerScreen extends Screen {
         @Override
         protected void updateMessage() {
             int val = (int) Math.round(this.value * 255.0);
-            this.setMessage(Component.literal(label + ": " + val).withColor(textColor));
+            this.setMessage(Component.literal(label + ": " + val).withStyle(style -> style.withColor(textColor)));
         }
 
         @Override

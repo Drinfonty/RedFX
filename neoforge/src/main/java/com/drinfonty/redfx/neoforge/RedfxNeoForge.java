@@ -3,20 +3,23 @@ package com.drinfonty.redfx.neoforge;
 import com.drinfonty.redfx.RedfxMod;
 import com.drinfonty.redfx.client.gui.RedfxConfigScreen;
 import com.drinfonty.redfx.neoforge.client.RedfxNeoForgeClient;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.fml.ModContainer;
-import net.neoforged.fml.common.Mod;
-import net.neoforged.fml.loading.FMLEnvironment;
-import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.client.ConfigScreenHandler;
+import net.minecraftforge.fml.ModLoadingContext;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraftforge.fml.loading.FMLEnvironment;
 
 @Mod("redfx")
 public class RedfxNeoForge {
-    public RedfxNeoForge(ModContainer container) {
+    public RedfxNeoForge() {
         RedfxMod.init();
-        // NeoForge <=21.8 exposes the dist as a public field; getDist() arrived later.
         if (FMLEnvironment.dist == Dist.CLIENT) {
-            container.registerExtensionPoint(IConfigScreenFactory.class, (mc, parent) -> new RedfxConfigScreen(parent));
-            RedfxNeoForgeClient.init(container.getEventBus());
+            ModLoadingContext.get().registerExtensionPoint(
+                ConfigScreenHandler.ConfigScreenFactory.class,
+                () -> new ConfigScreenHandler.ConfigScreenFactory((mc, parent) -> new RedfxConfigScreen(parent))
+            );
+            RedfxNeoForgeClient.init(FMLJavaModLoadingContext.get().getModEventBus());
         }
     }
 }

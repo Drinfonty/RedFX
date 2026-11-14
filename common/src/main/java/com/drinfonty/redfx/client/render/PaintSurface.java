@@ -333,21 +333,21 @@ public final class PaintSurface {
 					switch (hDir) {
 						case NORTH -> {
 							edgeU = coord;
-							edgeV = Math.clamp((int) Math.floor(box.minZ * 16.0), 0, 15);
+							edgeV = clampTexel(box.minZ * 16.0);
 							colPlane = box.minZ;
 						}
 						case SOUTH -> {
 							edgeU = coord;
-							edgeV = Math.clamp((int) Math.floor(box.maxZ * 16.0 - 1e-4), 0, 15);
+							edgeV = clampTexel(box.maxZ * 16.0 - 1e-4);
 							colPlane = box.maxZ;
 						}
 						case WEST -> {
-							edgeU = Math.clamp((int) Math.floor(box.minX * 16.0), 0, 15);
+							edgeU = clampTexel(box.minX * 16.0);
 							edgeV = coord;
 							colPlane = box.minX;
 						}
 						case EAST -> {
-							edgeU = Math.clamp((int) Math.floor(box.maxX * 16.0 - 1e-4), 0, 15);
+							edgeU = clampTexel(box.maxX * 16.0 - 1e-4);
 							edgeV = coord;
 							colPlane = box.maxX;
 						}
@@ -370,21 +370,21 @@ public final class PaintSurface {
 			switch (hDir) {
 				case NORTH -> {
 					edgeU = coord;
-					edgeV = Math.clamp((int) Math.floor(bestOuterBox.minZ * 16.0), 0, 15);
+					edgeV = clampTexel(bestOuterBox.minZ * 16.0);
 					colPlane = bestOuterBox.minZ;
 				}
 				case SOUTH -> {
 					edgeU = coord;
-					edgeV = Math.clamp((int) Math.floor(bestOuterBox.maxZ * 16.0 - 1e-4), 0, 15);
+					edgeV = clampTexel(bestOuterBox.maxZ * 16.0 - 1e-4);
 					colPlane = bestOuterBox.maxZ;
 				}
 				case WEST -> {
-					edgeU = Math.clamp((int) Math.floor(bestOuterBox.minX * 16.0), 0, 15);
+					edgeU = clampTexel(bestOuterBox.minX * 16.0);
 					edgeV = coord;
 					colPlane = bestOuterBox.minX;
 				}
 				case EAST -> {
-					edgeU = Math.clamp((int) Math.floor(bestOuterBox.maxX * 16.0 - 1e-4), 0, 15);
+					edgeU = clampTexel(bestOuterBox.maxX * 16.0 - 1e-4);
 					edgeV = coord;
 					colPlane = bestOuterBox.maxX;
 				}
@@ -716,5 +716,9 @@ public final class PaintSurface {
 			case FaceAxes.EAST -> box.maxX < 0.95;
 			default -> false;
 		};
+	}
+
+	private static int clampTexel(double value) {
+		return Math.max(0, Math.min(15, (int) Math.floor(value)));
 	}
 }

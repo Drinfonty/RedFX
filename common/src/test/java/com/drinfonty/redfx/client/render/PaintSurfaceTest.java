@@ -75,7 +75,7 @@ class PaintSurfaceTest {
 		assertEquals(0.125, PaintSurface.topOf(level, pos, snow));
 
 		// Foliage / bushes / grass / plants should return NONE (-1.0) and be ignored
-		assertEquals(PaintSurface.NONE, PaintSurface.topOf(level, pos, Blocks.SHORT_GRASS.defaultBlockState()));
+		assertEquals(PaintSurface.NONE, PaintSurface.topOf(level, pos, Blocks.GRASS.defaultBlockState()));
 		assertEquals(PaintSurface.NONE, PaintSurface.topOf(level, pos, Blocks.TALL_GRASS.defaultBlockState()));
 		assertEquals(PaintSurface.NONE, PaintSurface.topOf(level, pos, Blocks.FERN.defaultBlockState()));
 		assertEquals(PaintSurface.NONE, PaintSurface.topOf(level, pos, Blocks.LARGE_FERN.defaultBlockState()));

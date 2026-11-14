@@ -23,15 +23,15 @@ import net.minecraft.core.Direction;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.BlockAndTintGetter;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.client.ChunkRenderTypeSet;
-import net.neoforged.neoforge.client.model.BakedModelWrapper;
-import net.neoforged.neoforge.client.model.data.ModelData;
-import net.neoforged.neoforge.client.model.data.ModelProperty;
-import net.neoforged.neoforge.client.model.pipeline.QuadBakingVertexConsumer;
+import net.minecraftforge.client.ChunkRenderTypeSet;
+import net.minecraftforge.client.model.BakedModelWrapper;
+import net.minecraftforge.client.model.data.ModelData;
+import net.minecraftforge.client.model.data.ModelProperty;
+import net.minecraftforge.client.model.pipeline.QuadBakingVertexConsumer;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Emits blood decals as part of the block's own model on NeoForge.
+ * Emits blood decals as part of the block's own model on Forge / NeoForge 1.20.1.
  */
 public class RedfxDynamicModel extends BakedModelWrapper<BakedModel> {
 	private static final ModelProperty<BloodData> BLOOD_PROPERTY = new ModelProperty<>();
@@ -160,30 +160,38 @@ public class RedfxDynamicModel extends BakedModelWrapper<BakedModel> {
 	}
 
 	private static BakedQuad bake(float[] corners, Direction direction, int argb, boolean back) {
-		QuadBakingVertexConsumer consumer = new QuadBakingVertexConsumer();
+		QuadBakingVertexConsumer.Buffered consumer = new QuadBakingVertexConsumer.Buffered();
+		Direction faceDir = back ? direction.getOpposite() : direction;
 		consumer.setSprite(PaintSprites.paint());
-		consumer.setDirection(back ? direction.getOpposite() : direction);
+		consumer.setDirection(faceDir);
 		consumer.setShade(true);
 		consumer.setTintIndex(-1);
 		consumer.setHasAmbientOcclusion(true);
 
+		int a = (argb >>> 24) & 0xFF;
+		int r = (argb >>> 16) & 0xFF;
+		int g = (argb >>> 8) & 0xFF;
+		int b = argb & 0xFF;
+
 		for (int vertex = 0; vertex < 4; vertex++) {
 			int source = back ? 3 - vertex : vertex;
 
-			consumer.addVertex(
-				corners[source * 3], corners[source * 3 + 1], corners[source * 3 + 2]);
-			consumer.setColor(argb);
-			consumer.setUv(PaintSprites.paint().getU(uOf(source)), PaintSprites.paint().getV(vOf(source)));
+			consumer.vertex(corners[source * 3], corners[source * 3 + 1], corners[source * 3 + 2])
+				.color(r, g, b, a)
+				.uv(PaintSprites.paint().getU(uOf(source)), PaintSprites.paint().getV(vOf(source)))
+				.uv2(0)
+				.normal(faceDir.getStepX(), faceDir.getStepY(), faceDir.getStepZ())
+				.endVertex();
 		}
 
-		return consumer.bakeQuad();
+		return consumer.getQuad();
 	}
 
 	private static float uOf(int vertex) {
-		return vertex == 0 || vertex == 3 ? 0.0F : 1.0F;
+		return vertex == 0 || vertex == 3 ? 0.0F : 16.0F;
 	}
 
 	private static float vOf(int vertex) {
-		return vertex < 2 ? 1.0F : 0.0F;
+		return vertex < 2 ? 16.0F : 0.0F;
 	}
 }

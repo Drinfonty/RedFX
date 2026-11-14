@@ -1,5 +1,5 @@
 modLoader="javafml"
-loaderVersion="[1,)"
+loaderVersion="[47,)"
 displayURL="https://modrinth.com/mod/redfx-blood-particle"
 issueTrackerURL="https://github.com/Drinfonty/RedFX/issues"
 license="CC0-1.0"
@@ -12,21 +12,15 @@ description="A blood particle and visual effects mod."
 authors="Drinfonty"
 
 [[dependencies.redfx]]
-modId="neoforge"
-type="required"
-versionRange="${neoforgeDependency}"
+modId="forge"
+mandatory=true
+versionRange="${forgeDependency}"
 ordering="NONE"
 side="BOTH"
 
 [[dependencies.redfx]]
 modId="minecraft"
-type="required"
+mandatory=true
 versionRange="${minecraftDependencyMaven}"
 ordering="NONE"
 side="BOTH"
-
-[[mixins]]
-config="redfx.mixins.json"
-
-[[mixins]]
-config="redfx.client.mixins.json"

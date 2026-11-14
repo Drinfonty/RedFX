@@ -1,5 +1,5 @@
 plugins {
-	id 'net.neoforged.moddev' version '2.0.143'
+	id 'net.neoforged.moddev.legacyforge' version '2.0.143'
 	id 'com.modrinth.minotaur'
 	id 'net.darkhax.curseforgegradle'
 }
@@ -7,20 +7,16 @@ plugins {
 // -PtestJar must load the mod from the packaged jar and nothing else.
 def isTestJar = project.hasProperty('testJar')
 
-neoForge {
-	version = "${project.neoforge_version}"
+legacyForge {
+	version = "${project.forge_version}"
 
 	runs {
 		client {
 			client()
 
-			// A separate game directory so the packaged jar in mods/ is the only copy
-			// present, and so it never pollutes the normal dev run directory.
 			if (isTestJar) {
 				gameDirectory = project.file('run-testjar')
 			} else {
-				// Per-hit diagnostics for development only. Deliberately not set under
-				// -PtestJar, so that run stays a faithful rehearsal of what a player sees.
 				systemProperty 'redfx.debug', 'true'
 			}
 
@@ -31,23 +27,39 @@ neoForge {
 		}
 	}
 
-	// Declaring the source sets here makes ModDev hand them to FML's in-dev folder
-	// locator, which wins over a jar in mods/ - FML reports "Found 2 mod files for modid
-	// redfx" and then loads the loose build/classes folders. That made -PtestJar silently
-	// test the dev classes rather than the artifact being published.
 	if (!isTestJar) {
 		mods {
 			redfx {
 				sourceSet sourceSets.main
-				sourceSet project(":common").sourceSets.main
 			}
 		}
 	}
 }
 
-// Stage the packaged jar as the only mod in the -PtestJar run directory.
+sourceSets {
+	main {
+		java {
+			srcDir project(':common').file('src/main/java')
+		}
+		resources {
+			srcDir project(':common').file('src/main/resources')
+		}
+	}
+}
+
+mixin {
+	add sourceSets.main, 'redfx.refmap.json'
+	config 'redfx.mixins.json'
+	config 'redfx.client.mixins.json'
+}
+
+dependencies {
+	annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
+}
+
+// Stage the packaged (reobfuscated) jar as the only mod in the -PtestJar run directory.
 tasks.register('installTestJar', Copy) {
-	from tasks.named('jar')
+	from tasks.named('reobfJar')
 	into layout.projectDirectory.dir('run-testjar/mods')
 
 	doFirst {
@@ -57,24 +69,24 @@ tasks.register('installTestJar', Copy) {
 	}
 }
 
-dependencies {
-	implementation project(":common")
-}
-
 processResources {
 	def modVersion = project.mod_version
-	// NeoForge parses Maven ranges; minecraft_dependency is SemVer for fabric.mod.json
-	// and is not interchangeable, so the toml gets its own property.
 	def minecraftDependencyMaven = project.minecraft_dependency_maven
-	def neoforgeDependency = project.neoforge_dependency
+	def forgeDependency = project.forge_dependency
+	def mixinCompatLevel = project.mixin_compat_level
 	inputs.property "modVersion", modVersion
 	inputs.property "minecraftDependencyMaven", minecraftDependencyMaven
-	inputs.property "neoforgeDependency", neoforgeDependency
+	inputs.property "forgeDependency", forgeDependency
+	inputs.property "mixinCompatLevel", mixinCompatLevel
 
-	filesMatching("META-INF/neoforge.mods.toml") {
+	filesMatching("META-INF/mods.toml") {
 		expand "modVersion": modVersion,
 				"minecraftDependencyMaven": minecraftDependencyMaven,
-				"neoforgeDependency": neoforgeDependency
+				"forgeDependency": forgeDependency
+	}
+
+	filesMatching(["redfx.mixins.json", "redfx.client.mixins.json"]) {
+		expand "mixinCompatLevel": mixinCompatLevel
 	}
 }
 
@@ -91,28 +103,33 @@ java {
 }
 
 jar {
-	archiveFileName = "redfx-${project.mod_version}-${project.mc_version_suffix}-neoforge.jar"
+	archiveClassifier = 'slim'
 	def projectName = project.name
 	inputs.property "projectName", projectName
 
-	from project(":common").sourceSets.main.output
+	manifest.attributes([
+		"MixinConfigs": "redfx.mixins.json,redfx.client.mixins.json"
+	])
 
-	// LICENSE lives at the repo root; a bare "LICENSE" resolves against the subproject
-	// directory, so this silently packaged nothing.
 	from(rootProject.file("LICENSE")) {
-		rename { "${it}_$projectName"}
+		rename { "${it}_$projectName" }
 	}
+}
+
+tasks.named('reobfJar') {
+	archiveFileName = "redfx-${project.mod_version}-${project.mc_version_suffix}-forge.jar"
 }
 
 // Automatically copy built jar to release directory in the project root
 tasks.register('copyJarToRelease', Copy) {
-	from tasks.named('jar')
+	from tasks.named('reobfJar')
 	into "${project.rootDir}/release"
 
-	mustRunAfter tasks.named('jar')
+	mustRunAfter tasks.named('reobfJar')
 }
 
 tasks.named('build') {
+	dependsOn('reobfJar')
 	finalizedBy('copyJarToRelease')
 }
 
@@ -120,8 +137,6 @@ afterEvaluate {
 	tasks.named('runClient') {
 		if (isTestJar) {
 			dependsOn(tasks.named('installTestJar'))
-			// Keep the loose classes off the JVM classpath too, so nothing can be
-			// resolved from them behind FML's back. The jar is loaded from mods/.
 			setClasspath(classpath.filter { File file ->
 				!file.path.contains("common/build/classes") &&
 				!file.path.contains("common/build/resources") &&
@@ -136,16 +151,13 @@ modrinth {
 	token = rootProject.getModrinthToken()
 	projectId = project.modrinth_project_id
 
-	// ./gradlew modrinth -PpublishDebug validates the release and prints what would
-	// be sent, without uploading, so a publish can be rehearsed. Gated on a property
-	// rather than a hardcoded true so it cannot be left switched on by accident.
 	debugMode = project.hasProperty('publishDebug')
-	versionNumber = "${project.mod_version}-${project.mc_version_suffix}-neoforge"
-	versionName = "RedFX ${project.mod_version} (NeoForge)"
+	versionNumber = "${project.mod_version}-${project.mc_version_suffix}-forge"
+	versionName = "RedFX ${project.mod_version} (Forge / NeoForge)"
 	versionType = "release"
-	uploadFile = layout.buildDirectory.file("libs/redfx-${project.mod_version}-${project.mc_version_suffix}-neoforge.jar")
+	uploadFile = tasks.named('reobfJar').flatMap { it.archiveFile }
 	gameVersions = project.modrinth_game_versions.split(",") as List
-	loaders = ["neoforge"]
+	loaders = ["forge", "neoforge"]
 
 	def notesFile = rootProject.file("release/release-note-${project.mod_version}.md")
 	if (notesFile.exists()) {
@@ -156,18 +168,17 @@ modrinth {
 tasks.register("curseforge", net.darkhax.curseforgegradle.TaskPublishCurseForge) {
 	apiToken = rootProject.getCurseForgeToken()
 
-	// ./gradlew curseforge -PpublishDebug validates the release and prints what would
-	// be sent, without uploading, so a publish can be rehearsed.
 	debugMode = project.hasProperty('publishDebug')
 
-	def mainFile = upload(project.curseforge_project_id, tasks.named('jar'))
-	mainFile.displayName = "RedFX ${project.mod_version} (NeoForge)"
+	def mainFile = upload(project.curseforge_project_id, tasks.named('reobfJar'))
+	mainFile.displayName = "RedFX ${project.mod_version} (Forge / NeoForge)"
 	mainFile.releaseType = "release"
 	mainFile.changelogType = "markdown"
 
 	project.curseforge_game_versions.split(",").each {
 		mainFile.addGameVersion(it)
 	}
+	mainFile.addModLoader("Forge")
 	mainFile.addModLoader("NeoForge")
 
 	def notesFile = rootProject.file("release/release-note-${project.mod_version}.md")

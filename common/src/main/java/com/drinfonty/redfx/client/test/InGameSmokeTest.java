@@ -376,7 +376,7 @@ public final class InGameSmokeTest {
 			.setValue(StairBlock.FACING, forward.getOpposite())
 			.setValue(StairBlock.HALF, Half.BOTTOM), 3);
 		client.level.setBlock(grassPos.below(), Blocks.GRASS_BLOCK.defaultBlockState(), 3);
-		client.level.setBlock(grassPos, Blocks.SHORT_GRASS.defaultBlockState(), 3);
+		client.level.setBlock(grassPos, Blocks.GRASS.defaultBlockState(), 3);
 
 		// Synchronize arena and summon mob via server
 		var server = client.getSingleplayerServer();
@@ -445,7 +445,7 @@ public final class InGameSmokeTest {
 			commands.performPrefixedCommand(source, String.format(java.util.Locale.ROOT,
 				"setblock %d %d %d grass_block", grassPos.getX(), floorY - 1, grassPos.getZ()));
 			commands.performPrefixedCommand(source, String.format(java.util.Locale.ROOT,
-				"setblock %d %d %d short_grass", grassPos.getX(), grassPos.getY(), grassPos.getZ()));
+				"setblock %d %d %d grass", grassPos.getX(), grassPos.getY(), grassPos.getZ()));
 
 			// 9. Ensure player stands firmly 2 blocks in front on solid stone
 			BlockPos playerStandPos = floorOrigin.relative(forward.getOpposite(), 2);
@@ -831,7 +831,7 @@ public final class InGameSmokeTest {
 		}
 
 		// Foliage non-paintable
-		if (PaintSurface.topOf(client.level, origin, Blocks.SHORT_GRASS.defaultBlockState()) != PaintSurface.NONE) {
+		if (PaintSurface.topOf(client.level, origin, Blocks.GRASS.defaultBlockState()) != PaintSurface.NONE) {
 			throw new AssertionError("Short grass should not have a top paint surface!");
 		}
 		if (PaintSurface.topOf(client.level, origin, Blocks.TALL_GRASS.defaultBlockState()) != PaintSurface.NONE) {

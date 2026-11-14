@@ -369,7 +369,7 @@ public class EntityColorsScreen extends Screen {
 
     private Component getPresetButtonMessage(String hex) {
         if (RedfxConfig.isNone(hex)) {
-            return Component.literal("⊘ Disabled").withColor(0xFFAAAAAA);
+            return Component.literal("⊘ Disabled").withStyle(style -> style.withColor(0xFFAAAAAA));
         }
         int colorInt = RedfxConfig.parseColorInt(hex, 0xFF0000);
         String name = "Custom";
@@ -379,7 +379,7 @@ public class EntityColorsScreen extends Screen {
                 break;
             }
         }
-        return Component.literal("■ ").withColor(colorInt).append(Component.literal(name));
+        return Component.literal("■ ").withStyle(style -> style.withColor(colorInt)).append(Component.literal(name));
     }
 
     private void openColorPicker(String entityId, String currentHex) {
@@ -394,7 +394,7 @@ public class EntityColorsScreen extends Screen {
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        this.renderTransparentBackground(graphics);
+        this.renderBackground(graphics);
         int startY = Math.max(12, (this.height - 225) / 2);
         graphics.drawCenteredString(this.font, this.title, this.width / 2, Math.max(4, startY - 2), 0xFFFFFFFF);
         super.render(graphics, mouseX, mouseY, partialTick);

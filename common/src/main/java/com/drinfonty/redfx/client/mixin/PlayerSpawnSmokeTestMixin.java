@@ -15,7 +15,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(ClientLevel.class)
 public class PlayerSpawnSmokeTestMixin {
 	@Inject(method = "addEntity", at = @At("RETURN"))
-	private void redfx$onPlayerSpawned(Entity entity, CallbackInfo ci) {
+	private void redfx$onPlayerSpawned(int entityId, Entity entity, CallbackInfo ci) {
 		if (InGameSmokeTest.ENABLED && entity instanceof LocalPlayer) {
 			InGameSmokeTest.onPlayerSpawned();
 		}

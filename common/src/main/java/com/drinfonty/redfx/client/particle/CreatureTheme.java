@@ -1,8 +1,8 @@
 package com.drinfonty.redfx.client.particle;
 
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.tags.EntityTypeTags;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.MobType;
 
 public enum CreatureTheme {
     NORMAL,
@@ -24,7 +24,7 @@ public enum CreatureTheme {
         if (key.contains("warden") || key.contains("sculk")) {
             return SCULK;
         }
-        if (entity.getType().builtInRegistryHolder().is(EntityTypeTags.ARTHROPOD)) {
+        if (entity.getMobType() == MobType.ARTHROPOD) {
             return ARTHROPOD;
         }
         return NORMAL;
