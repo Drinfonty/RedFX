@@ -3,11 +3,9 @@ package com.drinfonty.redfx.canvas;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.Set;
 
 /**
  * Procedural blood splatter stamps onto 16x16 texel canvases.
@@ -28,8 +26,26 @@ public final class BloodSplatter {
 	private BloodSplatter() {
 	}
 
-	private record TexelPos(int u, int v) {
+	private static final class Scratch {
+		byte[] grid = new byte[40 * 40];
+		byte[] layer = new byte[40 * 40];
+		int[] activeIdx = new int[40 * 40];
+		int[] rimBuf = new int[40 * 40];
+		final int[] erodeEdge = new int[Canvas.TEXELS];
+		final int[] erodeAll = new int[Canvas.TEXELS];
+
+		void ensureGrid(int cells) {
+			if (grid.length < cells) {
+				grid = new byte[cells];
+				layer = new byte[cells];
+				activeIdx = new int[cells];
+				rimBuf = new int[cells];
+			}
+			java.util.Arrays.fill(grid, 0, cells, (byte) 0);
+		}
 	}
+
+	private static final ThreadLocal<Scratch> SCRATCH = ThreadLocal.withInitial(Scratch::new);
 
 	/**
 	 * Stamps splatter into the global face plane with initial edge roughness
@@ -53,97 +69,135 @@ public final class BloodSplatter {
 			double tangentU, double tangentV, StagedCanvasWriter writer) {
 		var random = java.util.concurrent.ThreadLocalRandom.current();
 
-		Set<TexelPos> points = new HashSet<>();
-		Set<TexelPos> blob = generateOrganicBlob(globalCenterU, globalCenterV, splatIndex, scale, tangentU, tangentV, random);
-		points.addAll(blob);
+		double blobRadius = Math.max(1.2, (2.8 + random.nextDouble() * 1.6) * scale);
+		double tanSpeedSq = tangentU * tangentU + tangentV * tangentV;
+		boolean hasTangent = tanSpeedSq > 0.001;
+		double elong;
+		double angle;
+		if (hasTangent) {
+			angle = Math.atan2(tangentV, tangentU);
+			double speed = Math.sqrt(tanSpeedSq);
+			elong = 1.4 + Math.min(1.8, speed * 4.5) + random.nextDouble() * 0.4;
+		} else {
+			elong = 1.0 + random.nextDouble() * 0.5;
+			angle = random.nextDouble() * Math.PI * 2.0;
+		}
+
+		int blobBound = (int) Math.ceil(blobRadius * elong * 1.5) + 2;
+		double satRadius = Math.max(0.7, 3.0 * scale);
+		int satBound = (int) Math.ceil(satRadius * 3.2) + 2;
+		int half = Math.max(blobBound, satBound) + 2; // +2 guarantees 1-texel empty sentinel border
+		int dim = half * 2 + 1;
+		int cells = dim * dim;
+
+		Scratch scratch = SCRATCH.get();
+		scratch.ensureGrid(cells);
+		byte[] grid = scratch.grid;
+		byte[] layer = scratch.layer;
+		int[] activeIdx = scratch.activeIdx;
+		int[] rimBuf = scratch.rimBuf;
+
+		int blobCount = fillOrganicBlob(grid, dim, half, blobRadius, elong, angle, hasTangent, random);
 
 		// Roughen the main blob's rim lightly so it reads as pixel-art speckle rather than a smooth disc
-		if (blob.size() > 10) {
-			List<TexelPos> rim = new ArrayList<>();
-			for (TexelPos p : blob) {
-				if (!blob.contains(new TexelPos(p.u - 1, p.v))
-					|| !blob.contains(new TexelPos(p.u + 1, p.v))
-					|| !blob.contains(new TexelPos(p.u, p.v - 1))
-					|| !blob.contains(new TexelPos(p.u, p.v + 1))) {
-					rim.add(p);
+		if (blobCount > 10) {
+			int rimCount = 0;
+			int minR = half - blobBound;
+			int maxR = half + blobBound;
+			for (int gy = minR; gy <= maxR; gy++) {
+				int row = gy * dim;
+				for (int gx = minR; gx <= maxR; gx++) {
+					int idx = row + gx;
+					if (grid[idx] != 0
+						&& (grid[idx - 1] == 0 || grid[idx + 1] == 0 || grid[idx - dim] == 0 || grid[idx + dim] == 0)) {
+						rimBuf[rimCount++] = idx;
+					}
 				}
 			}
-			Collections.shuffle(rim, random);
-			int numToRemove = Math.min((int) (rim.size() * 0.15f), points.size() - 3);
+			int numToRemove = Math.min((int) (rimCount * 0.15f), blobCount - 3);
 			for (int i = 0; i < numToRemove; i++) {
-				points.remove(rim.get(i));
+				int pick = i + random.nextInt(rimCount - i);
+				int chosen = rimBuf[pick];
+				rimBuf[pick] = rimBuf[i];
+				grid[chosen] = 0;
 			}
 		}
 
-		addSatellites(points, globalCenterU, globalCenterV, scale, tangentU, tangentV, random);
-		points.add(new TexelPos(globalCenterU, globalCenterV));
+		addSatellites(grid, dim, half, scale, satRadius, hasTangent, hasTangent ? Math.atan2(tangentV, tangentU) : 0.0, random);
+		grid[half * dim + half] = 1;
+
+		// Collect all active texel indices once
+		int activeCount = 0;
+		for (int gy = 1; gy < dim - 1; gy++) {
+			int row = gy * dim;
+			for (int gx = 1; gx < dim - 1; gx++) {
+				int idx = row + gx;
+				if (grid[idx] != 0) {
+					activeIdx[activeCount++] = idx;
+				}
+			}
+		}
 
 		int rgb = argb & 0xFFFFFF;
 		int baseAlpha = (argb >>> 24);
 		if (baseAlpha == 0) baseAlpha = 255;
 		boolean enableTranslucent = com.drinfonty.redfx.config.RedfxConfig.get().translucentEdges;
 
-		// Distance-to-boundary analysis of existing splat pixels:
-		// d1: pixels on the outermost perimeter (have at least one cardinal neighbor outside the splat)
-		Set<TexelPos> d1 = new HashSet<>();
-		for (TexelPos p : points) {
-			if (!points.contains(new TexelPos(p.u - 1, p.v))
-				|| !points.contains(new TexelPos(p.u + 1, p.v))
-				|| !points.contains(new TexelPos(p.u, p.v - 1))
-				|| !points.contains(new TexelPos(p.u, p.v + 1))) {
-				d1.add(p);
+		// Pass 1: mark d1 (layer=1) for outermost perimeter pixels
+		for (int i = 0; i < activeCount; i++) {
+			int idx = activeIdx[i];
+			if (grid[idx - 1] == 0 || grid[idx + 1] == 0 || grid[idx - dim] == 0 || grid[idx + dim] == 0) {
+				layer[idx] = 1;
+			} else {
+				layer[idx] = 0;
 			}
 		}
 
-		// d2: pixels 1 step inward from the perimeter (adjacent to d1, but not on the outer boundary)
-		Set<TexelPos> d2 = new HashSet<>();
-		for (TexelPos p : points) {
-			if (d1.contains(p)) continue;
-			if (d1.contains(new TexelPos(p.u - 1, p.v))
-				|| d1.contains(new TexelPos(p.u + 1, p.v))
-				|| d1.contains(new TexelPos(p.u, p.v - 1))
-				|| d1.contains(new TexelPos(p.u, p.v + 1))) {
-				d2.add(p);
+		// Pass 2: mark d2 (layer=2) vs d3 (layer=3)
+		boolean hasD2 = false;
+		boolean hasD3 = false;
+		for (int i = 0; i < activeCount; i++) {
+			int idx = activeIdx[i];
+			if (layer[idx] == 1) continue;
+			if (layer[idx - 1] == 1 || layer[idx + 1] == 1 || layer[idx - dim] == 1 || layer[idx + dim] == 1) {
+				layer[idx] = 2;
+				hasD2 = true;
+			} else {
+				layer[idx] = 3;
+				hasD3 = true;
 			}
 		}
 
-		Set<TexelPos> d3 = new HashSet<>();
-		for (TexelPos p : points) {
-			if (!d1.contains(p) && !d2.contains(p)) {
-				d3.add(p);
-			}
-		}
-
-		boolean hasInterior = !d3.isEmpty() || !d2.isEmpty();
-
+		boolean hasInterior = hasD3 || hasD2;
 		int minDistSq = Integer.MAX_VALUE;
 		int maxDistSq = Integer.MIN_VALUE;
 		if (!hasInterior) {
-			for (TexelPos p : points) {
-				int d2c = (p.u - globalCenterU) * (p.u - globalCenterU) + (p.v - globalCenterV) * (p.v - globalCenterV);
+			for (int i = 0; i < activeCount; i++) {
+				int idx = activeIdx[i];
+				int du = (idx % dim) - half;
+				int dv = (idx / dim) - half;
+				int d2c = du * du + dv * dv;
 				if (d2c < minDistSq) minDistSq = d2c;
 				if (d2c > maxDistSq) maxDistSq = d2c;
 			}
 		}
 
-		for (TexelPos p : points) {
+		int centerIdx = half * dim + half;
+		for (int i = 0; i < activeCount; i++) {
+			int idx = activeIdx[i];
+			int du = (idx % dim) - half;
+			int dv = (idx / dim) - half;
+			int gu = globalCenterU + du;
+			int gv = globalCenterV + dv;
+			byte lyr = layer[idx];
+
 			int stage;
-			if (!d3.isEmpty()) {
-				if (d3.contains(p)) {
-					stage = 0; // Deep core
-				} else if (d2.contains(p)) {
-					stage = 1; // Sub-perimeter
-				} else {
-					stage = 2; // Outermost edge
-				}
-			} else if (!d2.isEmpty()) {
-				if (d2.contains(p)) {
-					stage = 0; // Innermost layer acts as core
-				} else {
-					stage = (p.u == globalCenterU && p.v == globalCenterV) ? 1 : 2;
-				}
+			if (hasD3) {
+				stage = lyr == 3 ? 0 : (lyr == 2 ? 1 : 2);
+			} else if (hasD2) {
+				stage = lyr == 2 ? 0 : (idx == centerIdx ? 1 : 2);
 			} else {
-				int d2c = (p.u - globalCenterU) * (p.u - globalCenterU) + (p.v - globalCenterV) * (p.v - globalCenterV);
+				int d2c = du * du + dv * dv;
 				if (minDistSq == maxDistSq || d2c == minDistSq) {
 					stage = 0;
 				} else if (d2c < maxDistSq) {
@@ -157,18 +211,14 @@ public final class BloodSplatter {
 			if (!enableTranslucent) {
 				alpha = baseAlpha;
 			} else if (stage == 0) {
-				// Deep core: 100% of base opacity
 				alpha = baseAlpha;
 			} else if (stage == 1) {
-				// Inner transition edge (1 step inward from perimeter): ~76% opacity
 				alpha = (int) Math.round(baseAlpha * (195.0 / 255.0));
 			} else {
-				// Outermost edge: progressively more transparent farther out
-				int cardinalNeighbors = 0;
-				if (points.contains(new TexelPos(p.u - 1, p.v))) cardinalNeighbors++;
-				if (points.contains(new TexelPos(p.u + 1, p.v))) cardinalNeighbors++;
-				if (points.contains(new TexelPos(p.u, p.v - 1))) cardinalNeighbors++;
-				if (points.contains(new TexelPos(p.u, p.v + 1))) cardinalNeighbors++;
+				int cardinalNeighbors = (grid[idx - 1] != 0 ? 1 : 0)
+					+ (grid[idx + 1] != 0 ? 1 : 0)
+					+ (grid[idx - dim] != 0 ? 1 : 0)
+					+ (grid[idx + dim] != 0 ? 1 : 0);
 
 				if (!hasInterior && cardinalNeighbors >= 3) {
 					alpha = (int) Math.round(baseAlpha * (220.0 / 255.0));
@@ -181,92 +231,63 @@ public final class BloodSplatter {
 				}
 			}
 
-			int col = (alpha << 24) | shade(rgb, p.u, p.v);
-			writer.setTexel(p.u, p.v, col, stage);
+			int col = (alpha << 24) | shade(rgb, gu, gv);
+			writer.setTexel(gu, gv, col, stage);
 		}
 	}
 
-	/**
-	 * Builds an irregular, elongated blob whose outline is perturbed by low-frequency
-	 * angular harmonics plus per-texel jitter. If tangent velocity (tangentU, tangentV)
-	 * is provided, the splatter aligns and stretches along the impact momentum vector.
-	 */
-	private static Set<TexelPos> generateOrganicBlob(int cu, int cv, int splatIndex, float scale,
-			double tangentU, double tangentV, Random random) {
-		Set<TexelPos> out = new HashSet<>();
-		double radius = Math.max(1.2, (2.8 + random.nextDouble() * 1.6) * scale);
-		
-		double tanSpeedSq = tangentU * tangentU + tangentV * tangentV;
-		boolean hasTangent = tanSpeedSq > 0.001;
-		double elong;
-		double angle;
-
-		if (hasTangent) {
-			// Align elongation axis with impact tangent vector
-			angle = Math.atan2(tangentV, tangentU);
-			double speed = Math.sqrt(tanSpeedSq);
-			// Elongate from 1.6x up to 3.2x depending on momentum
-			elong = 1.4 + Math.min(1.8, speed * 4.5) + random.nextDouble() * 0.4;
-		} else {
-			elong = 1.0 + random.nextDouble() * 0.5;
-			angle = random.nextDouble() * Math.PI * 2.0;
-		}
-
+	private static int fillOrganicBlob(byte[] grid, int dim, int half, double radius, double elong,
+			double angle, boolean hasTangent, Random random) {
 		double cos = Math.cos(angle);
 		double sin = Math.sin(angle);
 
-		int harmonics = 3;
-		double[] amp = new double[harmonics];
-		double[] phase = new double[harmonics];
-		for (int k = 0; k < harmonics; k++) {
-			amp[k] = (0.10 + random.nextDouble() * 0.14) / (k + 1);
-			phase[k] = random.nextDouble() * Math.PI * 2.0;
-		}
+		double amp0 = (0.10 + random.nextDouble() * 0.14);
+		double amp1 = (0.10 + random.nextDouble() * 0.14) * 0.5;
+		double amp2 = (0.10 + random.nextDouble() * 0.14) / 3.0;
+		double phase0 = random.nextDouble() * Math.PI * 2.0;
+		double phase1 = random.nextDouble() * Math.PI * 2.0;
+		double phase2 = random.nextDouble() * Math.PI * 2.0;
 
-		// When impacting with high momentum, shift the droplet center slightly forward along tangent
-		double shiftU = hasTangent ? Math.cos(angle) * radius * 0.4 : 0.0;
-		double shiftV = hasTangent ? Math.sin(angle) * radius * 0.4 : 0.0;
+		double shiftU = hasTangent ? cos * radius * 0.4 : 0.0;
+		double shiftV = hasTangent ? sin * radius * 0.4 : 0.0;
 
 		int bound = (int) Math.ceil(radius * elong * 1.5) + 2;
+		int count = 0;
 		for (int dv = -bound; dv <= bound; dv++) {
+			int gy = half + dv;
+			if (gy <= 0 || gy >= dim - 1) continue;
+			int row = gy * dim;
+			double ry = dv - shiftV;
 			for (int du = -bound; du <= bound; du++) {
+				int gx = half + du;
+				if (gx <= 0 || gx >= dim - 1) continue;
 				double rx = du - shiftU;
-				double ry = dv - shiftV;
 				double x = (rx * cos + ry * sin) / elong;
 				double y = -rx * sin + ry * cos;
 				double r = Math.sqrt(x * x + y * y);
 				double theta = Math.atan2(y, x);
-				double edge = 1.0;
-				for (int k = 0; k < harmonics; k++) {
-					edge += amp[k] * Math.sin((k + 2) * theta + phase[k]);
-				}
+				double edge = 1.0
+					+ amp0 * Math.sin(2.0 * theta + phase0)
+					+ amp1 * Math.sin(3.0 * theta + phase1)
+					+ amp2 * Math.sin(4.0 * theta + phase2);
 				double jitter = (random.nextDouble() - 0.5) * 0.9;
 				if (r + jitter <= radius * edge) {
-					out.add(new TexelPos(cu + du, cv + dv));
+					grid[row + gx] = 1;
+					count++;
 				}
 			}
 		}
-		return out;
+		return count;
 	}
 
-	/**
-	 * Scatters small satellite droplets around the main blob, some joined to it by thin tendrils,
-	 * which gives the spattered, "flung" look and helps neighbouring splats bridge together.
-	 * If tangent velocity is present, casts additional forward "flying" droplets in the splash direction.
-	 */
-	private static void addSatellites(Set<TexelPos> points, int cu, int cv, float scale,
-			double tangentU, double tangentV, Random random) {
-		double radius = Math.max(0.7, 3.0 * scale);
+	private static void addSatellites(byte[] grid, int dim, int half, float scale, double radius,
+			boolean hasTangent, double impactAngle, Random random) {
 		int count = (int) Math.round((1 + random.nextDouble() * 4) * Math.min(1.5, scale + 0.3));
-		double tanSpeedSq = tangentU * tangentU + tangentV * tangentV;
-		boolean hasTangent = tanSpeedSq > 0.001;
-		double impactAngle = hasTangent ? Math.atan2(tangentV, tangentU) : 0.0;
 
 		for (int i = 0; i < count; i++) {
 			double a;
 			double dist;
 			if (hasTangent && random.nextDouble() < 0.65) {
-				// 65% of satellites are flung forward along the impact tangent cone (+/- 45 deg)
 				a = impactAngle + (random.nextDouble() - 0.5) * (Math.PI * 0.5);
 				dist = radius * (1.4 + random.nextDouble() * 1.8);
 			} else {
@@ -274,13 +295,19 @@ public final class BloodSplatter {
 				dist = radius * (1.2 + random.nextDouble() * 1.0);
 			}
 
-			int su = cu + (int) Math.round(Math.cos(a) * dist);
-			int sv = cv + (int) Math.round(Math.sin(a) * dist);
+			double cosA = Math.cos(a);
+			double sinA = Math.sin(a);
+			int su = half + (int) Math.round(cosA * dist);
+			int sv = half + (int) Math.round(sinA * dist);
 			int size = random.nextDouble() < 0.35 * Math.min(1.0, scale) ? 1 : 0;
 			for (int dv = -size; dv <= size; dv++) {
+				int gy = sv + dv;
+				if (gy <= 0 || gy >= dim - 1) continue;
 				for (int du = -size; du <= size; du++) {
+					int gx = su + du;
+					if (gx <= 0 || gx >= dim - 1) continue;
 					if (size == 0 || Math.abs(du) + Math.abs(dv) <= size) {
-						points.add(new TexelPos(su + du, sv + dv));
+						grid[gy * dim + gx] = 1;
 					}
 				}
 			}
@@ -288,8 +315,11 @@ public final class BloodSplatter {
 				int steps = (int) Math.ceil(dist);
 				for (int s = 1; s < steps; s++) {
 					double t = s / (double) steps;
-					points.add(new TexelPos(cu + (int) Math.round(Math.cos(a) * dist * t),
-						cv + (int) Math.round(Math.sin(a) * dist * t)));
+					int gx = half + (int) Math.round(cosA * dist * t);
+					int gy = half + (int) Math.round(sinA * dist * t);
+					if (gx > 0 && gx < dim - 1 && gy > 0 && gy < dim - 1) {
+						grid[gy * dim + gx] = 1;
+					}
 				}
 			}
 		}
@@ -420,9 +450,10 @@ public final class BloodSplatter {
 	 * @return number of texels erased (0 if canvas was already empty)
 	 */
 	public static int erode(int[] texels, int count) {
-		int[] edgeIndices = new int[Canvas.TEXELS];
+		Scratch scratch = SCRATCH.get();
+		int[] edgeIndices = scratch.erodeEdge;
 		int edgeCount = 0;
-		int[] allPainted = new int[Canvas.TEXELS];
+		int[] allPainted = scratch.erodeAll;
 		int allCount = 0;
 
 		for (int v = 0; v < Canvas.SIZE; v++) {

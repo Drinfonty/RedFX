@@ -10,6 +10,24 @@ import com.drinfonty.redfx.canvas.PaintColor;
  * Greedy-merges runs of painted texels into maximal rectangles on a face.
  */
 public final class CanvasMesher {
+	private static final class MeshScratch {
+		int[] runStart = new int[Canvas.SIZE];
+		int[] runEnd = new int[Canvas.SIZE];
+		int[] runColor = new int[Canvas.SIZE];
+		int[] runTop = new int[Canvas.SIZE];
+
+		int[] nextStart = new int[Canvas.SIZE];
+		int[] nextEnd = new int[Canvas.SIZE];
+		int[] nextColor = new int[Canvas.SIZE];
+		int[] nextTop = new int[Canvas.SIZE];
+
+		final int[] rowStart = new int[Canvas.SIZE];
+		final int[] rowEnd = new int[Canvas.SIZE];
+		final int[] rowColor = new int[Canvas.SIZE];
+	}
+
+	private static final ThreadLocal<MeshScratch> SCRATCH = ThreadLocal.withInitial(MeshScratch::new);
+
 	private CanvasMesher() {
 	}
 
@@ -19,21 +37,22 @@ public final class CanvasMesher {
 		}
 
 		List<PaintQuad> quads = new ArrayList<>();
+		MeshScratch scratch = SCRATCH.get();
 
-		int[] runStart = new int[Canvas.SIZE];
-		int[] runEnd = new int[Canvas.SIZE];
-		int[] runColor = new int[Canvas.SIZE];
-		int[] runTop = new int[Canvas.SIZE];
+		int[] runStart = scratch.runStart;
+		int[] runEnd = scratch.runEnd;
+		int[] runColor = scratch.runColor;
+		int[] runTop = scratch.runTop;
 		int openRuns = 0;
 
-		int[] nextStart = new int[Canvas.SIZE];
-		int[] nextEnd = new int[Canvas.SIZE];
-		int[] nextColor = new int[Canvas.SIZE];
-		int[] nextTop = new int[Canvas.SIZE];
+		int[] nextStart = scratch.nextStart;
+		int[] nextEnd = scratch.nextEnd;
+		int[] nextColor = scratch.nextColor;
+		int[] nextTop = scratch.nextTop;
 
-		int[] rowStart = new int[Canvas.SIZE];
-		int[] rowEnd = new int[Canvas.SIZE];
-		int[] rowColor = new int[Canvas.SIZE];
+		int[] rowStart = scratch.rowStart;
+		int[] rowEnd = scratch.rowEnd;
+		int[] rowColor = scratch.rowColor;
 
 		for (int pv = 0; pv < Canvas.SIZE; pv++) {
 			int rowRuns = 0;
