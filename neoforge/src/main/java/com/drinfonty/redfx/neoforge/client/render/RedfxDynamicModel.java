@@ -40,6 +40,7 @@ public class RedfxDynamicModel extends BakedModelWrapper<BakedModel> {
 	}
 
 	private static final Map<CacheKey, List<BakedQuad>> CACHE = new ConcurrentHashMap<>();
+	private static final java.util.Queue<CacheKey> CACHE_ORDER = new java.util.concurrent.ConcurrentLinkedQueue<>();
 	private static final int MAX_CACHED_CANVASES = 8192;
 
 	private record CacheKey(Canvas canvas, int face, float facePlane, float surfaceY, boolean seeThrough, @Nullable RenderType renderType) {
@@ -51,6 +52,7 @@ public class RedfxDynamicModel extends BakedModelWrapper<BakedModel> {
 
 	public static void clearCache() {
 		CACHE.clear();
+		CACHE_ORDER.clear();
 	}
 
 	@Override
@@ -113,9 +115,14 @@ public class RedfxDynamicModel extends BakedModelWrapper<BakedModel> {
 			int currentFace = face;
 
 			for (PaintSurface.SurfaceCanvas sc : PaintSurface.splitCanvas(null, data.pos, state, face, canvas)) {
-				List<BakedQuad> faceQuads = CACHE.computeIfAbsent(
-					new CacheKey(sc.canvas(), currentFace, sc.facePlane(), sc.surfaceY(), data.seeThrough, renderType),
-					key -> build(key.canvas(), key.face(), key.facePlane(), key.surfaceY(), key.seeThrough(), key.renderType()));
+				CacheKey cacheKey = new CacheKey(sc.canvas(), currentFace, sc.facePlane(), sc.surfaceY(), data.seeThrough, renderType);
+				List<BakedQuad> faceQuads = CACHE.get(cacheKey);
+				if (faceQuads == null) {
+					faceQuads = build(cacheKey.canvas(), cacheKey.face(), cacheKey.facePlane(), cacheKey.surfaceY(), cacheKey.seeThrough(), cacheKey.renderType());
+					if (CACHE.putIfAbsent(cacheKey, faceQuads) == null) {
+						CACHE_ORDER.add(cacheKey);
+					}
+				}
 
 				if (quads == null) {
 					quads = new ArrayList<>(base.size() + faceQuads.size() * 2);
@@ -126,8 +133,11 @@ public class RedfxDynamicModel extends BakedModelWrapper<BakedModel> {
 			}
 		}
 
-		if (CACHE.size() > MAX_CACHED_CANVASES) {
-			CACHE.clear();
+		int excess = CACHE.size() - MAX_CACHED_CANVASES;
+		while (excess-- > 0) {
+			CacheKey oldest = CACHE_ORDER.poll();
+			if (oldest == null) break;
+			CACHE.remove(oldest);
 		}
 
 		return quads != null ? quads : base;

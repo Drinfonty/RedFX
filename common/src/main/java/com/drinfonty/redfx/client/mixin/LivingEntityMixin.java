@@ -84,17 +84,66 @@ public class LivingEntityMixin {
         spawnBloodParticles(self, self.getLastDamageSource(), true);
     }
 
+    @Unique
+    private static final int REDFX_MAX_BLOOD_PARTICLES_PER_TICK = 300;
+    @Unique
+    private static long redfx$spawnBudgetTick = Long.MIN_VALUE;
+    @Unique
+    private static int redfx$spawnedThisTick = 0;
+
+    @Unique
+    private static int redfx$claimParticleSpawnBudget(ClientLevel level, int requested) {
+        long tick = level.getGameTime();
+        if (tick != redfx$spawnBudgetTick) {
+            redfx$spawnBudgetTick = tick;
+            redfx$spawnedThisTick = 0;
+        }
+        int remaining = REDFX_MAX_BLOOD_PARTICLES_PER_TICK - redfx$spawnedThisTick;
+        if (remaining <= 0) {
+            return 0;
+        }
+        int granted = Math.min(requested, remaining);
+        redfx$spawnedThisTick += granted;
+        return granted;
+    }
+
+    @Unique
+    private static net.minecraft.world.level.block.state.BlockState redfx$resolveParticleBlockState(String particleType) {
+        if ("RedPoof".equals(particleType)) {
+            return null;
+        }
+        if ("TNT".equals(particleType)) {
+            return Blocks.TNT.defaultBlockState();
+        }
+        return Blocks.SNOW_BLOCK.defaultBlockState();
+    }
+
     private void spawnBloodParticles(LivingEntity entity, DamageSource damageSource, boolean isDeath) {
         String entityKey = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).toString();
         if (!RedfxConfig.get().isBloodEnabledFor(entityKey)) return;
 
+        Minecraft mc = Minecraft.getInstance();
+        float distanceScale = 1.0f;
+        if (mc.player != null) {
+            double distSq = mc.player.distanceToSqr(entity);
+            if (distSq > 48.0 * 48.0) {
+                return;
+            }
+            if (distSq > 24.0 * 24.0) {
+                distanceScale = 0.5f;
+            }
+        }
+
         float configMultiplier = RedfxConfig.get().getMultiplier();
         float weaponMultiplier = getWeaponMultiplier(entity, damageSource);
-        float totalMultiplier = configMultiplier * weaponMultiplier;
+        float totalMultiplier = configMultiplier * weaponMultiplier * distanceScale;
 
         int baseCount = isDeath ? (50 + entity.getRandom().nextInt(25)) : (12 + entity.getRandom().nextInt(8));
         int count = Math.round(baseCount * totalMultiplier);
-        
+        if (count <= 0) return;
+
+        ClientLevel clientLevel = (ClientLevel) entity.level();
+        count = redfx$claimParticleSpawnBudget(clientLevel, count);
         if (count <= 0) return;
         
         // Determine attack direction and attacker entity
@@ -117,7 +166,6 @@ public class LivingEntityMixin {
         }
 
         // Local client player fallback (e.g. melee hit from local player)
-        Minecraft mc = Minecraft.getInstance();
         if (attackerPos == null && damageSource == null && mc.player != null) {
             if (mc.player.distanceToSqr(entity) <= 36.0) {
                 attackerEntity = mc.player;
@@ -180,26 +228,14 @@ public class LivingEntityMixin {
         }
 
         String particleType = RedfxConfig.get().particleType;
-        boolean isPoof = particleType.equals("RedPoof");
-        
-        // Base canvas mapping
-        net.minecraft.world.level.block.state.BlockState blockState = null;
-        if (!isPoof) {
-            if (particleType.equals("TNT")) {
-                blockState = Blocks.TNT.defaultBlockState();
-            } else {
-                // Use snow block as a clean white canvas for color tinting
-                blockState = Blocks.SNOW_BLOCK.defaultBlockState();
-            }
-        }
+        boolean isPoof = "RedPoof".equals(particleType);
+        net.minecraft.world.level.block.state.BlockState blockState = redfx$resolveParticleBlockState(particleType);
 
         // Determine base entity-specific blood colors
         float[] baseColor = getBloodColor(entity);
         float r = baseColor[0];
         float g = baseColor[1];
         float b = baseColor[2];
-
-        ClientLevel clientLevel = (ClientLevel) entity.level();
 
         CreatureTheme theme = CreatureTheme.fromEntity(entity);
         int themeBurstCount = isDeath ? 8 : 3;
@@ -429,18 +465,19 @@ public class LivingEntityMixin {
         String entityKey = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).toString();
         if (!RedfxConfig.get().isBloodEnabledFor(entityKey)) return;
 
-        ClientLevel clientLevel = (ClientLevel) entity.level();
-        String particleType = RedfxConfig.get().particleType;
-        boolean isPoof = particleType.equals("RedPoof");
-        
-        net.minecraft.world.level.block.state.BlockState blockState = null;
-        if (!isPoof) {
-            if (particleType.equals("TNT")) {
-                blockState = Blocks.TNT.defaultBlockState();
-            } else {
-                blockState = Blocks.SNOW_BLOCK.defaultBlockState();
-            }
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player != null && mc.player.distanceToSqr(entity) > 48.0 * 48.0) {
+            return;
         }
+
+        ClientLevel clientLevel = (ClientLevel) entity.level();
+        if (redfx$claimParticleSpawnBudget(clientLevel, 1) <= 0) {
+            return;
+        }
+
+        String particleType = RedfxConfig.get().particleType;
+        boolean isPoof = "RedPoof".equals(particleType);
+        net.minecraft.world.level.block.state.BlockState blockState = redfx$resolveParticleBlockState(particleType);
 
         float[] baseColor = getBloodColor(entity);
         float r = baseColor[0];

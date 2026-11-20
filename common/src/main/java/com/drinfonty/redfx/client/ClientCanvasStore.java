@@ -87,6 +87,8 @@ public final class ClientCanvasStore {
 	private final TreeMap<Long, List<Runnable>> pendingActions = new TreeMap<>();
 	private final Long2ObjectOpenHashMap<long[]> edgeDripTimestamps = new Long2ObjectOpenHashMap<>();
 	private final Long2ObjectOpenHashMap<long[]> faceStampWindows = new Long2ObjectOpenHashMap<>();
+	private final LongOpenHashSet pendingBlockKeys = new LongOpenHashSet();
+	private volatile boolean hasPendingStages = false;
 	private int totalPendingActionCount = 0;
 
 	private ClientCanvasStore() {
@@ -125,16 +127,12 @@ public final class ClientCanvasStore {
 		if (isPainted(pos)) {
 			return true;
 		}
-		synchronized (this) {
-			for (List<PendingTexel> stageTexels : pendingStages.values()) {
-				for (PendingTexel pt : stageTexels) {
-					if (pt.pos.equals(pos)) {
-						return true;
-					}
-				}
-			}
+		if (!hasPendingStages) {
+			return false;
 		}
-		return false;
+		synchronized (this) {
+			return pendingBlockKeys.contains(pos.asLong());
+		}
 	}
 
 	/**
@@ -201,6 +199,10 @@ public final class ClientCanvasStore {
 			return;
 		}
 		pendingStages.computeIfAbsent(executeAtMs, k -> new ArrayList<>(texels.size())).addAll(texels);
+		for (int i = 0; i < texels.size(); i++) {
+			pendingBlockKeys.add(texels.get(i).pos.asLong());
+		}
+		hasPendingStages = true;
 	}
 
 	public synchronized void scheduleAction(long executeAtMs, Runnable action) {
@@ -328,7 +330,7 @@ public final class ClientCanvasStore {
 		long blockKey = pos.asLong();
 		edgeDripTimestamps.remove(blockKey);
 		faceStampWindows.remove(blockKey);
-		if (!pendingStages.isEmpty()) {
+		if (pendingBlockKeys.remove(blockKey) && !pendingStages.isEmpty()) {
 			Iterator<List<PendingTexel>> it = pendingStages.values().iterator();
 			while (it.hasNext()) {
 				List<PendingTexel> stageTexels = it.next();
@@ -337,6 +339,7 @@ public final class ClientCanvasStore {
 					it.remove();
 				}
 			}
+			hasPendingStages = !pendingStages.isEmpty();
 		}
 
 		long chunkKey = chunkKey(pos);
@@ -417,6 +420,9 @@ public final class ClientCanvasStore {
 		if (!faceStampWindows.isEmpty()) {
 			faceStampWindows.keySet().removeIf(k -> chunkKey(BlockPos.getX(k) >> 4, BlockPos.getZ(k) >> 4) == chunkPosPacked);
 		}
+		if (!pendingBlockKeys.isEmpty()) {
+			pendingBlockKeys.removeIf(k -> chunkKey(BlockPos.getX(k) >> 4, BlockPos.getZ(k) >> 4) == chunkPosPacked);
+		}
 		if (!pendingStages.isEmpty()) {
 			Iterator<List<PendingTexel>> it = pendingStages.values().iterator();
 			while (it.hasNext()) {
@@ -426,6 +432,7 @@ public final class ClientCanvasStore {
 					it.remove();
 				}
 			}
+			hasPendingStages = !pendingStages.isEmpty();
 		}
 		if (removed != null && !removed.isEmpty() && dirtyRender) {
 			int chunkX = chunkX(chunkPosPacked);
@@ -441,6 +448,8 @@ public final class ClientCanvasStore {
 		pendingClears.clear();
 		edgeDripTimestamps.clear();
 		faceStampWindows.clear();
+		pendingBlockKeys.clear();
+		hasPendingStages = false;
 		totalPendingActionCount = 0;
 	}
 
@@ -508,8 +517,20 @@ public final class ClientCanvasStore {
 					readyTexels.addAll(bucket);
 				}
 			}
-			if (readyTexels != null && !readyTexels.isEmpty()) {
-				applyTexelsInternal(readyTexels, toDirtySections);
+			if (readyTexels != null) {
+				pendingBlockKeys.clear();
+				if (pendingStages.isEmpty()) {
+					hasPendingStages = false;
+				} else {
+					for (List<PendingTexel> rem : pendingStages.values()) {
+						for (int i = 0; i < rem.size(); i++) {
+							pendingBlockKeys.add(rem.get(i).pos.asLong());
+						}
+					}
+				}
+				if (!readyTexels.isEmpty()) {
+					applyTexelsInternal(readyTexels, toDirtySections);
+				}
 			}
 		}
 
