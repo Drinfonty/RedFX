@@ -1,9 +1,11 @@
 package com.drinfonty.redfx.client;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.drinfonty.redfx.canvas.BloodSplatter;
@@ -62,6 +64,16 @@ public final class ClientCanvasStore {
 	private static final long ERODE_INTERVAL_MS = 200L;
 	/** Number of edge pixels erased per step. */
 	private static final int ERODE_PIXELS_PER_STEP = 3;
+	/** Minimum interval before the same block edge column can trigger another drip cascade. */
+	private static final long EDGE_DRIP_COOLDOWN_MS = 450L;
+	/** Sliding window for per-(block, face) splatter rate limiting on saturated farms. */
+	private static final long STAMP_WINDOW_MS = 100L;
+	/** Maximum full splatters accepted per (block, face) within a 100ms window. */
+	private static final int MAX_STAMPS_PER_FACE_PER_WINDOW = 16;
+	/** Hard cap on tracked blocks in rate-limit maps to keep memory bounded. */
+	private static final int MAX_TRACKED_DRIP_BLOCKS = 4096;
+	/** Hard cap on delayed particle/splash runnables queued across bursts. */
+	private static final int MAX_PENDING_ACTIONS = 512;
 
 	public static ClientCanvasStore get() {
 		return INSTANCE;
@@ -70,15 +82,12 @@ public final class ClientCanvasStore {
 	public record PendingTexel(BlockPos pos, int face, int u, int v, int col, long expirationMs) {
 	}
 
-	private record PendingStage(long executeAtMs, List<PendingTexel> texels) {
-	}
-
-	private record PendingAction(long executeAtMs, Runnable action) {
-	}
-
 	private final ConcurrentHashMap<Long, Long2ObjectMap<Canvas>> chunks = new ConcurrentHashMap<>();
-	private final List<PendingStage> pendingStages = new ArrayList<>();
-	private final List<PendingAction> pendingActions = new ArrayList<>();
+	private final TreeMap<Long, List<PendingTexel>> pendingStages = new TreeMap<>();
+	private final TreeMap<Long, List<Runnable>> pendingActions = new TreeMap<>();
+	private final Long2ObjectOpenHashMap<long[]> edgeDripTimestamps = new Long2ObjectOpenHashMap<>();
+	private final Long2ObjectOpenHashMap<long[]> faceStampWindows = new Long2ObjectOpenHashMap<>();
+	private int totalPendingActionCount = 0;
 
 	private ClientCanvasStore() {
 	}
@@ -117,8 +126,8 @@ public final class ClientCanvasStore {
 			return true;
 		}
 		synchronized (this) {
-			for (PendingStage stage : pendingStages) {
-				for (PendingTexel pt : stage.texels) {
+			for (List<PendingTexel> stageTexels : pendingStages.values()) {
+				for (PendingTexel pt : stageTexels) {
 					if (pt.pos.equals(pos)) {
 						return true;
 					}
@@ -128,16 +137,76 @@ public final class ClientCanvasStore {
 		return false;
 	}
 
+	/**
+	 * Attempts to claim an impact stamp slot for {@code (pos, face)} within a 100ms sliding window.
+	 * Prevents redundant overlapping splatters from saturating a single block face during bursts.
+	 */
+	public synchronized boolean tryClaimStampBudget(BlockPos pos, int face, long nowMs) {
+		if (face < 0 || face >= FaceAxes.FACE_COUNT) {
+			return false;
+		}
+		long blockKey = pos.asLong();
+		long[] state = faceStampWindows.get(blockKey);
+		if (state == null) {
+			if (faceStampWindows.size() >= MAX_TRACKED_DRIP_BLOCKS) {
+				faceStampWindows.clear();
+			}
+			state = new long[FaceAxes.FACE_COUNT * 2];
+			faceStampWindows.put(blockKey, state);
+		}
+		int base = face << 1;
+		long windowStart = state[base];
+		long count = state[base + 1];
+		if (count == 0L || nowMs < windowStart || nowMs - windowStart >= STAMP_WINDOW_MS) {
+			state[base] = nowMs;
+			state[base + 1] = 1L;
+			return true;
+		}
+		if (count >= MAX_STAMPS_PER_FACE_PER_WINDOW) {
+			return false;
+		}
+		state[base + 1] = count + 1L;
+		return true;
+	}
+
+	/**
+	 * Attempts to claim an edge drip slot for {@code (pos, sideFace, uSide)} at {@code nowMs}.
+	 * Returns {@code false} if this exact column already initiated a drip within the cooldown window.
+	 */
+	public synchronized boolean tryClaimEdgeDrip(BlockPos pos, int sideFace, int uSide, long nowMs) {
+		if (sideFace < FaceAxes.NORTH || sideFace > FaceAxes.EAST || uSide < 0 || uSide >= Canvas.SIZE) {
+			return false;
+		}
+		long blockKey = pos.asLong();
+		long[] cols = edgeDripTimestamps.get(blockKey);
+		if (cols == null) {
+			if (edgeDripTimestamps.size() >= MAX_TRACKED_DRIP_BLOCKS) {
+				edgeDripTimestamps.clear();
+			}
+			cols = new long[4 * Canvas.SIZE];
+			Arrays.fill(cols, Long.MIN_VALUE);
+			edgeDripTimestamps.put(blockKey, cols);
+		}
+		int idx = ((sideFace - FaceAxes.NORTH) << 4) | uSide;
+		long lastMs = cols[idx];
+		if (lastMs != Long.MIN_VALUE && nowMs >= lastMs && nowMs - lastMs < EDGE_DRIP_COOLDOWN_MS) {
+			return false;
+		}
+		cols[idx] = nowMs;
+		return true;
+	}
+
 	public synchronized void scheduleStage(long executeAtMs, List<PendingTexel> texels) {
 		if (texels == null || texels.isEmpty()) {
 			return;
 		}
-		pendingStages.add(new PendingStage(executeAtMs, new ArrayList<>(texels)));
+		pendingStages.computeIfAbsent(executeAtMs, k -> new ArrayList<>(texels.size())).addAll(texels);
 	}
 
 	public synchronized void scheduleAction(long executeAtMs, Runnable action) {
-		if (action != null) {
-			pendingActions.add(new PendingAction(executeAtMs, action));
+		if (action != null && totalPendingActionCount < MAX_PENDING_ACTIONS) {
+			pendingActions.computeIfAbsent(executeAtMs, k -> new ArrayList<>(4)).add(action);
+			totalPendingActionCount++;
 		}
 	}
 
@@ -227,6 +296,10 @@ public final class ClientCanvasStore {
 		return pendingStages.size();
 	}
 
+	public synchronized int pendingActionCount() {
+		return totalPendingActionCount;
+	}
+
 	public synchronized void put(BlockPos pos, int face, Canvas canvas) {
 		long chunkKey = chunkKey(pos);
 		long key = CanvasKey.pack(pos.getX() & 0xF, pos.getY(), pos.getZ() & 0xF, face);
@@ -252,11 +325,18 @@ public final class ClientCanvasStore {
 	}
 
 	public synchronized void clearBlock(BlockPos pos) {
+		long blockKey = pos.asLong();
+		edgeDripTimestamps.remove(blockKey);
+		faceStampWindows.remove(blockKey);
 		if (!pendingStages.isEmpty()) {
-			pendingStages.removeIf(stage -> {
-				stage.texels.removeIf(pt -> pt.pos.equals(pos));
-				return stage.texels.isEmpty();
-			});
+			Iterator<List<PendingTexel>> it = pendingStages.values().iterator();
+			while (it.hasNext()) {
+				List<PendingTexel> stageTexels = it.next();
+				stageTexels.removeIf(pt -> pt.pos.equals(pos));
+				if (stageTexels.isEmpty()) {
+					it.remove();
+				}
+			}
 		}
 
 		long chunkKey = chunkKey(pos);
@@ -302,10 +382,22 @@ public final class ClientCanvasStore {
 
 	public synchronized void clearChunk(long chunkPosPacked, boolean dirtyRender) {
 		Long2ObjectMap<Canvas> removed = chunks.remove(chunkPosPacked);
-		pendingStages.removeIf(stage -> {
-			stage.texels.removeIf(pt -> chunkKey(pt.pos) == chunkPosPacked);
-			return stage.texels.isEmpty();
-		});
+		if (!edgeDripTimestamps.isEmpty()) {
+			edgeDripTimestamps.keySet().removeIf(k -> chunkKey(BlockPos.getX(k) >> 4, BlockPos.getZ(k) >> 4) == chunkPosPacked);
+		}
+		if (!faceStampWindows.isEmpty()) {
+			faceStampWindows.keySet().removeIf(k -> chunkKey(BlockPos.getX(k) >> 4, BlockPos.getZ(k) >> 4) == chunkPosPacked);
+		}
+		if (!pendingStages.isEmpty()) {
+			Iterator<List<PendingTexel>> it = pendingStages.values().iterator();
+			while (it.hasNext()) {
+				List<PendingTexel> stageTexels = it.next();
+				stageTexels.removeIf(pt -> chunkKey(pt.pos) == chunkPosPacked);
+				if (stageTexels.isEmpty()) {
+					it.remove();
+				}
+			}
+		}
 		if (removed != null && !removed.isEmpty() && dirtyRender) {
 			int chunkX = chunkX(chunkPosPacked);
 			int chunkZ = chunkZ(chunkPosPacked);
@@ -317,6 +409,9 @@ public final class ClientCanvasStore {
 		chunks.clear();
 		pendingStages.clear();
 		pendingActions.clear();
+		edgeDripTimestamps.clear();
+		faceStampWindows.clear();
+		totalPendingActionCount = 0;
 	}
 
 	/**
@@ -331,34 +426,41 @@ public final class ClientCanvasStore {
 		LongOpenHashSet toDirtySections = new LongOpenHashSet();
 
 		if (!pendingActions.isEmpty()) {
-			Iterator<PendingAction> aIt = pendingActions.iterator();
-			List<Runnable> readyActions = new ArrayList<>();
+			List<Runnable> readyActions = null;
+			Iterator<Map.Entry<Long, List<Runnable>>> aIt = pendingActions.headMap(nowMs, true).entrySet().iterator();
 			while (aIt.hasNext()) {
-				PendingAction pa = aIt.next();
-				if (nowMs >= pa.executeAtMs) {
-					aIt.remove();
-					readyActions.add(pa.action);
+				List<Runnable> bucket = aIt.next().getValue();
+				aIt.remove();
+				totalPendingActionCount = Math.max(0, totalPendingActionCount - bucket.size());
+				if (readyActions == null) {
+					readyActions = new ArrayList<>(bucket);
+				} else {
+					readyActions.addAll(bucket);
 				}
 			}
-			for (Runnable r : readyActions) {
-				try {
-					r.run();
-				} catch (Throwable ignored) {
+			if (readyActions != null) {
+				for (Runnable r : readyActions) {
+					try {
+						r.run();
+					} catch (Throwable ignored) {
+					}
 				}
 			}
 		}
 
 		if (!pendingStages.isEmpty()) {
-			Iterator<PendingStage> pIt = pendingStages.iterator();
-			List<PendingTexel> readyTexels = new ArrayList<>();
+			List<PendingTexel> readyTexels = null;
+			Iterator<Map.Entry<Long, List<PendingTexel>>> pIt = pendingStages.headMap(nowMs, true).entrySet().iterator();
 			while (pIt.hasNext()) {
-				PendingStage stage = pIt.next();
-				if (nowMs >= stage.executeAtMs) {
-					pIt.remove();
-					readyTexels.addAll(stage.texels);
+				List<PendingTexel> bucket = pIt.next().getValue();
+				pIt.remove();
+				if (readyTexels == null) {
+					readyTexels = new ArrayList<>(bucket);
+				} else {
+					readyTexels.addAll(bucket);
 				}
 			}
-			if (!readyTexels.isEmpty()) {
+			if (readyTexels != null && !readyTexels.isEmpty()) {
 				applyTexelsInternal(readyTexels, toDirtySections);
 			}
 		}
