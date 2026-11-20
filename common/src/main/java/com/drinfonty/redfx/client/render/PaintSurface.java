@@ -258,20 +258,73 @@ public final class PaintSurface {
 		};
 	}
 
+	public static void findEdgesForDirection(BlockGetter level, BlockPos pos, BlockState state, Direction hDir,
+			BlockEdge[] outOuter, BlockEdge[] outInternal) {
+		if (state == null || state.isAir()) return;
+
+		BlockGetter bg = level != null ? level : EmptyBlockGetter.INSTANCE;
+		BlockPos bp = pos != null ? pos : BlockPos.ZERO;
+
+		if (state.isCollisionShapeFullBlock(bg, bp)) {
+			double colPlane = (hDir == Direction.NORTH || hDir == Direction.WEST) ? 0.0 : 1.0;
+			boolean ns = hDir == Direction.NORTH || hDir == Direction.SOUTH;
+			int fixed = (hDir == Direction.NORTH || hDir == Direction.WEST) ? 0 : 15;
+			for (int coord = 0; coord < Canvas.SIZE; coord++) {
+				int edgeU = ns ? coord : fixed;
+				int edgeV = ns ? fixed : coord;
+				outOuter[coord] = new BlockEdge(edgeU, edgeV, 1.0, 0.0, colPlane, false);
+			}
+			return;
+		}
+
+		VoxelShape shape = state.getShape(bg, bp);
+		if (shape.isEmpty()) return;
+		List<AABB> boxes = shape.toAabbs();
+		List<BlockEdge> tmp = new ArrayList<>(2);
+
+		for (int coord = 0; coord < Canvas.SIZE; coord++) {
+			tmp.clear();
+			collectEdgesForCoord(bg, bp, state, boxes, hDir, coord, tmp);
+			for (int i = 0; i < tmp.size(); i++) {
+				BlockEdge e = tmp.get(i);
+				if (e.isInternal()) {
+					if (outInternal != null && outInternal[coord] == null) outInternal[coord] = e;
+				} else if (outOuter[coord] == null) {
+					outOuter[coord] = e;
+				}
+			}
+		}
+	}
+
 	public static List<BlockEdge> findEdges(BlockGetter level, BlockPos pos, BlockState state, Direction hDir, int coord) {
 		if (state == null || state.isAir()) return List.of();
 
 		BlockGetter bg = level != null ? level : EmptyBlockGetter.INSTANCE;
 		BlockPos bp = pos != null ? pos : BlockPos.ZERO;
 
+		if (state.isCollisionShapeFullBlock(bg, bp)) {
+			int edgeU = (hDir == Direction.NORTH || hDir == Direction.SOUTH) ? coord : (hDir == Direction.WEST ? 0 : 15);
+			int edgeV = (hDir == Direction.WEST || hDir == Direction.EAST) ? coord : (hDir == Direction.NORTH ? 0 : 15);
+			double colPlane = (hDir == Direction.NORTH || hDir == Direction.WEST) ? 0.0 : 1.0;
+			return List.of(new BlockEdge(edgeU, edgeV, 1.0, 0.0, colPlane, false));
+		}
+
 		VoxelShape shape = state.getShape(bg, bp);
 		if (shape.isEmpty()) return List.of();
 
-		double tangent = (coord + 0.5) / (double) Canvas.SIZE;
 		List<AABB> boxes = shape.toAabbs();
+		List<BlockEdge> edges = new ArrayList<>(2);
+		collectEdgesForCoord(bg, bp, state, boxes, hDir, coord, edges);
+		return edges;
+	}
+
+	private static void collectEdgesForCoord(BlockGetter bg, BlockPos bp, BlockState state, List<AABB> boxes,
+			Direction hDir, int coord, List<BlockEdge> edges) {
+		double tangent = (coord + 0.5) / (double) Canvas.SIZE;
 
 		double maxTop = NONE;
-		for (AABB box : boxes) {
+		for (int i = 0; i < boxes.size(); i++) {
+			AABB box = boxes.get(i);
 			boolean tangentMatch = switch (hDir) {
 				case NORTH, SOUTH -> tangent >= box.minX - 1e-4 && tangent <= box.maxX + 1e-4;
 				case WEST, EAST -> tangent >= box.minZ - 1e-4 && tangent <= box.maxZ + 1e-4;
@@ -282,13 +335,13 @@ public final class PaintSurface {
 			}
 		}
 
-		if (maxTop == NONE) return List.of();
+		if (maxTop == NONE) return;
 
 		boolean hasUpperStructure = maxTop > 0.35;
-		List<BlockEdge> edges = new ArrayList<>(2);
 		AABB bestOuterBox = null;
 
-		for (AABB box : boxes) {
+		for (int i = 0; i < boxes.size(); i++) {
+			AABB box = boxes.get(i);
 			boolean tangentMatch = switch (hDir) {
 				case NORTH, SOUTH -> tangent >= box.minX - 1e-4 && tangent <= box.maxX + 1e-4;
 				case WEST, EAST -> tangent >= box.minZ - 1e-4 && tangent <= box.maxZ + 1e-4;
@@ -393,8 +446,6 @@ public final class PaintSurface {
 
 			edges.add(new BlockEdge(edgeU, edgeV, bestOuterBox.maxY, bestOuterBox.minY, colPlane, false));
 		}
-
-		return edges;
 	}
 
 	public static BlockEdge findEdge(BlockGetter level, BlockPos pos, BlockState state, Direction hDir, int coord) {
