@@ -35,20 +35,16 @@ import com.drinfonty.redfx.config.RedfxConfig;
 public class BloodParticle extends TerrainParticle {
     private final int splatIndex; // Picks one of 5 splat patterns (1 to 5)
 
-    private static long TERRAIN_LAYER_OFFSET = -1L;
+    private static java.lang.reflect.Field TERRAIN_LAYER_FIELD = null;
     private static Object TRANSLUCENT_TERRAIN_LAYER = null;
-    private static Object THE_UNSAFE = null;
 
     static {
         try {
             Class<?> layerClass = Class.forName("net.minecraft.client.particle.SingleQuadParticle$Layer");
             for (java.lang.reflect.Field f : TerrainParticle.class.getDeclaredFields()) {
                 if (f.getType().equals(layerClass)) {
-                    java.lang.reflect.Field uf = sun.misc.Unsafe.class.getDeclaredField("theUnsafe");
-                    uf.setAccessible(true);
-                    sun.misc.Unsafe unsafe = (sun.misc.Unsafe) uf.get(null);
-                    THE_UNSAFE = unsafe;
-                    TERRAIN_LAYER_OFFSET = unsafe.objectFieldOffset(f);
+                    f.setAccessible(true);
+                    TERRAIN_LAYER_FIELD = f;
                     TRANSLUCENT_TERRAIN_LAYER = layerClass.getField("TRANSLUCENT_TERRAIN").get(null);
                     break;
                 }
@@ -58,9 +54,9 @@ public class BloodParticle extends TerrainParticle {
     }
 
     private static void enableTranslucentTerrain(TerrainParticle particle) {
-        if (THE_UNSAFE != null && TERRAIN_LAYER_OFFSET != -1L && TRANSLUCENT_TERRAIN_LAYER != null) {
+        if (TERRAIN_LAYER_FIELD != null && TRANSLUCENT_TERRAIN_LAYER != null) {
             try {
-                ((sun.misc.Unsafe) THE_UNSAFE).putObject(particle, TERRAIN_LAYER_OFFSET, TRANSLUCENT_TERRAIN_LAYER);
+                TERRAIN_LAYER_FIELD.set(particle, TRANSLUCENT_TERRAIN_LAYER);
             } catch (Throwable ignored) {
             }
         }
@@ -544,7 +540,8 @@ public class BloodParticle extends TerrainParticle {
             Set<BlockPos> solidTopBlocks = dripEdges ? new HashSet<>() : null;
             Map<BlockPos, Double> blockElevations = dripEdges ? new HashMap<>() : null;
             Map<BlockPos, int[]> newTopTexelsByBlock = dripEdges ? new HashMap<>() : null;
-            SurfaceInfo targetSurface = resolveTopSurfaceInfo(level, targetBlock, (centerU + 0.5) / 16.0, (centerV + 0.5) / 16.0);
+            Map<BlockPos, CachedColumn> columnCache = new HashMap<>(4);
+            SurfaceInfo targetSurface = resolveTopSurfaceInfoCached(level, columnCache, targetBlock, (centerU + 0.5) / 16.0, (centerV + 0.5) / 16.0);
             double targetElevation = targetSurface != null ? targetSurface.elevation() : (double) (targetBlock.getY() + 1.0);
 
             BloodSplatter.stampGlobal(globalCenterU, globalCenterV, argb, splatIndex, scale, tangentU, tangentV, (gu, gv, col, stage) -> {
@@ -561,7 +558,7 @@ public class BloodParticle extends TerrainParticle {
                 int wy = normal;
                 int wz = bv;
                 BlockPos colPos = new BlockPos(wx, wy, wz);
-                SurfaceInfo surfaceInfo = resolveTopSurfaceInfo(level, colPos, (uTexel + 0.5) / 16.0, (vTexel + 0.5) / 16.0);
+                SurfaceInfo surfaceInfo = resolveTopSurfaceInfoCached(level, columnCache, colPos, (uTexel + 0.5) / 16.0, (vTexel + 0.5) / 16.0);
 
                 if (surfaceInfo != null) {
                     // Only stamp on top faces that are roughly level with the impact surface
@@ -1039,6 +1036,66 @@ public class BloodParticle extends TerrainParticle {
     }
 
     private record SurfaceInfo(BlockPos blockPos, double elevation) {
+    }
+
+    private record CachedColumn(
+        BlockPos abovePos, BlockState aboveState, boolean aboveCheck,
+        BlockPos colPos, BlockState colState, boolean colCheck,
+        BlockPos belowPos, BlockState belowState, boolean belowCheck,
+        SurfaceInfo uniformSurface
+    ) {
+    }
+
+    private static SurfaceInfo resolveTopSurfaceInfoCached(net.minecraft.world.level.BlockGetter level,
+            Map<BlockPos, CachedColumn> cache, BlockPos colPos, double relX, double relZ) {
+        CachedColumn col = cache.get(colPos);
+        if (col == null) {
+            BlockPos abovePos = colPos.above();
+            BlockState aboveState = level.getBlockState(abovePos);
+            boolean aboveCheck = !aboveState.isAir() && aboveState.getFluidState().isEmpty() && !PaintSurface.isIgnored(aboveState);
+
+            BlockState bs = level.getBlockState(colPos);
+            boolean colCheck = !bs.isAir() && bs.getFluidState().isEmpty() && !PaintSurface.isIgnored(bs);
+
+            SurfaceInfo uniform = null;
+            BlockPos belowPos = null;
+            BlockState belowState = null;
+            boolean belowCheck = false;
+
+            if (!aboveCheck && colCheck && bs.isCollisionShapeFullBlock(level, colPos)) {
+                uniform = new SurfaceInfo(colPos, colPos.getY() + 1.0);
+            } else {
+                belowPos = colPos.below();
+                belowState = level.getBlockState(belowPos);
+                belowCheck = !belowState.isAir() && belowState.getFluidState().isEmpty() && !PaintSurface.isIgnored(belowState);
+            }
+
+            col = new CachedColumn(abovePos, aboveState, aboveCheck, colPos, bs, colCheck, belowPos, belowState, belowCheck, uniform);
+            cache.put(colPos, col);
+        }
+
+        if (col.uniformSurface != null) {
+            return col.uniformSurface;
+        }
+        if (col.aboveCheck) {
+            double top = PaintSurface.surfaceElevationAt(level, col.abovePos, col.aboveState, relX, relZ);
+            if (top != PaintSurface.NONE && top < 1.0) {
+                return new SurfaceInfo(col.abovePos, col.abovePos.getY() + top);
+            }
+        }
+        if (col.colCheck) {
+            double top = PaintSurface.surfaceElevationAt(level, col.colPos, col.colState, relX, relZ);
+            if (top != PaintSurface.NONE) {
+                return new SurfaceInfo(col.colPos, col.colPos.getY() + top);
+            }
+        }
+        if (col.belowCheck) {
+            double top = PaintSurface.surfaceElevationAt(level, col.belowPos, col.belowState, relX, relZ);
+            if (top != PaintSurface.NONE) {
+                return new SurfaceInfo(col.belowPos, col.belowPos.getY() + top);
+            }
+        }
+        return null;
     }
 
     private static SurfaceInfo resolveTopSurfaceInfo(net.minecraft.world.level.BlockGetter level, BlockPos colPos, double relX, double relZ) {
