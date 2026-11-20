@@ -103,17 +103,18 @@ public class RedfxWrapperModel extends WrapperBlockStateModel {
 		}
 
 		ClientCanvasStore store = ClientCanvasStore.get();
+		if (!store.isPainted(pos)) {
+			return super.createGeometryKey(level, pos, state, random);
+		}
+
 		Object[] key = new Object[FaceAxes.FACE_COUNT + 2];
 		key[0] = super.createGeometryKey(level, pos, state, random);
 		key[FaceAxes.FACE_COUNT + 1] = PaintSurface.isSeeThrough(state);
-		boolean painted = false;
 
 		for (int face = 0; face < FaceAxes.FACE_COUNT; face++) {
-			Canvas canvas = store.get(pos, face);
-			key[face + 1] = canvas;
-			painted |= canvas != null;
+			key[face + 1] = store.get(pos, face);
 		}
 
-		return painted ? List.of(key) : key[0];
+		return List.of(key);
 	}
 }
