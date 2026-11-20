@@ -308,13 +308,15 @@ public class BloodParticle extends TerrainParticle {
             if (targetState.isAir() || !targetState.getFluidState().isEmpty() || PaintSurface.isIgnored(targetState)) {
                 hitDirection = null;
             } else {
-                stampToCanvas(this.level, this.x, this.y, this.z, oldXd, oldYd, oldZd, this.rCol, this.gCol, this.bCol, this.splatIndex, this.random, targetBlock, hitDirection);
+                boolean stamped = stampToCanvas(this.level, this.x, this.y, this.z, oldXd, oldYd, oldZd, this.rCol, this.gCol, this.bCol, this.splatIndex, this.random, targetBlock, hitDirection);
 
-                if (RedfxConfig.get().enableSplatDust) {
-                    spawnSplatDust(this.level, this.x, this.y, this.z, this.rCol, this.gCol, this.bCol, this.random);
+                if (stamped) {
+                    if (RedfxConfig.get().enableSplatDust) {
+                        spawnSplatDust(this.level, this.x, this.y, this.z, this.rCol, this.gCol, this.bCol, this.random);
+                    }
+
+                    spawnThemeImpactParticles(this.level, this.x, this.y, this.z, this.theme, this.random);
                 }
-
-                spawnThemeImpactParticles(this.level, this.x, this.y, this.z, this.theme, this.random);
 
                 this.remove();
             }
@@ -405,19 +407,71 @@ public class BloodParticle extends TerrainParticle {
         }
     }
 
-    public static void stampToCanvas(ClientLevel level, double x, double y, double z,
+    public static boolean stampToCanvas(ClientLevel level, double x, double y, double z,
                                      float rCol, float gCol, float bCol,
                                      int splatIndex, RandomSource random,
                                      BlockPos targetBlock, Direction hitDirection) {
-        stampToCanvas(level, x, y, z, 0.0, 0.0, 0.0, rCol, gCol, bCol, splatIndex, random, targetBlock, hitDirection);
+        return stampToCanvas(level, x, y, z, 0.0, 0.0, 0.0, rCol, gCol, bCol, splatIndex, random, targetBlock, hitDirection);
     }
 
-    public static void stampToCanvas(ClientLevel level, double x, double y, double z,
+    public interface DripActionDispatcher {
+        void spawnFloorSplash(double x, double y, double z, float r, float g, float b);
+        void spawnOverhangDrop(double x, double y, double z, float r, float g, float b);
+    }
+
+    public static boolean stampToCanvas(ClientLevel level, double x, double y, double z,
                                      double impactVx, double impactVy, double impactVz,
                                      float rCol, float gCol, float bCol,
                                      int splatIndex, RandomSource random,
                                      BlockPos targetBlock, Direction hitDirection) {
+        DripActionDispatcher dispatcher = new DripActionDispatcher() {
+            @Override
+            public void spawnFloorSplash(double sx, double sy, double sz, float r, float g, float b) {
+                spawnSplash(level, sx, sy, sz, r, g, b, level.getRandom());
+            }
+
+            @Override
+            public void spawnOverhangDrop(double dropSpawnX, double dropSpawnY, double dropSpawnZ, float dropR, float dropG, float dropB) {
+                try {
+                    Minecraft mc = Minecraft.getInstance();
+                    if (mc.level == null) return;
+                    Particle drop = mc.particleEngine.createParticle(
+                        ParticleTypes.FALLING_WATER, dropSpawnX, dropSpawnY, dropSpawnZ, 0.0, 0.0, 0.0
+                    );
+                    if (drop instanceof SingleQuadParticle sqp) {
+                        sqp.setColor(dropR, dropG, dropB);
+                    }
+                    ParticleAlphaHelper.setAlpha(drop, RedfxConfig.get().bloodOpacity);
+                    if (drop instanceof BloodDripAccessor bda) {
+                        bda.redfx$setBloodDrip(dropR, dropG, dropB);
+                    }
+                } catch (Throwable ignored) {
+                }
+            }
+        };
+        return stampToCanvasInternal(level, x, y, z, impactVx, impactVy, impactVz, rCol, gCol, bCol, splatIndex, random, targetBlock, hitDirection, dispatcher, System.currentTimeMillis());
+    }
+
+    public static boolean stampToCanvas(net.minecraft.world.level.BlockGetter level, double x, double y, double z,
+                                     double impactVx, double impactVy, double impactVz,
+                                     float rCol, float gCol, float bCol,
+                                     int splatIndex, RandomSource random,
+                                     BlockPos targetBlock, Direction hitDirection,
+                                     DripActionDispatcher dispatcher, long nowMs) {
+        return stampToCanvasInternal(level, x, y, z, impactVx, impactVy, impactVz, rCol, gCol, bCol, splatIndex, random, targetBlock, hitDirection, dispatcher, nowMs);
+    }
+
+    private static boolean stampToCanvasInternal(net.minecraft.world.level.BlockGetter level, double x, double y, double z,
+                                     double impactVx, double impactVy, double impactVz,
+                                     float rCol, float gCol, float bCol,
+                                     int splatIndex, RandomSource random,
+                                     BlockPos targetBlock, Direction hitDirection,
+                                     DripActionDispatcher dispatcher, long nowMs) {
         int face = hitDirection.get3DDataValue();
+        ClientCanvasStore store = ClientCanvasStore.get();
+        if (!store.tryClaimStampBudget(targetBlock, face, nowMs)) {
+            return false;
+        }
         double lx = x - targetBlock.getX();
         double ly = y - targetBlock.getY();
         double lz = z - targetBlock.getZ();
@@ -461,7 +515,7 @@ public class BloodParticle extends TerrainParticle {
             finalSec += random.nextInt(variance * 2) - variance;
         }
         finalSec = Math.max(1, finalSec);
-        long expirationMs = System.currentTimeMillis() + (finalSec * 1000L);
+        long expirationMs = nowMs + (finalSec * 1000L);
 
         float scale = 0.8f * RedfxConfig.get().splatSizeScale;
 
@@ -473,10 +527,8 @@ public class BloodParticle extends TerrainParticle {
         int globalCenterU = FaceStroke.encodeU(face, blockU, centerU);
         int globalCenterV = FaceStroke.encodeV(face, blockV, centerV);
 
-        ClientCanvasStore store = ClientCanvasStore.get();
-        Map<CanvasTarget, int[]> modifiedCanvases = new HashMap<>();
+        boolean dripEdges = RedfxConfig.get().dripOverEdges;
 
-        long nowMs = System.currentTimeMillis();
         long baseDelayMs = RedfxConfig.get().splatterGrowthDelayTicks * 50L;
         float configFactor = Math.max(0.5f, RedfxConfig.get().splatterGrowthDelayTicks / 2.0f);
 
@@ -484,12 +536,14 @@ public class BloodParticle extends TerrainParticle {
         Map<Long, List<ClientCanvasStore.PendingTexel>> scheduledByTime = new TreeMap<>();
         java.util.function.BiConsumer<ClientCanvasStore.PendingTexel, Long> addTexel = (pt, execTime) -> {
             allTexels.add(pt);
-            scheduledByTime.computeIfAbsent(execTime, k -> new ArrayList<>()).add(pt);
+            long bucketTime = execTime <= nowMs ? nowMs : ((execTime + 24L) / 25L) * 25L;
+            scheduledByTime.computeIfAbsent(bucketTime, k -> new ArrayList<>()).add(pt);
         };
 
         if (face == Direction.UP.get3DDataValue()) {
-            Set<BlockPos> solidTopBlocks = new HashSet<>();
-            Map<BlockPos, Double> blockElevations = new HashMap<>();
+            Set<BlockPos> solidTopBlocks = dripEdges ? new HashSet<>() : null;
+            Map<BlockPos, Double> blockElevations = dripEdges ? new HashMap<>() : null;
+            Map<BlockPos, int[]> newTopTexelsByBlock = dripEdges ? new HashMap<>() : null;
             SurfaceInfo targetSurface = resolveTopSurfaceInfo(level, targetBlock, (centerU + 0.5) / 16.0, (centerV + 0.5) / 16.0);
             double targetElevation = targetSurface != null ? targetSurface.elevation() : (double) (targetBlock.getY() + 1.0);
 
@@ -512,9 +566,11 @@ public class BloodParticle extends TerrainParticle {
                 if (surfaceInfo != null) {
                     // Only stamp on top faces that are roughly level with the impact surface
                     if (surfaceInfo.blockPos().equals(targetBlock) || Math.abs(surfaceInfo.elevation() - targetElevation) < 0.85) {
-                        paintTexel(modifiedCanvases, store, surfaceInfo.blockPos(), Direction.UP.get3DDataValue(), uTexel, vTexel, col);
-                        solidTopBlocks.add(surfaceInfo.blockPos());
-                        blockElevations.put(surfaceInfo.blockPos(), surfaceInfo.elevation());
+                        if (dripEdges) {
+                            recordNewTexel(newTopTexelsByBlock, surfaceInfo.blockPos(), uTexel, vTexel, col);
+                            solidTopBlocks.add(surfaceInfo.blockPos());
+                            blockElevations.put(surfaceInfo.blockPos(), surfaceInfo.elevation());
+                        }
 
                         ClientCanvasStore.PendingTexel pt = new ClientCanvasStore.PendingTexel(
                             surfaceInfo.blockPos(), Direction.UP.get3DDataValue(), uTexel, vTexel, col, expirationMs
@@ -525,14 +581,13 @@ public class BloodParticle extends TerrainParticle {
                 }
             });
 
-            if (RedfxConfig.get().dripOverEdges) {
+            if (dripEdges && !solidTopBlocks.isEmpty()) {
                 Direction[] horizontalDirs = new Direction[] {
                     Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST
                 };
 
                 for (BlockPos bPos : solidTopBlocks) {
-                    CanvasTarget topTarget = new CanvasTarget(bPos, Direction.UP.get3DDataValue());
-                    int[] topTexels = modifiedCanvases.get(topTarget);
+                    int[] topTexels = newTopTexelsByBlock.get(bPos);
                     if (topTexels == null) continue;
 
                     double myElevation = blockElevations.computeIfAbsent(bPos, p -> {
@@ -541,6 +596,7 @@ public class BloodParticle extends TerrainParticle {
                     });
 
                     BlockState bState = level.getBlockState(bPos);
+                    boolean isFullBlock = bState.isCollisionShapeFullBlock(level, bPos);
                     double localTop = PaintSurface.topOf(level, bPos, bState);
                     if (localTop == PaintSurface.NONE) {
                         localTop = 1.0;
@@ -549,10 +605,15 @@ public class BloodParticle extends TerrainParticle {
 
                     BlockPos belowPos = bPos.below();
                     BlockState belowState = level.getBlockState(belowPos);
+                    int passCount = isFullBlock ? 1 : 2;
 
                     for (Direction hDir : horizontalDirs) {
-                        boolean sidePaintable = bState.isFaceSturdy(level, bPos, hDir)
-                            || bState.isCollisionShapeFullBlock(level, bPos)
+                        if (isFullBlock && !hasNewTexelNearOuterEdge(topTexels, hDir)) {
+                            continue;
+                        }
+
+                        boolean sidePaintable = isFullBlock
+                            || bState.isFaceSturdy(level, bPos, hDir)
                             || (localTop != PaintSurface.NONE);
                         if (!sidePaintable) continue;
 
@@ -563,95 +624,102 @@ public class BloodParticle extends TerrainParticle {
                         BlockPos neighborPos = bPos.relative(hDir);
                         SurfaceInfo neighborInfo = resolveTopSurfaceInfo(level, neighborPos);
 
-                        if (neighborInfo != null && myElevation - neighborInfo.elevation() < 0.05 && bState.isCollisionShapeFullBlock(level, bPos)) {
+                        if (neighborInfo != null && myElevation - neighborInfo.elevation() < 0.05 && isFullBlock) {
                             // Neighbor is at same height or higher; no exposed vertical drop
                             continue;
                         }
 
                         int sideFace = hDir.get3DDataValue();
+                        boolean[][] hasBloodPass = new boolean[passCount][Canvas.SIZE];
+                        int[][] rimColorsPass = new int[passCount][Canvas.SIZE];
+                        PaintSurface.BlockEdge[][] columnEdgesPass = new PaintSurface.BlockEdge[passCount][Canvas.SIZE];
+                        boolean[] foundAnyPass = new boolean[passCount];
 
-                        for (boolean checkInternal : new boolean[] { false, true }) {
-                            // Identify columns along this edge that have blood, and connect them to the edge
-                            boolean[] hasBlood = new boolean[Canvas.SIZE];
-                            int[] rimColors = new int[Canvas.SIZE];
-                            PaintSurface.BlockEdge[] columnEdges = new PaintSurface.BlockEdge[Canvas.SIZE];
-                            boolean foundAny = false;
+                        PaintSurface.BlockEdge[] outerEdges = new PaintSurface.BlockEdge[Canvas.SIZE];
+                        PaintSurface.BlockEdge[] internalEdges = passCount > 1 ? new PaintSurface.BlockEdge[Canvas.SIZE] : null;
+                        PaintSurface.findEdgesForDirection(level, bPos, bState, hDir, outerEdges, internalEdges);
+
+                        int duEdge = hDir == Direction.WEST ? 1 : (hDir == Direction.EAST ? -1 : 0);
+                        int dvEdge = hDir == Direction.NORTH ? 1 : (hDir == Direction.SOUTH ? -1 : 0);
+
+                        for (int pass = 0; pass < passCount; pass++) {
+                            PaintSurface.BlockEdge[] sourceEdges = (pass == 0) ? outerEdges : internalEdges;
+                            if (sourceEdges == null) continue;
 
                             for (int coord = 0; coord < Canvas.SIZE; coord++) {
-                                List<PaintSurface.BlockEdge> edges = PaintSurface.findEdges(level, bPos, bState, hDir, coord);
-                                PaintSurface.BlockEdge edge = null;
-                                for (PaintSurface.BlockEdge e : edges) {
-                                    if (e.isInternal() == checkInternal) {
-                                        edge = e;
-                                        break;
-                                    }
-                                }
+                                PaintSurface.BlockEdge edge = sourceEdges[coord];
                                 if (edge == null) continue;
 
                                 int edgeCol = topTexels[edge.edgeV() * Canvas.SIZE + edge.edgeU()];
 
-                            // If outer edge pixel is empty, check up to 2 pixels inward (splash near edge)
-                            if (edgeCol == 0) {
-                                int du = hDir == Direction.WEST ? 1 : (hDir == Direction.EAST ? -1 : 0);
-                                int dv = hDir == Direction.NORTH ? 1 : (hDir == Direction.SOUTH ? -1 : 0);
-                                int inU1 = edge.edgeU() + du;
-                                int inV1 = edge.edgeV() + dv;
-                                if (inU1 >= 0 && inU1 < Canvas.SIZE && inV1 >= 0 && inV1 < Canvas.SIZE) {
-                                    int inward1 = topTexels[inV1 * Canvas.SIZE + inU1];
-                                    if (inward1 != 0) {
-                                        edgeCol = inward1;
-                                        topTexels[edge.edgeV() * Canvas.SIZE + edge.edgeU()] = inward1;
-                                        addTexel.accept(new ClientCanvasStore.PendingTexel(bPos, Direction.UP.get3DDataValue(), edge.edgeU(), edge.edgeV(), inward1, expirationMs), nowMs + 2 * baseDelayMs);
-                                    } else {
-                                        int inU2 = inU1 + du;
-                                        int inV2 = inV1 + dv;
-                                        if (inU2 >= 0 && inU2 < Canvas.SIZE && inV2 >= 0 && inV2 < Canvas.SIZE) {
-                                            int inward2 = topTexels[inV2 * Canvas.SIZE + inU2];
-                                            if (inward2 != 0) {
-                                                edgeCol = inward2;
-                                                long bridgeTime = nowMs + 2 * baseDelayMs;
-                                                topTexels[inV1 * Canvas.SIZE + inU1] = inward2;
-                                                topTexels[edge.edgeV() * Canvas.SIZE + edge.edgeU()] = inward2;
-                                                addTexel.accept(new ClientCanvasStore.PendingTexel(bPos, Direction.UP.get3DDataValue(), inU1, inV1, inward2, expirationMs), bridgeTime);
-                                                addTexel.accept(new ClientCanvasStore.PendingTexel(bPos, Direction.UP.get3DDataValue(), edge.edgeU(), edge.edgeV(), inward2, expirationMs), bridgeTime);
+                                // If outer edge pixel is empty, check up to 2 pixels inward (splash near edge)
+                                if (edgeCol == 0) {
+                                    int inU1 = edge.edgeU() + duEdge;
+                                    int inV1 = edge.edgeV() + dvEdge;
+                                    if (inU1 >= 0 && inU1 < Canvas.SIZE && inV1 >= 0 && inV1 < Canvas.SIZE) {
+                                        int inward1 = topTexels[inV1 * Canvas.SIZE + inU1];
+                                        if (inward1 != 0) {
+                                            edgeCol = inward1;
+                                            topTexels[edge.edgeV() * Canvas.SIZE + edge.edgeU()] = inward1;
+                                            addTexel.accept(new ClientCanvasStore.PendingTexel(bPos, Direction.UP.get3DDataValue(), edge.edgeU(), edge.edgeV(), inward1, expirationMs), nowMs + 2 * baseDelayMs);
+                                        } else {
+                                            int inU2 = inU1 + duEdge;
+                                            int inV2 = inV1 + dvEdge;
+                                            if (inU2 >= 0 && inU2 < Canvas.SIZE && inV2 >= 0 && inV2 < Canvas.SIZE) {
+                                                int inward2 = topTexels[inV2 * Canvas.SIZE + inU2];
+                                                if (inward2 != 0) {
+                                                    edgeCol = inward2;
+                                                    long bridgeTime = nowMs + 2 * baseDelayMs;
+                                                    topTexels[inV1 * Canvas.SIZE + inU1] = inward2;
+                                                    topTexels[edge.edgeV() * Canvas.SIZE + edge.edgeU()] = inward2;
+                                                    addTexel.accept(new ClientCanvasStore.PendingTexel(bPos, Direction.UP.get3DDataValue(), inU1, inV1, inward2, expirationMs), bridgeTime);
+                                                    addTexel.accept(new ClientCanvasStore.PendingTexel(bPos, Direction.UP.get3DDataValue(), edge.edgeU(), edge.edgeV(), inward2, expirationMs), bridgeTime);
+                                                }
                                             }
                                         }
                                     }
                                 }
-                            }
 
-                            if (edgeCol != 0) {
-                                hasBlood[coord] = true;
-                                rimColors[coord] = edgeCol;
-                                columnEdges[coord] = edge;
-                                foundAny = true;
+                                if (edgeCol != 0) {
+                                    hasBloodPass[pass][coord] = true;
+                                    rimColorsPass[pass][coord] = edgeCol;
+                                    columnEdgesPass[pass][coord] = edge;
+                                    foundAnyPass[pass] = true;
+                                }
                             }
                         }
 
-                        if (!foundAny) continue;
+                        for (int pass = 0; pass < passCount; pass++) {
+                            if (!foundAnyPass[pass]) continue;
+                            boolean[] hasBlood = hasBloodPass[pass];
+                            int[] rimColors = rimColorsPass[pass];
+                            PaintSurface.BlockEdge[] columnEdges = columnEdgesPass[pass];
 
-                        // Find continuous clusters of columns and trickle teardrop beads at random within the boundary
-                        int cStart = -1;
-                        for (int coord = 0; coord <= Canvas.SIZE; coord++) {
-                            if (coord < Canvas.SIZE && hasBlood[coord]) {
-                                if (cStart == -1) cStart = coord;
-                            } else if (cStart != -1) {
-                                int cEnd = coord - 1;
+                            // Find continuous clusters of columns and trickle teardrop beads at random within the boundary
+                            int cStart = -1;
+                            for (int coord = 0; coord <= Canvas.SIZE; coord++) {
+                                if (coord < Canvas.SIZE && hasBlood[coord]) {
+                                    if (cStart == -1) cStart = coord;
+                                } else if (cStart != -1) {
+                                    int cEnd = coord - 1;
 
-                                int[] beadColumns = EdgeDrip.selectBeadColumns(
-                                    cStart, cEnd, bPos.getX(), bPos.getZ(), sideFace, splatIndex
-                                );
+                                    int[] beadColumns = EdgeDrip.selectBeadColumns(
+                                        cStart, cEnd, bPos.getX(), bPos.getZ(), sideFace, splatIndex
+                                    );
 
-                                for (int c : beadColumns) {
-                                    PaintSurface.BlockEdge edge = columnEdges[c];
-                                    if (edge == null) continue;
+                                    for (int c : beadColumns) {
+                                        PaintSurface.BlockEdge edge = columnEdges[c];
+                                        if (edge == null) continue;
 
-                                    int col = rimColors[c];
-                                    int baseAlpha = (col >>> 24);
-                                    if (baseAlpha == 0) baseAlpha = Math.max(10, Math.min(255, (int) (RedfxConfig.get().bloodOpacity * 255.0f)));
-                                    int rgb = col & 0xFFFFFF;
+                                        int uSide = EdgeDrip.sideU(sideFace, edge.edgeU(), edge.edgeV());
+                                        if (!store.tryClaimEdgeDrip(bPos, sideFace, uSide, nowMs)) {
+                                            continue;
+                                        }
 
-                                    int uSide = EdgeDrip.sideU(sideFace, edge.edgeU(), edge.edgeV());
+                                        int col = rimColors[c];
+                                        int baseAlpha = (col >>> 24);
+                                        if (baseAlpha == 0) baseAlpha = Math.max(10, Math.min(255, (int) (RedfxConfig.get().bloodOpacity * 255.0f)));
+                                        int rgb = col & 0xFFFFFF;
                                     double colTop = edge.colTop();
                                     double colBottom = edge.colBottom();
                                     double colPlane = edge.colPlane();
@@ -803,7 +871,8 @@ public class BloodParticle extends TerrainParticle {
                                     }
 
                                     if (reachedBorder) {
-                                        long arrivalTime = beadStartMs + (long) dripLen * stepDelayMs;
+                                        long rawArrival = beadStartMs + (long) dripLen * stepDelayMs;
+                                        long arrivalTime = rawArrival <= nowMs ? nowMs : ((rawArrival + 24L) / 25L) * 25L;
 
                                         if (touchesBlock && checkPos != null) {
                                             double relX = Math.max(0.0, Math.min(1.0, frontX - checkPos.getX()));
@@ -849,15 +918,15 @@ public class BloodParticle extends TerrainParticle {
                                             final float dripG = ((rgb >> 8) & 0xFF) / 255.0f;
                                             final float dripB = (rgb & 0xFF) / 255.0f;
 
-                                            if (RedfxConfig.get().enableSplatDust) {
+                                            if (RedfxConfig.get().enableSplatDust && dispatcher != null) {
                                                 final double splatFloorY = floorElevation;
                                                 final double sx = frontX;
                                                 final double sz = frontZ;
                                                 ClientCanvasStore.get().scheduleAction(arrivalTime, () -> {
-                                                    spawnSplash(level, sx, splatFloorY + 0.02, sz, dripR, dripG, dripB, level.getRandom());
+                                                    dispatcher.spawnFloorSplash(sx, splatFloorY + 0.02, sz, dripR, dripG, dripB);
                                                 });
                                             }
-                                        } else if (!belowPaintable && !isInternalStep) {
+                                        } else if (!belowPaintable && !isInternalStep && dispatcher != null) {
                                             final double dropSpawnX = frontX;
                                             final double dropSpawnY = dripBaseY - 0.02;
                                             final double dropSpawnZ = frontZ;
@@ -866,21 +935,7 @@ public class BloodParticle extends TerrainParticle {
                                             final float dropB = (rgb & 0xFF) / 255.0f;
 
                                             ClientCanvasStore.get().scheduleAction(arrivalTime, () -> {
-                                                try {
-                                                    Minecraft mc = Minecraft.getInstance();
-                                                    if (mc.level == null) return;
-                                                    Particle drop = mc.particleEngine.createParticle(
-                                                        ParticleTypes.FALLING_WATER, dropSpawnX, dropSpawnY, dropSpawnZ, 0.0, 0.0, 0.0
-                                                    );
-                                                    if (drop instanceof SingleQuadParticle sqp) {
-                                                        sqp.setColor(dropR, dropG, dropB);
-                                                    }
-                                                    ParticleAlphaHelper.setAlpha(drop, RedfxConfig.get().bloodOpacity);
-                                                    if (drop instanceof BloodDripAccessor bda) {
-                                                        bda.redfx$setBloodDrip(dropR, dropG, dropB);
-                                                    }
-                                                } catch (Throwable ignored) {
-                                                }
+                                                dispatcher.spawnOverhangDrop(dropSpawnX, dropSpawnY, dropSpawnZ, dropR, dropG, dropB);
                                             });
                                         }
                                     }
@@ -968,32 +1023,25 @@ public class BloodParticle extends TerrainParticle {
             }
         }
 
-        // Publish texels: either immediately or scheduled per-pixel across time
+        // Batch immediate & staged texels via scheduleStage so all impacts in a tick coalesce cleanly on tickExpiration
         boolean gradual = RedfxConfig.get().gradualSplatter && RedfxConfig.get().splatterGrowthDelayTicks > 0;
         if (!gradual) {
-            store.applyTexels(allTexels);
+            store.scheduleStage(nowMs, allTexels);
         } else {
             for (Map.Entry<Long, List<ClientCanvasStore.PendingTexel>> entry : scheduledByTime.entrySet()) {
-                long execTime = entry.getKey();
                 List<ClientCanvasStore.PendingTexel> texels = entry.getValue();
-                if (texels.isEmpty()) continue;
-
-                if (execTime <= nowMs) {
-                    store.applyTexels(texels);
-                } else {
-                    store.scheduleStage(execTime, texels);
+                if (!texels.isEmpty()) {
+                    store.scheduleStage(entry.getKey(), texels);
                 }
             }
         }
-    }
-
-    private record CanvasTarget(BlockPos pos, int face) {
+        return true;
     }
 
     private record SurfaceInfo(BlockPos blockPos, double elevation) {
     }
 
-    private static SurfaceInfo resolveTopSurfaceInfo(ClientLevel level, BlockPos colPos, double relX, double relZ) {
+    private static SurfaceInfo resolveTopSurfaceInfo(net.minecraft.world.level.BlockGetter level, BlockPos colPos, double relX, double relZ) {
         BlockPos abovePos = colPos.above();
         BlockState aboveState = level.getBlockState(abovePos);
         if (!aboveState.isAir() && aboveState.getFluidState().isEmpty() && !PaintSurface.isIgnored(aboveState)) {
@@ -1020,22 +1068,15 @@ public class BloodParticle extends TerrainParticle {
         return null;
     }
 
-    private static SurfaceInfo resolveTopSurfaceInfo(ClientLevel level, BlockPos colPos) {
+    private static SurfaceInfo resolveTopSurfaceInfo(net.minecraft.world.level.BlockGetter level, BlockPos colPos) {
         return resolveTopSurfaceInfo(level, colPos, 0.5, 0.5);
     }
 
-    private static void paintTexel(Map<CanvasTarget, int[]> modifiedCanvases, ClientCanvasStore store,
-        BlockPos pos, int face, int u, int v, int col) {
+    private static void recordNewTexel(Map<BlockPos, int[]> newTexelsByBlock, BlockPos pos, int u, int v, int col) {
         if (u < 0 || u >= Canvas.SIZE || v < 0 || v >= Canvas.SIZE) {
             return;
         }
-        CanvasTarget target = new CanvasTarget(pos, face);
-        int[] texels = modifiedCanvases.get(target);
-        if (texels == null) {
-            Canvas existing = store.get(pos, face);
-            texels = existing != null ? existing.texels().clone() : new int[Canvas.TEXELS];
-            modifiedCanvases.put(target, texels);
-        }
+        int[] texels = newTexelsByBlock.computeIfAbsent(pos, k -> new int[Canvas.TEXELS]);
         int idx = v * Canvas.SIZE + u;
         int existing = texels[idx];
         int existingAlpha = (existing >>> 24);
@@ -1043,5 +1084,37 @@ public class BloodParticle extends TerrainParticle {
         if (newAlpha > existingAlpha || (newAlpha == existingAlpha && existing != col)) {
             texels[idx] = col;
         }
+    }
+
+    private static boolean hasNewTexelNearOuterEdge(int[] texels, Direction hDir) {
+        return switch (hDir) {
+            case NORTH -> {
+                for (int idx = 0; idx < 3 * Canvas.SIZE; idx++) {
+                    if (texels[idx] != 0) yield true;
+                }
+                yield false;
+            }
+            case SOUTH -> {
+                for (int idx = 13 * Canvas.SIZE; idx < Canvas.TEXELS; idx++) {
+                    if (texels[idx] != 0) yield true;
+                }
+                yield false;
+            }
+            case WEST -> {
+                for (int v = 0; v < Canvas.SIZE; v++) {
+                    int base = v * Canvas.SIZE;
+                    if (texels[base] != 0 || texels[base + 1] != 0 || texels[base + 2] != 0) yield true;
+                }
+                yield false;
+            }
+            case EAST -> {
+                for (int v = 0; v < Canvas.SIZE; v++) {
+                    int base = v * Canvas.SIZE;
+                    if (texels[base + 13] != 0 || texels[base + 14] != 0 || texels[base + 15] != 0) yield true;
+                }
+                yield false;
+            }
+            default -> true;
+        };
     }
 }
