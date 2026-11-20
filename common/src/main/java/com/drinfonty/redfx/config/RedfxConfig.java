@@ -143,7 +143,32 @@ public class RedfxConfig {
         return config;
     }
 
+    private transient java.util.Map<String, float[]> parsedColorCache;
+
+    public void invalidateColorCache() {
+        if (parsedColorCache != null) {
+            parsedColorCache.clear();
+        }
+    }
+
+    private float[] getCachedParsedColor(String hex) {
+        if (hex == null || hex.isBlank()) return null;
+        if (parsedColorCache == null) {
+            parsedColorCache = new java.util.concurrent.ConcurrentHashMap<>();
+        }
+        float[] cached = parsedColorCache.get(hex);
+        if (cached != null) {
+            return cached;
+        }
+        float[] parsed = parseColor(hex);
+        if (parsed != null) {
+            parsedColorCache.put(hex, parsed);
+        }
+        return parsed;
+    }
+
     public void save() {
+        invalidateColorCache();
         try {
             File parent = CONFIG_FILE.getParentFile();
             if (parent != null && !parent.exists()) {
@@ -176,6 +201,7 @@ public class RedfxConfig {
         this.gradualSplatter = true;
         this.splatterGrowthDelayTicks = 2;
         initDefaultEntityColors();
+        invalidateColorCache();
     }
 
     public float getMultiplier() {
@@ -220,7 +246,7 @@ public class RedfxConfig {
             String hex = entityBloodColors.get(entityId);
             if (hex != null) {
                 if (isNone(hex)) return null;
-                float[] rgb = parseColor(hex);
+                float[] rgb = getCachedParsedColor(hex);
                 if (rgb != null) return rgb;
             }
             int colon = entityId.indexOf(':');
@@ -229,7 +255,7 @@ public class RedfxConfig {
                 hex = entityBloodColors.get(shortKey);
                 if (hex != null) {
                     if (isNone(hex)) return null;
-                    float[] rgb = parseColor(hex);
+                    float[] rgb = getCachedParsedColor(hex);
                     if (rgb != null) return rgb;
                 }
             }
@@ -240,7 +266,7 @@ public class RedfxConfig {
     public float[] getDefaultBloodColor() {
         String hex = entityBloodColors.get("default");
         if (hex != null) {
-            float[] rgb = parseColor(hex);
+            float[] rgb = getCachedParsedColor(hex);
             if (rgb != null) return rgb;
         }
         return new float[]{1.0F, 0.05F, 0.05F};

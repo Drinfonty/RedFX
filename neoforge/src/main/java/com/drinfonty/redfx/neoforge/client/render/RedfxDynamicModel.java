@@ -33,6 +33,7 @@ import net.neoforged.neoforge.client.model.pipeline.QuadBakingVertexConsumer;
  */
 public class RedfxDynamicModel extends DelegateBlockStateModel implements DynamicBlockStateModel {
 	private static final Map<CacheKey, List<BakedQuad>> CACHE = new ConcurrentHashMap<>();
+	private static final java.util.Queue<CacheKey> CACHE_ORDER = new java.util.concurrent.ConcurrentLinkedQueue<>();
 	private static final int MAX_CACHED_CANVASES = 8192;
 
 	private record CacheKey(Canvas canvas, int face, float facePlane, float surfaceY, boolean seeThrough) {
@@ -44,6 +45,7 @@ public class RedfxDynamicModel extends DelegateBlockStateModel implements Dynami
 
 	public static void clearCache() {
 		CACHE.clear();
+		CACHE_ORDER.clear();
 	}
 
 	@Override
@@ -72,9 +74,14 @@ public class RedfxDynamicModel extends DelegateBlockStateModel implements Dynami
 			boolean seeThrough = PaintSurface.isSeeThrough(state);
 
 			for (PaintSurface.SurfaceCanvas sc : PaintSurface.splitCanvas(level, pos, state, face, canvas)) {
-				List<BakedQuad> faceQuads = CACHE.computeIfAbsent(
-					new CacheKey(sc.canvas(), currentFace, sc.facePlane(), sc.surfaceY(), seeThrough),
-					key -> build(key.canvas(), key.face(), key.facePlane(), key.surfaceY(), key.seeThrough()));
+				CacheKey cacheKey = new CacheKey(sc.canvas(), currentFace, sc.facePlane(), sc.surfaceY(), seeThrough);
+				List<BakedQuad> faceQuads = CACHE.get(cacheKey);
+				if (faceQuads == null) {
+					faceQuads = build(cacheKey.canvas(), cacheKey.face(), cacheKey.facePlane(), cacheKey.surfaceY(), cacheKey.seeThrough());
+					if (CACHE.putIfAbsent(cacheKey, faceQuads) == null) {
+						CACHE_ORDER.add(cacheKey);
+					}
+				}
 
 				if (quads == null) {
 					quads = new ArrayList<>(faceQuads.size() * 2);
@@ -88,8 +95,11 @@ public class RedfxDynamicModel extends DelegateBlockStateModel implements Dynami
 			parts.add(new PaintPart(quads));
 		}
 
-		if (CACHE.size() > MAX_CACHED_CANVASES) {
-			CACHE.clear();
+		int excess = CACHE.size() - MAX_CACHED_CANVASES;
+		while (excess-- > 0) {
+			CacheKey oldest = CACHE_ORDER.poll();
+			if (oldest == null) break;
+			CACHE.remove(oldest);
 		}
 	}
 
